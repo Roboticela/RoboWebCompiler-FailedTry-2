@@ -1,0 +1,29 @@
+{
+  "$schema": "RoboHTMLCompiler.InputTypeRegistry.v1",
+  "description": "The input element is specialised at compile time from its type content attribute, so the native tree never carries an untyped 'input' node that must be re-interpreted at run time.",
+  "inputTypes": [
+    { "type": "text", "kind": "Input" },
+    { "type": "email", "kind": "Input" },
+    { "type": "password", "kind": "Input" },
+    { "type": "number", "kind": "NumberInput" },
+    { "type": "date", "kind": "DateInput" },
+    { "type": "datetime-local", "kind": "DateTimeInput" },
+    { "type": "month", "kind": "MonthInput" },
+    { "type": "week", "kind": "WeekInput" },
+    { "type": "time", "kind": "TimeInput" },
+    { "type": "file", "kind": "FileInput" },
+    { "type": "checkbox", "kind": "Checkbox" },
+    { "type": "radio", "kind": "Radio" },
+    { "type": "range", "kind": "Range" },
+    { "type": "color", "kind": "ColorInput" },
+    { "type": "search", "kind": "SearchInput" },
+    { "type": "url", "kind": "UrlInput" },
+    { "type": "tel", "kind": "TelephoneInput" },
+    { "type": "hidden", "kind": "HiddenInput" },
+    { "type": "submit", "kind": "SubmitButton" },
+    { "type": "reset", "kind": "ResetButton" },
+    { "type": "button", "kind": "Button" },
+    { "type": "image", "kind": "ImageButton" },
+    { "type": "datetime", "kind": "DateTimeInput", "obsolete": true }
+  ]
+}

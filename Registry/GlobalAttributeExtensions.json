@@ -1,0 +1,9 @@
+{
+  "$schema": "RoboHTMLCompiler.GlobalAttributeExtensions.v1",
+  "description": "The HTML Standard delegates these global attributes to DOM ('for any element in any namespace'). They are registered explicitly here so the compiler accepts them on every element.",
+  "attributes": [
+    { "name": "class" },
+    { "name": "id" },
+    { "name": "slot" }
+  ]
+}

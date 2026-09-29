@@ -1,0 +1,45 @@
+{
+  "$schema": "RoboHTMLCompiler.MathMlElementRegistry.v1",
+  "namespace": "MathML",
+  "origin": "MathML Core. Authored by hand because Reference/HTML/ contains the WHATWG HTML Standard, which specifies only the MathML integration points.",
+  "description": "MathML is a first-class source namespace with its own AST, layout and measurement representation. MathML is never lowered into ordinary HTML text.",
+  "elements": [
+    { "name": "math", "kind": "MathRoot" },
+
+    { "name": "mi", "kind": "MathToken" },
+    { "name": "mn", "kind": "MathToken" },
+    { "name": "ms", "kind": "MathToken" },
+    { "name": "mtext", "kind": "MathToken" },
+    { "name": "mo", "kind": "MathOperator" },
+
+    { "name": "mrow", "kind": "MathRow" },
+    { "name": "mstyle", "kind": "MathStyle" },
+    { "name": "merror", "kind": "MathError" },
+    { "name": "mphantom", "kind": "MathPhantom" },
+    { "name": "maction", "kind": "MathAction" },
+    { "name": "semantics", "kind": "MathSemantics" },
+    { "name": "annotation", "kind": "MathAnnotation" },
+    { "name": "annotation-xml", "kind": "MathAnnotation" },
+
+    { "name": "mfrac", "kind": "MathFraction" },
+    { "name": "msqrt", "kind": "MathRadical" },
+    { "name": "mroot", "kind": "MathRadical" },
+
+    { "name": "msub", "kind": "MathScript" },
+    { "name": "msup", "kind": "MathScript" },
+    { "name": "msubsup", "kind": "MathScript" },
+    { "name": "munder", "kind": "MathScript" },
+    { "name": "mover", "kind": "MathScript" },
+    { "name": "munderover", "kind": "MathScript" },
+    { "name": "mmultiscripts", "kind": "MathMultiScripts" },
+    { "name": "mprescripts", "kind": "MathPrescript" },
+    { "name": "none", "kind": "MathPrescript" },
+
+    { "name": "mspace", "kind": "MathSpace" },
+    { "name": "mpadded", "kind": "MathPadded" },
+
+    { "name": "mtable", "kind": "MathTable" },
+    { "name": "mtr", "kind": "MathTableRow" },
+    { "name": "mtd", "kind": "MathTableCell" }
+  ]
+}
