@@ -52,6 +52,27 @@ ROBO_TEST(Separation, InlineEventHandlerAttributesAreRejected)
     }
 }
 
+ROBO_TEST(Separation, UndeclaredEventHandlerAttributesAreRejected)
+{
+    // The reference no longer defines these handlers, but an 'on*' attribute is
+    // always inline JavaScript, so the compiler must reject it as such rather
+    // than fall back to an unknown attribute.
+    static const char* const snippets[] = {
+        "<button onloadend=\"save()\">Save</button>",
+        "<button ondragexit=\"save()\">Save</button>",
+        "<button onwebkitanimationend=\"save()\">Save</button>",
+        "<button onmadeupevent=\"save()\">Save</button>"
+    };
+
+    for (const char* snippet : snippets)
+    {
+        DiagnosticSink sink;
+        ROBO_CHECK(!ValidateBody(snippet, sink));
+        ROBO_CHECK(HasError(sink, DiagnosticCode::InlineEventHandlerAttribute));
+        ROBO_CHECK(!HasError(sink, DiagnosticCode::UnknownAttribute));
+    }
+}
+
 ROBO_TEST(Separation, InlineScriptContentIsRejected)
 {
     DiagnosticSink sink;

@@ -1,0 +1,10 @@
+{
+  "$schema": "RoboHTMLCompiler.ObsoleteVocabulary.v1",
+  "description": "Legacy vocabulary that the compiler must recognise so that it can reject it with a precise 'obsolete' diagnostic instead of reporting it as an unknown feature. Entries here are never implemented: an obsolete element or attribute is always a compilation error in strict mode. The list complements CompilerKnowledge/Vocabulary/DeprecatedElements.json, which is mined from the current revision of the reference and therefore cannot mention features the reference no longer documents.",
+  "policy": "recognised-and-rejected",
+  "elements": [],
+  "attributes": [
+    { "name": "allowpaymentrequest", "obsoleteOn": ["iframe"], "replacedBy": "allow" },
+    { "name": "allowusermedia", "obsoleteOn": ["iframe"], "replacedBy": "allow" }
+  ]
+}

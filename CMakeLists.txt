@@ -42,10 +42,14 @@ option(RoboWarningsAsErrors "Treat compiler warnings as errors" OFF)
 # ---------------------------------------------------------------------------
 
 # Directory holding the hand-authored registries plus the JSON produced by the
-# SpecExtractor tool out of Reference/HTML/.
+# SpecExtractor tool out of the standards reference.
 set(RoboRegistrySourceDirectory "${CMAKE_SOURCE_DIR}/Registry" CACHE PATH "Hand-authored registry JSON directory")
-set(RoboGeneratedRegistryDirectory "${CMAKE_SOURCE_DIR}/Generated/Registry" CACHE PATH "Extracted registry JSON directory")
-set(RoboReferenceDirectory "${CMAKE_SOURCE_DIR}/Reference/HTML" CACHE PATH "Standards reference directory")
+set(RoboGeneratedRegistryDirectory "${CMAKE_SOURCE_DIR}/CompilerKnowledge/Vocabulary" CACHE PATH "Extracted registry JSON directory")
+
+# The standards reference is an implementation checklist that has been fully
+# consumed; the directory is optional. When it is absent the extraction stage
+# reports that and leaves CompilerKnowledge/Vocabulary/ authoritative.
+set(RoboReferenceDirectory "${CMAKE_SOURCE_DIR}/Reference/HTML" CACHE PATH "Standards reference directory (optional)")
 
 # Default target name for the compiler executable.
 set(RoboCompilerExecutableName "RoboHTMLCompiler")

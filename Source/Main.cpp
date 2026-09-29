@@ -6,6 +6,7 @@
 // Options:
 //     --output <directory>       Root output directory (default: build)
 //     --name <applicationName>   Application name (default: derived from the document)
+//     --all                      Compile every HTML document in the directory
 //     --target <web|native|all>  Output targets (default: all)
 //     --strictness <lax|strict|pedantic>
 //     --allow-obsolete           Accept obsolete elements and attributes
@@ -38,6 +39,8 @@ namespace
             "Options:\n"
             "  --output <directory>       Root output directory (default: build)\n"
             "  --name <applicationName>   Application name (default: derived from the document)\n"
+            "  --all                      Compile every HTML document in the directory, each into\n"
+            "                             its own <output>/<DocumentName> subdirectory\n"
             "  --target <web|native|all>  Output targets (default: all)\n"
             "  --strictness <lax|strict|pedantic>\n"
             "  --allow-obsolete           Accept obsolete elements and attributes\n"
@@ -47,7 +50,7 @@ namespace
             "  --help                     Print this help and exit\n"
             "\n"
             "Generated output:\n"
-            "  <output>/GeneratedHTML/index.html      browser compatible HTML\n"
+            "  <output>/GeneratedHTML/<document>.html  browser compatible HTML\n"
             "  <output>/GeneratedNative/              strongly typed C++ model\n"
             "  <output>/GeneratedIR/                  machine readable native IR\n"
             "  <output>/GeneratedReports/             compilation report and diagnostics\n";
@@ -68,7 +71,7 @@ namespace
             (void)name;
         }
 
-        std::cout << "  (see Generated/ImplementationCoverage.json for reference coverage status)\n";
+        std::cout << "  (see CompilerKnowledge/ImplementationCoverage.json for reference coverage status)\n";
     }
 }
 
@@ -83,6 +86,7 @@ int main(int argumentCount, char** argumentValues)
     bool emitIrDump = true;
     bool quiet = false;
     bool allowObsolete = false;
+    bool compileAllDocuments = false;
 
     CompilationOptions options;
     options.generateWebTarget = true;
@@ -164,6 +168,12 @@ int main(int argumentCount, char** argumentValues)
             continue;
         }
 
+        if (argument == "--all" || argument == "--batch")
+        {
+            compileAllDocuments = true;
+            continue;
+        }
+
         if (argument == "--no-ir")
         {
             emitIrDump = false;
@@ -202,6 +212,37 @@ int main(int argumentCount, char** argumentValues)
 
     DiagnosticSink diagnostics;
     Compiler compiler(diagnostics);
+
+    if (compileAllDocuments)
+    {
+        const BatchCompilationResult batch = compiler.CompileBatch(options);
+
+        if (!batch.Succeeded() || diagnostics.HasErrors())
+        {
+            if (batch.documents.empty())
+            {
+                std::cerr << "\n" << diagnostics.FormatErrors();
+            }
+            std::cerr << "\nBatch compilation failed: " << batch.failedCount << " of "
+                      << batch.documents.size() << " document(s) did not compile.\n";
+            return 1;
+        }
+
+        if (!quiet)
+        {
+            std::cout << "\nRoboHTMLCompiler batch build complete\n";
+            std::cout << "  documents:         " << batch.compiledCount << "\n";
+            std::cout << "  output:            " << batch.outputDirectory.generic_string() << "\n";
+            std::cout << "  batch report:      " << batch.reportPath.generic_string() << "\n";
+            for (const BatchDocument& document : batch.documents)
+            {
+                std::cout << "  " << document.documentName << "  ->  " << document.applicationName
+                          << "NativeModel.{h,cpp}" << "\n";
+            }
+        }
+
+        return 0;
+    }
 
     const CompilationResult result = compiler.Compile(options);
 

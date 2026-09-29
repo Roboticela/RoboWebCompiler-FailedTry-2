@@ -1,0 +1,118 @@
+{
+  "$schema": "RoboHTMLCompiler.GlobalAttributes.v1",
+  "source": "Reference/HTML/source",
+  "attributes": [
+    {
+      "name": "accesskey",
+      "namespace": "HTML"
+    },
+    {
+      "name": "autocapitalize",
+      "namespace": "HTML"
+    },
+    {
+      "name": "autocorrect",
+      "namespace": "HTML"
+    },
+    {
+      "name": "autofocus",
+      "namespace": "HTML"
+    },
+    {
+      "name": "contenteditable",
+      "namespace": "HTML"
+    },
+    {
+      "name": "dir",
+      "namespace": "HTML"
+    },
+    {
+      "name": "draggable",
+      "namespace": "HTML"
+    },
+    {
+      "name": "enterkeyhint",
+      "namespace": "HTML"
+    },
+    {
+      "name": "headingoffset",
+      "namespace": "HTML"
+    },
+    {
+      "name": "headingreset",
+      "namespace": "HTML"
+    },
+    {
+      "name": "hidden",
+      "namespace": "HTML"
+    },
+    {
+      "name": "inert",
+      "namespace": "HTML"
+    },
+    {
+      "name": "inputmode",
+      "namespace": "HTML"
+    },
+    {
+      "name": "is",
+      "namespace": "HTML"
+    },
+    {
+      "name": "itemid",
+      "namespace": "HTML"
+    },
+    {
+      "name": "itemprop",
+      "namespace": "HTML"
+    },
+    {
+      "name": "itemref",
+      "namespace": "HTML"
+    },
+    {
+      "name": "itemscope",
+      "namespace": "HTML"
+    },
+    {
+      "name": "itemtype",
+      "namespace": "HTML"
+    },
+    {
+      "name": "lang",
+      "namespace": "HTML"
+    },
+    {
+      "name": "nonce",
+      "namespace": "HTML"
+    },
+    {
+      "name": "popover",
+      "namespace": "HTML"
+    },
+    {
+      "name": "spellcheck",
+      "namespace": "HTML"
+    },
+    {
+      "name": "style",
+      "namespace": "HTML"
+    },
+    {
+      "name": "tabindex",
+      "namespace": "HTML"
+    },
+    {
+      "name": "title",
+      "namespace": "HTML"
+    },
+    {
+      "name": "translate",
+      "namespace": "HTML"
+    },
+    {
+      "name": "writingsuggestions",
+      "namespace": "HTML"
+    }
+  ]
+}

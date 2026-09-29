@@ -1,8 +1,8 @@
 # ---------------------------------------------------------------------------
 # RoboHTMLCompilerTools
 #
-#     Reference/HTML/  --SpecExtractor-->  Generated/Registry/*.json
-#     Registry/*.json  --RegistryCompiler-->  Generated/Include, Generated/Source
+#     Reference/HTML/  --SpecExtractor-->  CompilerKnowledge/Vocabulary/*.json
+#     Registry/*.json  --RegistryCompiler-->  CompilerKnowledge/Include, CompilerKnowledge/Source
 #
 # These targets are engineering tooling: they never run as part of a normal
 # application build, but they are what turns the standards reference into the
@@ -38,7 +38,7 @@ add_custom_target(RoboExtractReferences
     COMMAND SpecExtractor
             "${RoboReferenceDirectory}"
             "${RoboGeneratedRegistryDirectory}"
-            "${CMAKE_SOURCE_DIR}/Generated/ImplementationCoverage.json"
+            "${CMAKE_SOURCE_DIR}/CompilerKnowledge/ImplementationCoverage.json"
     DEPENDS SpecExtractor
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     COMMENT "Mining the standards reference into registry JSON"
@@ -49,12 +49,45 @@ add_custom_target(RoboCompileRegistries
     COMMAND RegistryCompiler
             "${RoboRegistrySourceDirectory}"
             "${RoboGeneratedRegistryDirectory}"
-            "${CMAKE_SOURCE_DIR}/Generated/Include/RoboHTMLCompiler"
-            "${CMAKE_SOURCE_DIR}/Generated/Source"
-            "${CMAKE_SOURCE_DIR}/Generated/ImplementationCoverage.json"
+            "${CMAKE_SOURCE_DIR}/CompilerKnowledge/Include/RoboHTMLCompiler"
+            "${CMAKE_SOURCE_DIR}/CompilerKnowledge/Source"
+            "${CMAKE_SOURCE_DIR}/CompilerKnowledge/ImplementationCoverage.json"
     DEPENDS RegistryCompiler
     WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
     COMMENT "Generating strongly typed registry tables"
+    USES_TERMINAL
+)
+
+# The reference directory is an implementation checklist rather than a runtime
+# dependency. The audit reports every element and attribute each reference
+# document defines that the compiler does not account for yet;
+# RoboConsumeReferences deletes the revision snapshots that are fully covered.
+add_custom_target(RoboAuditReferences
+    COMMAND SpecExtractor
+            "${RoboReferenceDirectory}"
+            "${RoboGeneratedRegistryDirectory}"
+            "${CMAKE_SOURCE_DIR}/CompilerKnowledge/ImplementationCoverage.json"
+            --sweep
+            --hand-registry "${RoboRegistrySourceDirectory}"
+            --audit-report "${CMAKE_SOURCE_DIR}/CompilerKnowledge/ReferenceAudit.json"
+    DEPENDS SpecExtractor
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "Auditing the standards reference against the compiled-in vocabulary"
+    USES_TERMINAL
+)
+
+add_custom_target(RoboConsumeReferences
+    COMMAND SpecExtractor
+            "${RoboReferenceDirectory}"
+            "${RoboGeneratedRegistryDirectory}"
+            "${CMAKE_SOURCE_DIR}/CompilerKnowledge/ImplementationCoverage.json"
+            --sweep
+            --consume
+            --hand-registry "${RoboRegistrySourceDirectory}"
+            --audit-report "${CMAKE_SOURCE_DIR}/CompilerKnowledge/ReferenceAudit.json"
+    DEPENDS SpecExtractor
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "Consuming the fully covered reference documents"
     USES_TERMINAL
 )
 
@@ -64,4 +97,5 @@ add_custom_target(RoboGenerateRegistries
 )
 
 set_target_properties(RoboExtractReferences RoboCompileRegistries RoboGenerateRegistries
+    RoboAuditReferences RoboConsumeReferences
     PROPERTIES FOLDER "RoboHTMLCompilerTools")

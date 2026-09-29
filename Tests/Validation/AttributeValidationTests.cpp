@@ -124,6 +124,25 @@ ROBO_TEST(Validation, ObsoleteElementsAreRejectedInStrictMode)
     }
 }
 
+ROBO_TEST(Validation, ObsoleteAttributesAreRejectedInStrictMode)
+{
+    // Legacy vocabulary the current revision of the reference no longer
+    // documents is still recognised, so it is rejected as obsolete instead of
+    // being reported as an unknown feature.
+    DiagnosticSink sink;
+    ROBO_CHECK(!ValidateBody("<iframe src=\"a.html\" allowpaymentrequest></iframe>", sink));
+    ROBO_CHECK(HasError(sink, DiagnosticCode::ObsoleteAttribute));
+    ROBO_CHECK(!HasError(sink, DiagnosticCode::UnknownAttribute));
+
+    DiagnosticSink second;
+    ROBO_CHECK(!ValidateBody("<iframe src=\"a.html\" allowusermedia></iframe>", second));
+    ROBO_CHECK(HasError(second, DiagnosticCode::ObsoleteAttribute));
+
+    DiagnosticSink third;
+    ROBO_CHECK(!ValidateBody("<table><tr><td align=\"center\">x</td></tr></table>", third));
+    ROBO_CHECK(HasError(third, DiagnosticCode::ObsoleteAttribute));
+}
+
 ROBO_TEST(Validation, ObsoleteElementsCanBeAcceptedExplicitly)
 {
     ValidationOptions options;

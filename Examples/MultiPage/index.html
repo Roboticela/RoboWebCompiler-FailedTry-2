@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MultiPage - Home</title>
+</head>
+<body class="bg-slate-100 p-8">
+  <header class="flex items-center justify-between p-4 bg-white rounded-lg shadow">
+    <h1 id="workshop-heading" class="text-2xl font-bold text-slate-900">Workshop</h1>
+    <nav class="flex gap-3">
+      <a href="login.html" class="text-blue-600">Sign in</a>
+      <a href="dashboard.html" class="text-blue-600">Dashboard</a>
+    </nav>
+  </header>
+
+  <main class="flex flex-col gap-4">
+    <p class="text-slate-700">Three documents, one folder, one native model each.</p>
+
+    <section class="card p-4">
+      <h2 class="text-lg font-medium text-slate-800">What gets generated</h2>
+      <ul class="tight-list text-slate-700">
+        <li>Every document becomes its own strongly typed C++ model.</li>
+        <li>Styling stays in the stylesheet.</li>
+        <li>Behaviour stays in the JavaScript modules.</li>
+      </ul>
+    </section>
+
+    <figure class="p-4 bg-white rounded-lg">
+      <svg viewBox="0 0 120 40" width="240" height="80" role="img" aria-label="A small bar chart">
+        <rect x="0" y="24" width="24" height="16" fill="#3b82f6"></rect>
+        <rect x="32" y="12" width="24" height="28" fill="#22c55e"></rect>
+        <rect x="64" y="4" width="24" height="36" fill="#f59e0b"></rect>
+        <path d="M96 40 L112 4 L120 40 Z" fill="#ef4444"></path>
+      </svg>
+      <figcaption class="text-sm text-slate-600">SVG stays a first-class namespace.</figcaption>
+    </figure>
+
+    <p class="p-4 bg-white rounded-lg text-lg">
+      <math display="block"><msup><mi>a</mi><mn>2</mn></msup><mo>+</mo><mfrac><mn>1</mn><mn>2</mn></mfrac></math>
+    </p>
+  </main>
+
+  <script src="index.js" defer></script>
+</body>
+</html>

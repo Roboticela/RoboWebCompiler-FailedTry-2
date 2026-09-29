@@ -2,7 +2,7 @@
 // RoboHTMLCompiler - the compiler's structured knowledge.
 //
 // The registries produced by RoboHTMLCompilerTools are compiled into the binary
-// as strongly typed tables (see Generated/Include/RoboHTMLCompiler). This header
+// as strongly typed tables (see CompilerKnowledge/Include/RoboHTMLCompiler). This header
 // presents them as queryable, immutable definitions. The compiler never parses
 // JSON, and the reference documentation is an engineering input rather than a
 // runtime dependency.

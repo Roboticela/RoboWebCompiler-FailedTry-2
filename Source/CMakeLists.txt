@@ -2,7 +2,7 @@
 # RoboHTMLCompiler core library.
 #
 # The library owns the whole compiler frontend. The generated registry tables
-# under Generated/ are compiled straight in, so the compiler never parses JSON,
+# under CompilerKnowledge/ are compiled straight in, so the compiler never parses JSON,
 # HTML or CSS at run time.
 # ---------------------------------------------------------------------------
 
@@ -21,16 +21,17 @@ set(RoboCoreSources
     "${CMAKE_CURRENT_SOURCE_DIR}/Parser/Parsers.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Registry/Registry.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Validation/Validation.cpp"
-    "${CMAKE_SOURCE_DIR}/Generated/Source/GeneratedRegistries.cpp"
+    "${CMAKE_SOURCE_DIR}/CompilerKnowledge/Source/GeneratedRegistries.cpp"
 )
 
-set(RoboCoreGeneratedHeader "${CMAKE_SOURCE_DIR}/Generated/Include/RoboHTMLCompiler/GeneratedEnums.h")
+set(RoboCoreGeneratedHeader "${CMAKE_SOURCE_DIR}/CompilerKnowledge/Include/RoboHTMLCompiler/GeneratedEnums.h")
 
 if(NOT EXISTS "${RoboCoreGeneratedHeader}")
     message(FATAL_ERROR
         "The generated registries are missing (${RoboCoreGeneratedHeader}).\n"
-        "Run 'cmake --build <build> --target RoboGenerateRegistries' once, or run:\n"
-        "    RoboHTMLCompilerTools: SpecExtractor + RegistryCompiler")
+        "They are checked in next to the sources. Restore CompilerKnowledge/ and its Vocabulary/,\n"
+        "or point -DRoboReferenceDirectory at a standards reference checkout and run:\n"
+        "    cmake --build <build> --target RoboGenerateRegistries")
 endif()
 
 add_library(RoboHTMLCompilerLib STATIC ${RoboCoreSources})
@@ -38,7 +39,7 @@ add_library(RoboHTMLCompilerLib STATIC ${RoboCoreSources})
 target_include_directories(RoboHTMLCompilerLib
     PUBLIC
         "${CMAKE_SOURCE_DIR}/Include"
-        "${CMAKE_SOURCE_DIR}/Generated/Include"
+        "${CMAKE_SOURCE_DIR}/CompilerKnowledge/Include"
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}"
 )

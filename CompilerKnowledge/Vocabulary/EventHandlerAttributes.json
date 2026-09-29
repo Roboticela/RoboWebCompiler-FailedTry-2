@@ -1,0 +1,220 @@
+{
+  "$schema": "RoboHTMLCompiler.EventHandlerAttributes.v1",
+  "source": "Reference/HTML/source",
+  "policy": "Content attribute event handlers are recognised so that the compiler can reject them with a precise diagnostic: behaviour belongs to JavaScript modules.",
+  "attributes": [
+    {
+      "name": "onauxclick"
+    },
+    {
+      "name": "onbeforeinput"
+    },
+    {
+      "name": "onbeforematch"
+    },
+    {
+      "name": "onbeforetoggle"
+    },
+    {
+      "name": "onblur"
+    },
+    {
+      "name": "oncancel"
+    },
+    {
+      "name": "oncanplay"
+    },
+    {
+      "name": "oncanplaythrough"
+    },
+    {
+      "name": "onchange"
+    },
+    {
+      "name": "onclick"
+    },
+    {
+      "name": "onclose"
+    },
+    {
+      "name": "oncommand"
+    },
+    {
+      "name": "oncontextlost"
+    },
+    {
+      "name": "oncontextmenu"
+    },
+    {
+      "name": "oncontextrestored"
+    },
+    {
+      "name": "oncopy"
+    },
+    {
+      "name": "oncuechange"
+    },
+    {
+      "name": "oncut"
+    },
+    {
+      "name": "ondblclick"
+    },
+    {
+      "name": "ondrag"
+    },
+    {
+      "name": "ondragend"
+    },
+    {
+      "name": "ondragenter"
+    },
+    {
+      "name": "ondragleave"
+    },
+    {
+      "name": "ondragover"
+    },
+    {
+      "name": "ondragstart"
+    },
+    {
+      "name": "ondrop"
+    },
+    {
+      "name": "ondurationchange"
+    },
+    {
+      "name": "onemptied"
+    },
+    {
+      "name": "onended"
+    },
+    {
+      "name": "onerror"
+    },
+    {
+      "name": "onfocus"
+    },
+    {
+      "name": "onformdata"
+    },
+    {
+      "name": "oninput"
+    },
+    {
+      "name": "oninvalid"
+    },
+    {
+      "name": "onkeydown"
+    },
+    {
+      "name": "onkeypress"
+    },
+    {
+      "name": "onkeyup"
+    },
+    {
+      "name": "onload"
+    },
+    {
+      "name": "onloadeddata"
+    },
+    {
+      "name": "onloadedmetadata"
+    },
+    {
+      "name": "onloadstart"
+    },
+    {
+      "name": "onmousedown"
+    },
+    {
+      "name": "onmouseenter"
+    },
+    {
+      "name": "onmouseleave"
+    },
+    {
+      "name": "onmousemove"
+    },
+    {
+      "name": "onmouseout"
+    },
+    {
+      "name": "onmouseover"
+    },
+    {
+      "name": "onmouseup"
+    },
+    {
+      "name": "onpaste"
+    },
+    {
+      "name": "onpause"
+    },
+    {
+      "name": "onplay"
+    },
+    {
+      "name": "onplaying"
+    },
+    {
+      "name": "onprogress"
+    },
+    {
+      "name": "onratechange"
+    },
+    {
+      "name": "onreset"
+    },
+    {
+      "name": "onresize"
+    },
+    {
+      "name": "onscroll"
+    },
+    {
+      "name": "onscrollend"
+    },
+    {
+      "name": "onsecuritypolicyviolation"
+    },
+    {
+      "name": "onseeked"
+    },
+    {
+      "name": "onseeking"
+    },
+    {
+      "name": "onselect"
+    },
+    {
+      "name": "onslotchange"
+    },
+    {
+      "name": "onstalled"
+    },
+    {
+      "name": "onsubmit"
+    },
+    {
+      "name": "onsuspend"
+    },
+    {
+      "name": "ontimeupdate"
+    },
+    {
+      "name": "ontoggle"
+    },
+    {
+      "name": "onvolumechange"
+    },
+    {
+      "name": "onwaiting"
+    },
+    {
+      "name": "onwheel"
+    }
+  ]
+}

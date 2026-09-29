@@ -268,7 +268,17 @@ namespace RoboHTMLCompiler
         std::filesystem::create_directories(outputDirectory);
 
         const std::string html = RenderDocument(document, styleSheetFileName, scriptFileName);
-        const std::filesystem::path documentPath = outputDirectory / "index.html";
+
+        // The browser target keeps the document's own file name, so a directory
+        // of documents compiles into recognizable pages.
+        std::string documentFileName = "index.html";
+        const std::filesystem::path sourceDocument(document.sourceFile);
+        if (sourceDocument.has_filename())
+        {
+            documentFileName = sourceDocument.filename().generic_string();
+        }
+
+        const std::filesystem::path documentPath = outputDirectory / documentFileName;
         const std::filesystem::path styleSheetPath = outputDirectory / styleSheetFileName;
         const std::filesystem::path scriptPath = outputDirectory / scriptFileName;
 

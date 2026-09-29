@@ -5,6 +5,7 @@
 
 #include <filesystem>
 #include <fstream>
+#include <set>
 #include <sstream>
 #include <string>
 
@@ -28,6 +29,11 @@ namespace
     std::filesystem::path ExampleRoot()
     {
         return std::filesystem::path(ROBO_TEST_SOURCE_DIR) / "Examples" / "BasicApp";
+    }
+
+    std::filesystem::path ExamplesRoot()
+    {
+        return std::filesystem::path(ROBO_TEST_SOURCE_DIR) / "Examples";
     }
 
     std::filesystem::path OutputRoot(const std::string& name)
@@ -158,6 +164,92 @@ ROBO_TEST(Integration, NativeTargetAndIrDumpAreWritten)
     const std::string ir = ReadFile(result.nativeTarget.irDumpPath);
     ROBO_CHECK(ir.find("\"kind\": \"Button\"") != std::string::npos);
     ROBO_CHECK(ir.find("\"bindings\"") != std::string::npos);
+}
+
+ROBO_TEST(Integration, BatchCompilationProducesOneModelPerDocument)
+{
+    CompilationOptions options;
+    options.sourceDirectory = ExamplesRoot() / "MultiPage";
+    options.outputDirectory = OutputRoot("batch");
+    options.applicationName = "MultiPage";
+
+    DiagnosticSink sink;
+    Compiler compiler(sink);
+    const BatchCompilationResult batch = compiler.CompileBatch(options);
+
+    ROBO_CHECK(batch.Succeeded());
+    ROBO_CHECK_EQ(batch.compiledCount, static_cast<std::size_t>(3));
+    ROBO_CHECK_EQ(batch.failedCount, static_cast<std::size_t>(0));
+    ROBO_CHECK_EQ(batch.documents.size(), static_cast<std::size_t>(3));
+    ROBO_CHECK(std::filesystem::exists(batch.reportPath));
+
+    std::set<std::string> applications;
+    for (const BatchDocument& document : batch.documents)
+    {
+        ROBO_CHECK(document.succeeded);
+        ROBO_CHECK(!document.applicationName.empty());
+        ROBO_CHECK(std::filesystem::exists(document.result.nativeTarget.headerPath));
+        ROBO_CHECK(std::filesystem::exists(document.result.nativeTarget.sourcePath));
+        ROBO_CHECK(std::filesystem::exists(document.result.nativeTarget.irDumpPath));
+
+        // Every document keeps its own file name in the browser target.
+        ROBO_CHECK_EQ(document.result.webTarget.documentPath.filename().string(), document.documentName);
+
+        applications.insert(document.applicationName);
+    }
+
+    ROBO_CHECK(applications.count("Index") == 1);
+    ROBO_CHECK(applications.count("Login") == 1);
+    ROBO_CHECK(applications.count("Dashboard") == 1);
+}
+
+ROBO_TEST(Integration, BatchCompilationReportsFailuresWithoutStopping)
+{
+    const std::filesystem::path source = WriteTemporaryApplication(
+        "batchMixed",
+        "<!DOCTYPE html><html><head><title>T</title></head><body>"
+        "<p id=\"present\" class=\"px-2\">ok</p>"
+        "<script src=\"app.js\" defer></script>"
+        "</body></html>",
+        "/* nothing */\n",
+        "const present = document.getElementById(\"present\");\n");
+
+    std::ofstream(source / "broken.html")
+        << "<!DOCTYPE html><html><head><title>B</title></head><body>"
+           "<notanelement>nope</notanelement></body></html>";
+
+    CompilationOptions options;
+    options.sourceDirectory = source;
+    options.outputDirectory = OutputRoot("batchMixed");
+    options.applicationName = "BatchMixed";
+
+    DiagnosticSink sink;
+    Compiler compiler(sink);
+    const BatchCompilationResult batch = compiler.CompileBatch(options);
+
+    ROBO_CHECK(!batch.Succeeded());
+    ROBO_CHECK_EQ(batch.compiledCount, static_cast<std::size_t>(1));
+    ROBO_CHECK_EQ(batch.failedCount, static_cast<std::size_t>(1));
+    ROBO_CHECK_EQ(batch.documents.size(), static_cast<std::size_t>(2));
+
+    // The healthy document still produced a complete native model.
+    bool sawCompiledDocument = false;
+    for (const BatchDocument& document : batch.documents)
+    {
+        if (document.documentName == "broken.html")
+        {
+            ROBO_CHECK(!document.succeeded);
+            ROBO_CHECK(document.errorCount > 0);
+            ROBO_CHECK(!document.diagnostics.empty());
+            continue;
+        }
+
+        sawCompiledDocument = true;
+        ROBO_CHECK(document.succeeded);
+        ROBO_CHECK(std::filesystem::exists(document.result.nativeTarget.sourcePath));
+    }
+    ROBO_CHECK(sawCompiledDocument);
+    ROBO_CHECK(std::filesystem::exists(batch.reportPath));
 }
 
 ROBO_TEST(Integration, CompilationReportIsWritten)

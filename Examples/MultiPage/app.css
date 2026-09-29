@@ -1,0 +1,15 @@
+/* Shared stylesheet for the MultiPage example.
+   HTML never contains CSS: the documents only reference these class names. */
+
+.card {
+  background-color: #ffffff;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #cbd5e1;
+  border-radius: 0.5rem;
+}
+
+.tight-list {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+}

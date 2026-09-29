@@ -42,6 +42,25 @@ code, a human-readable message, an explanation and a suggested fix:
 `<link rel="stylesheet">` references remain legal: they *point at* the other
 languages instead of embedding them.
 
+### Nothing is ignored
+
+Source that the compiler does not implement is always an error. There is no
+silent fallback, no "unknown, pass through" and no partial compilation:
+
+| Source construct              | Result                                                                 |
+| ----------------------------- | ---------------------------------------------------------------------- |
+| Element the reference defines | Normalised into a native `ElementKind` and compiled                     |
+| Element the reference removed | `RHC1004` obsolete element — registered so it can be reported precisely, never implemented |
+| Attribute the reference removed | `RHC1005` obsolete attribute — same policy                            |
+| Attribute that is not a handler | `RHC1005`/`MHTML003`/`MHTML005` depending on why it does not apply   |
+| Anything starting with `on`   | `MHTML002` inline event-handler attribute, whether or not the reference still defines the handler |
+| Element or attribute the compiler has never heard of | `MHTML004`/`MHTML005` unknown element or attribute |
+
+The one deliberate exception is the custom element: a name that follows the
+custom element naming rules (`my-component`) is not part of the reference
+vocabulary, so it is accepted and lowered into a native custom category, and it
+may carry its own non-standard attributes. Everything else is an error.
+
 ### Diagnostic codes
 
 | Code                     | Meaning                                             |
@@ -70,7 +89,7 @@ languages instead of embedding them.
 ## 2. Pipeline
 
 ```
-Examples/<App>/                     Registry/*.json        Generated/Registry/*.json
+Examples/<App>/                     Registry/*.json        CompilerKnowledge/Vocabulary/*.json
    index.html  app.css  app.js            \                     /
         |                                  \                   /
         v                                   v                 v
@@ -134,15 +153,23 @@ Source/                     compiler implementation (lexer, parsers, validation,
                             CSS, JavaScript, native lowering, code generation, CLI)
 Registry/                   hand-authored vocabulary (kinds, properties,
                             normalisation, routing, ARIA, SVG, MathML, semantics)
-Generated/Registry/         JSON mined from the standards reference
-Generated/Include/          generated strongly typed enums + registry tables
-Generated/Source/           generated registry tables implementation
-Generated/ImplementationCoverage.json  machine-readable coverage report
-Tools/                      SpecExtractor, RegistryCompiler, JSON helper, build drivers
+CompilerKnowledge/          the compiler's knowledge, checked in as real code
+  Vocabulary/               JSON mined from the standards reference
+  Include/                  strongly typed enums + registry tables (compiled in)
+  Source/                   registry tables implementation
+  ImplementationCoverage.json   machine-readable coverage report
+  ReferenceAudit.json       the audit trail of the consumed reference
+Tools/                      SpecExtractor, RegistryCompiler, JSON helper, drivers
 Tests/                      component and integration suites (custom framework)
-Examples/BasicApp/          a working HTML + CSS + JS application
-Reference/HTML/             the WHATWG HTML Standard checkout (engineering input)
+Examples/BasicApp/          a single-document HTML + CSS + JS application
+Examples/MultiPage/         three documents in one folder, one model each
 ```
+
+`CompilerKnowledge/` is **not** build output. It is generated once by the
+tooling from the standards reference, and from then on it is source: it is
+compiled into the binary, checked in, and edited only by rerunning the tools.
+There is no `Reference/` directory any more — the standards reference was used
+as an implementation checklist and has been fully consumed (see below).
 
 ---
 
@@ -179,37 +206,140 @@ and, when the tools are enabled, `build/bin/SpecExtractor.exe` and
 
 ---
 
+## 4b. Compiling a folder of documents
+
+`Tools/Run.bat` and `Tools/Run.sh` compile every HTML document in a folder into
+its own strongly typed C++ native model. They build the compiler first if it has
+not been built yet, and the only required argument is the input folder; the
+output folder defaults to `build/compiled/<inputFolderName>`.
+
+```bat
+Tools\Run.bat Examples\MultiPage
+Tools\Run.bat Examples\MultiPage build\compiled\MultiPage Release
+```
+
+```sh
+Tools/Run.sh Examples/MultiPage
+Tools/Run.sh Examples/MultiPage build/compiled/MultiPage --target native
+```
+
+One folder per document, one native model per document:
+
+```
+<output>/
+  BatchReport.json                    per-document outcome, counts and diagnostics
+  Index/
+    GeneratedHTML/index.html          browser output keeps the document's name
+    GeneratedHTML/styles.css
+    GeneratedHTML/scripts.js
+    GeneratedNative/IndexNativeModel.h
+    GeneratedNative/IndexNativeModel.cpp
+    GeneratedIR/Index.ir.json
+    GeneratedReports/{CompilationReport,Diagnostics}.json
+  Login/
+    GeneratedNative/LoginNativeModel.{h,cpp}
+    ...
+```
+
+The subdirectory name and the generated file names come from the document's
+file name: `task-list.html` becomes `TaskList/` and `TaskListNativeModel.{h,cpp}`.
+
+A document that fails to compile does not stop the others. Its diagnostics are
+recorded in `BatchReport.json` and printed, the compiler exits non-zero, and the
+remaining documents still produce their full output.
+
+Each document is linked only with the behaviour modules it actually references,
+so one page's script is never checked against another page's markup. Every
+stylesheet in the folder is treated as the document's rule pool, exactly as in a
+single-document compile.
+
+---
+
 ## 5. Regenerating the registries
 
 The registries are the compiler's knowledge, and they are *generated*, not
 hand-maintained at run time:
 
 ```sh
-# Reference/HTML/  ->  Generated/Registry/*.json + coverage report
+# reference tree (if any)  ->  CompilerKnowledge/Vocabulary/*.json + coverage report
 cmake --build build --target RoboExtractReferences
 
-# Registry/ + Generated/Registry/  ->  Generated/Include + Generated/Source
+# Registry/ + CompilerKnowledge/Vocabulary/  ->  CompilerKnowledge/Include + CompilerKnowledge/Source
 cmake --build build --target RoboCompileRegistries
 
 # both, in order
 cmake --build build --target RoboGenerateRegistries
 ```
 
+With the reference consumed, `RoboExtractReferences` reports that and changes
+nothing; `RoboCompileRegistries` remains the authoritative step.
+
 `RegistryCompiler` validates every cross-reference while it runs: an unknown
 native kind, an unknown native property, or a route for an unregistered
 attribute is a hard error, so the registries cannot silently drift apart.
 
-### Reference tracking policy
+### Auditing and consuming the reference
 
-`Generated/ImplementationCoverage.json` records, for every file under
-`Reference/HTML/`, its role and processing status. Today only
-`Reference/HTML/source` (the preprocessed WHATWG HTML Standard) is a
-`primary-vocabulary-source` and is marked `processed`; the remaining 131 files
-are `auxiliary` and `not-compiler-input`. Reference files are **not deleted**
-while they are still needed as an engineering input, and any file is only
-eligible for removal once the coverage report marks it fully covered. The report
-currently records zero `partial`, `pending` and `unsupported` entries for HTML,
-SVG, MathML, ARIA and input types.
+The reference directory was an implementation checklist, not a runtime
+dependency: it was read document by document, the vocabulary each document
+defined was implemented, and the document was deleted once nothing in it was
+left unaccounted for. **The checklist is finished and the directory has been
+removed.** The commands below are kept because the same loop is how a new or
+updated reference would be taken in.
+
+```sh
+# Report every reference document whose vocabulary is not accounted for yet
+cmake --build build --target RoboAuditReferences
+
+# Delete the revision snapshots that are fully covered
+cmake --build build --target RoboConsumeReferences
+```
+
+Equivalently, straight through the tool:
+
+```sh
+SpecExtractor Reference/HTML CompilerKnowledge/Vocabulary CompilerKnowledge/ImplementationCoverage.json \
+    --sweep --hand-registry Registry --audit-report CompilerKnowledge/ReferenceAudit.json
+```
+
+Add `--consume` to delete the documents that pass the audit.
+
+**Policy.** A document is consumed only when every element and attribute it
+defines is either *implemented* by the compiler or *registered as obsolete* and
+rejected by it. Nothing is deleted on a guess, and obsolete vocabulary is never
+implemented — see the guarantee table below. `CompilerKnowledge/ReferenceAudit.json`
+is the durable audit trail: `documents` is the current state and
+`consumedHistory` records every document that was consumed, with the coverage
+evidence that justified it.
+
+**Consumption log.** The reference is gone. `Reference/HTML/` held 132 files:
+
+* `source`, the preprocessed WHATWG HTML Standard — mined into
+  `CompilerKnowledge/Vocabulary/` (142 elements, 115 element attributes, 28 global
+  attributes, 71 event handlers, 29 obsolete elements, 105 obsolete
+  attributes).
+* 17 Wattsi review drafts under `review-drafts/`, one per half-year from
+  2018-07 to 2026-07. Each was audited against the compiled-in vocabulary and
+  consumed; all 17 are recorded in `CompilerKnowledge/ReferenceAudit.json` under
+  `consumedHistory`.
+* 114 auxiliary files (the specification's own images, fonts, demo pages,
+  dev scripts, CI configuration and licence). Thirteen of the demo HTML pages
+  were scanned for tag and attribute vocabulary and introduced nothing the
+  compiler did not already implement.
+
+Consumption is recorded in `CompilerKnowledge/ImplementationCoverage.json`:
+`referenceState` is `consumed`, `references` is empty, and `retiredReferences`
+lists all 115 files that were still present when the folder was removed. The
+mined vocabulary sections (`html`, `attributes`, `globalAttributes`,
+`behaviour`) survive that refresh and still report zero `partial`, `pending`
+and `unsupported` entries, as do SVG, MathML, ARIA and input types.
+
+From here `CompilerKnowledge/Vocabulary/` is authoritative. `RoboExtractReferences` is a
+no-op that reports the reference as consumed instead of failing, so the full
+`RoboGenerateRegistries` pipeline keeps working. Dropping a new reference
+tree back at `Reference/HTML/` and rerunning `RoboGenerateRegistries` picks it
+up again; `RoboAuditReferences` will report whatever it defines that the
+compiler does not account for yet.
 
 ---
 
@@ -220,6 +350,8 @@ RoboHTMLCompiler [options] [sourceDirectory]
 
   --output <directory>       Root output directory (default: build)
   --name <applicationName>   Application name (default: derived from the document)
+  --all                      Compile every HTML document in the directory, each into
+                             its own <output>/<DocumentName> subdirectory
   --target <web|native|all>  Output targets (default: all)
   --strictness <lax|strict|pedantic>
   --allow-obsolete           Accept obsolete elements and attributes
@@ -229,19 +361,26 @@ RoboHTMLCompiler [options] [sourceDirectory]
   --help                     Print this help and exit
 ```
 
+`--all` is what `Tools/Run.bat` / `Tools/Run.sh` use; without it the compiler
+compiles a single entry document (`<ApplicationName>.html`, then `index.html`,
+then any `*.html`).
+
 ### Generated output
 
 ```
-<output>/GeneratedHTML/index.html          browser-compatible HTML
-<output>/GeneratedHTML/styles.css          authored rules + expanded Tailwind utilities
-<output>/GeneratedHTML/scripts.js          behaviour summary
-<output>/GeneratedNative/<App>NativeModel.h    typed model declaration
-<output>/GeneratedNative/<App>NativeModel.cpp  typed model construction
-<output>/GeneratedIR/<App>.ir.json         machine-readable native IR
+<output>/GeneratedHTML/<document>.html      browser-compatible HTML
+<output>/GeneratedHTML/styles.css           authored rules + expanded Tailwind utilities
+<output>/GeneratedHTML/scripts.js           behaviour summary
+<output>/GeneratedNative/<App>NativeModel.h     typed model declaration
+<output>/GeneratedNative/<App>NativeModel.cpp   typed model construction
+<output>/GeneratedIR/<App>.ir.json          machine-readable native IR
 <output>/GeneratedReports/CompilationReport.json
 <output>/GeneratedReports/Diagnostics.json
 <output>/GeneratedReports/ImplementationCoverage.json
 ```
+
+In `--all` mode every document gets the same tree under
+`<output>/<DocumentName>/`, plus `<output>/BatchReport.json`.
 
 The example application is compiled end to end by the
 `RoboCompileExample` target, which is what produces `build/GeneratedHTML/index.html`.
@@ -271,6 +410,7 @@ applications). `ctest` also registers `RoboHTMLCompilerExample`, which compiles
 * Files, classes and functions use `PascalCase`; variables use `camelCase`;
   constants use `PascalCase`.
 * Registries are declarative JSON; C++ tables are generated from them and never
-  edited by hand (`Generated/` is git-ignored and reproducible).
+  edited by hand; `CompilerKnowledge/` holds everything the tooling derives from
+  them, and it is checked in because it is the compiler's real knowledge.
 * The compiler only ever *writes* JSON (reports, IR dumps); it never parses it
   outside the tooling.

@@ -5,8 +5,10 @@
 #include "CodeGeneration/JsonEmit.h"
 
 #include <algorithm>
+#include <cctype>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <sstream>
 
 namespace RoboHTMLCompiler
@@ -31,6 +33,73 @@ namespace RoboHTMLCompiler
         std::string BaseName(const std::filesystem::path& path)
         {
             return path.stem().string();
+        }
+
+        /// "task-list.html" -> "TaskList": a valid C++ identifier that names the
+        /// generated native model of a document.
+        std::string ApplicationNameFromDocument(const std::filesystem::path& path)
+        {
+            std::string name;
+            bool capitalize = true;
+
+            for (const char character : path.stem().string())
+            {
+                const unsigned char value = static_cast<unsigned char>(character);
+                if (std::isalnum(value) == 0)
+                {
+                    capitalize = true;
+                    continue;
+                }
+
+                name.push_back(capitalize ? static_cast<char>(std::toupper(value))
+                                          : static_cast<char>(std::tolower(value)));
+                capitalize = false;
+            }
+
+            if (name.empty())
+            {
+                return "Document";
+            }
+            if (std::isalpha(static_cast<unsigned char>(name[0])) == 0)
+            {
+                name.insert(name.begin(), 'P');
+            }
+            return name;
+        }
+
+        /// True when a script file is the resource a document referenced.
+        bool IsScriptReference(const std::filesystem::path& path, const std::set<std::string>& referenced)
+        {
+            if (referenced.empty())
+            {
+                return false;
+            }
+
+            std::string target = path.filename().generic_string();
+            const std::size_t slash = target.find_last_of('/');
+            if (slash != std::string::npos)
+            {
+                target = target.substr(slash + 1);
+            }
+
+            for (const std::string& reference : referenced)
+            {
+                std::string candidate = reference;
+                while (candidate.compare(0, 2, "./") == 0)
+                {
+                    candidate.erase(0, 2);
+                }
+                const std::size_t referenceSlash = candidate.find_last_of('/');
+                const std::string tail = referenceSlash == std::string::npos
+                                             ? candidate
+                                             : candidate.substr(referenceSlash + 1);
+                if (candidate == target || tail == target)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 
@@ -97,8 +166,23 @@ namespace RoboHTMLCompiler
             return false;
         }
 
+        return CollectCompanionSources(application);
+    }
+
+    bool Compiler::CollectCompanionSources(ApplicationSource& application)
+    {
+        application.styleSheetPaths.clear();
+        application.scriptPaths.clear();
+
+        std::error_code errorCode;
+        if (!std::filesystem::is_directory(application.directory, errorCode))
+        {
+            return true;
+        }
+
         std::vector<std::filesystem::path> entries;
-        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(sourceDirectory))
+        for (const std::filesystem::directory_entry& entry :
+             std::filesystem::directory_iterator(application.directory))
         {
             if (!entry.is_regular_file())
             {
@@ -144,10 +228,17 @@ namespace RoboHTMLCompiler
     }
 
     bool Compiler::LoadBehaviourModules(const ApplicationSource& application,
+                                        const CompilationOptions& options,
+                                        const std::set<std::string>& referencedScripts,
                                         JavaScriptModuleCompiler& behaviourModule)
     {
         for (const std::filesystem::path& path : application.scriptPaths)
         {
+            if (options.referencedScriptsOnly && !IsScriptReference(path, referencedScripts))
+            {
+                continue;
+            }
+
             behaviourModule.AddModule(path.filename().generic_string(), ReadWholeFile(path));
         }
 
@@ -165,7 +256,13 @@ namespace RoboHTMLCompiler
         result.reportDirectory = options.outputDirectory / "GeneratedReports";
 
         ApplicationSource application;
-        if (!DiscoverSources(options.sourceDirectory, options.applicationName, application))
+        if (!options.documentPath.empty())
+        {
+            application.directory = options.sourceDirectory;
+            application.documentPath = options.documentPath;
+            CollectCompanionSources(application);
+        }
+        else if (!DiscoverSources(options.sourceDirectory, options.applicationName, application))
         {
             return result;
         }
@@ -245,7 +342,13 @@ namespace RoboHTMLCompiler
             }
         });
 
-        LoadBehaviourModules(application, behaviourModule);
+        std::set<std::string> referencedScripts;
+        for (const ScriptResource& resource : behaviourModule.GetScriptResources())
+        {
+            referencedScripts.insert(resource.reference);
+        }
+
+        LoadBehaviourModules(application, options, referencedScripts, behaviourModule);
         behaviourModule.LinkAgainstDocument(*document);
 
         if (diagnostics.HasErrors())
@@ -335,7 +438,7 @@ namespace RoboHTMLCompiler
                             std::to_string(registry.GetAttributeCount()) + ",");
             lines.push_back("  \"nativeElementKinds\": " + std::to_string(0) + ",");
             lines.push_back("  \"note\": \"Full reference coverage status is tracked in "
-                            "Generated/ImplementationCoverage.json and regenerated by the "
+                            "CompilerKnowledge/ImplementationCoverage.json and regenerated by the "
                             "RoboHTMLCompilerTools targets.\"");
             lines.push_back("}");
             WriteFile(result.reportDirectory / "ImplementationCoverage.json",
@@ -352,6 +455,164 @@ namespace RoboHTMLCompiler
 
         result.succeeded = true;
         return result;
+    }
+
+    BatchCompilationResult Compiler::CompileBatch(const CompilationOptions& options)
+    {
+        BatchCompilationResult batch;
+        batch.sourceDirectory = options.sourceDirectory;
+        batch.outputDirectory = options.outputDirectory;
+
+        std::vector<std::filesystem::path> documents;
+        std::error_code errorCode;
+        if (!std::filesystem::is_directory(options.sourceDirectory, errorCode))
+        {
+            diagnostics.Error(DiagnosticCode::MissingSourceFile,
+                              SourceLocation{ options.sourceDirectory.generic_string(), 1, 1, 0 },
+                              "The application source directory does not exist.",
+                              std::string(),
+                              "Point the compiler at a directory containing the application sources.",
+                              options.sourceDirectory.generic_string());
+            return batch;
+        }
+
+        for (const std::filesystem::directory_entry& entry :
+             std::filesystem::directory_iterator(options.sourceDirectory))
+        {
+            if (!entry.is_regular_file())
+            {
+                continue;
+            }
+
+            const std::string extension = entry.path().extension().string();
+            if (extension == ".html" || extension == ".htm")
+            {
+                documents.push_back(entry.path());
+            }
+        }
+        std::sort(documents.begin(), documents.end());
+
+        if (documents.empty())
+        {
+            diagnostics.Error(DiagnosticCode::MissingSourceFile,
+                              SourceLocation{ options.sourceDirectory.generic_string(), 1, 1, 0 },
+                              "No HTML document was found in the application directory.",
+                              std::string(),
+                              "Add at least one .html document to compile.",
+                              options.sourceDirectory.generic_string());
+            return batch;
+        }
+
+        std::cout << "[RoboHTMLCompiler] batch compiling " << documents.size() << " document(s) from "
+                  << options.sourceDirectory.generic_string() << "\n";
+
+        for (const std::filesystem::path& documentPath : documents)
+        {
+            BatchDocument document;
+            document.documentPath = documentPath;
+            document.documentName = documentPath.filename().generic_string();
+            document.applicationName = ApplicationNameFromDocument(documentPath);
+            document.outputDirectory = options.outputDirectory / document.applicationName;
+
+            CompilationOptions documentOptions = options;
+            documentOptions.documentPath = documentPath;
+            documentOptions.applicationName = document.applicationName;
+            documentOptions.outputDirectory = document.outputDirectory;
+            documentOptions.referencedScriptsOnly = true;
+
+            // Each document is compiled with its own diagnostics so one failure
+            // can never be attributed to another document or stop the batch.
+            DiagnosticSink documentSink;
+            Compiler documentCompiler(documentSink);
+            document.result = documentCompiler.Compile(documentOptions);
+
+            document.succeeded = document.result.succeeded && !documentSink.HasErrors();
+            document.errorCount = documentSink.ErrorCount();
+            document.diagnostics = documentSink.FormatErrors();
+            document.sourceElementCount = document.result.elementCount;
+            document.nativeElementCount = document.result.nativeElementCount;
+            document.styleCount = document.result.styleCount;
+            document.eventBindingCount = document.result.eventBindingCount;
+
+            std::cout << "  " << (document.succeeded ? "compiled " : "failed   ") << document.documentName
+                      << "  ->  " << document.applicationName << "  (" << document.sourceElementCount
+                      << " source elements, " << document.nativeElementCount << " native elements)"
+                      << "\n";
+
+            if (document.succeeded)
+            {
+                ++batch.compiledCount;
+            }
+            else
+            {
+                ++batch.failedCount;
+                std::cerr << document.diagnostics << "\n";
+            }
+
+            batch.documents.push_back(std::move(document));
+        }
+
+        batch.reportPath = options.outputDirectory / "BatchReport.json";
+        WriteBatchReport(batch);
+        return batch;
+    }
+
+    void Compiler::WriteBatchReport(const BatchCompilationResult& batch) const
+    {
+        using namespace CodeGeneration;
+
+        std::ostringstream report;
+        report << "{\n";
+        report << "  \"project\": \"RoboHTMLCompiler\",\n";
+        report << "  \"mode\": \"batch\",\n";
+        report << "  \"input\": " << Quote(batch.sourceDirectory.generic_string()) << ",\n";
+        report << "  \"output\": " << Quote(batch.outputDirectory.generic_string()) << ",\n";
+        report << "  \"compiled\": " << batch.compiledCount << ",\n";
+        report << "  \"failed\": " << batch.failedCount << ",\n";
+        report << "  \"documents\": [\n";
+
+        for (std::size_t index = 0; index < batch.documents.size(); ++index)
+        {
+            const BatchDocument& document = batch.documents[index];
+
+            std::vector<std::string> outputs;
+            if (!document.result.webTarget.documentPath.empty())
+            {
+                outputs.push_back(Quote(document.result.webTarget.documentPath.generic_string()));
+            }
+            if (!document.result.nativeTarget.headerPath.empty())
+            {
+                outputs.push_back(Quote(document.result.nativeTarget.headerPath.generic_string()));
+            }
+            if (!document.result.nativeTarget.sourcePath.empty())
+            {
+                outputs.push_back(Quote(document.result.nativeTarget.sourcePath.generic_string()));
+            }
+            if (!document.result.nativeTarget.irDumpPath.empty())
+            {
+                outputs.push_back(Quote(document.result.nativeTarget.irDumpPath.generic_string()));
+            }
+
+            report << "    {\n";
+            report << "      \"document\": " << Quote(document.documentName) << ",\n";
+            report << "      \"application\": " << Quote(document.applicationName) << ",\n";
+            report << "      \"source\": " << Quote(document.documentPath.generic_string()) << ",\n";
+            report << "      \"output\": " << Quote(document.outputDirectory.generic_string()) << ",\n";
+            report << "      \"succeeded\": " << Quote(document.succeeded) << ",\n";
+            report << "      \"errors\": " << document.errorCount << ",\n";
+            report << "      \"counts\": { \"sourceElements\": " << document.sourceElementCount
+                   << ", \"nativeElements\": " << document.nativeElementCount
+                   << ", \"internedStyles\": " << document.styleCount
+                   << ", \"eventBindings\": " << document.eventBindingCount << " },\n";
+            report << "      \"outputs\": " << JsonArray(outputs) << ",\n";
+            report << "      \"diagnostics\": " << Quote(document.diagnostics) << "\n";
+            report << "    }" << (index + 1 == batch.documents.size() ? "" : ",") << "\n";
+        }
+
+        report << "  ]\n";
+        report << "}\n";
+
+        WriteFile(batch.reportPath, report.str());
     }
 
     void Compiler::WriteCompilationReport(const CompilationOptions& options,

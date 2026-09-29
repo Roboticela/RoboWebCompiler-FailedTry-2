@@ -1,0 +1,2376 @@
+{
+  "$schema": "RoboHTMLCompiler.HtmlElements.v1",
+  "source": "Reference/HTML/source",
+  "generator": "RoboHTMLCompiler SpecExtractor",
+  "elements": [
+    {
+      "name": "html",
+      "namespace": "HTML",
+      "sectionId": "the-html-element",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLHtmlElement",
+      "contentModel": "A head element followed by a body element.",
+      "sourceLine": 16070,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "head",
+      "namespace": "HTML",
+      "sectionId": "the-head-element",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLHeadElement",
+      "contentModel": "If the document is an iframe srcdoc document or if title information is available from a higher-level protocol: Zero or more elements of metadata content , of which no more than one is a title element and no more than one is a base element. Otherwise: One or more elements of metadata content , of which exactly one is a title element and no more than one is a base element.",
+      "sourceLine": 16131,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "title",
+      "namespace": "HTML",
+      "sectionId": "the-title-element",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLTitleElement",
+      "contentModel": "Text that is not inter-element whitespace .",
+      "sourceLine": 16199,
+      "categories": [
+        "Metadata content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "base",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLBaseElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 16299,
+      "categories": [
+        "Metadata content ."
+      ],
+      "attributes": [
+        "href",
+        "target"
+      ]
+    },
+    {
+      "name": "link",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLLinkElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 16507,
+      "categories": [
+        "Metadata content .",
+        "If the element is allowed in the body : flow content .",
+        "If the element is allowed in the body : phrasing content ."
+      ],
+      "attributes": [
+        "href",
+        "crossorigin",
+        "rel",
+        "media",
+        "integrity",
+        "hreflang",
+        "type",
+        "referrerpolicy",
+        "sizes",
+        "imagesrcset",
+        "imagesizes",
+        "as",
+        "blocking",
+        "color",
+        "disabled",
+        "fetchpriority",
+        "title"
+      ]
+    },
+    {
+      "name": "meta",
+      "namespace": "HTML",
+      "sectionId": "the-meta-element",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLMetaElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 17716,
+      "categories": [
+        "Metadata content .",
+        "If the itemprop attribute is present: flow content .",
+        "If the itemprop attribute is present: phrasing content ."
+      ],
+      "attributes": [
+        "name",
+        "http-equiv",
+        "content",
+        "charset",
+        "media"
+      ]
+    },
+    {
+      "name": "style",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLStyleElement",
+      "contentModel": "Text that gives a conformant style sheet .",
+      "sourceLine": 18964,
+      "categories": [
+        "Metadata content ."
+      ],
+      "attributes": [
+        "media",
+        "blocking",
+        "title"
+      ]
+    },
+    {
+      "name": "body",
+      "namespace": "HTML",
+      "sectionId": "the-body-element",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLBodyElement",
+      "contentModel": "Flow content .",
+      "sourceLine": 19390,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "article",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content .",
+      "sourceLine": 19502,
+      "categories": [
+        "Flow content .",
+        "Sectioning content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "section",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content .",
+      "sourceLine": 19651,
+      "categories": [
+        "Flow content .",
+        "Sectioning content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "nav",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content .",
+      "sourceLine": 19815,
+      "categories": [
+        "Flow content .",
+        "Sectioning content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "aside",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content .",
+      "sourceLine": 19998,
+      "categories": [
+        "Flow content .",
+        "Sectioning content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "h1",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLHeadingElement",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 20148,
+      "categories": [
+        "Flow content .",
+        "Heading content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "h2",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLHeadingElement",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 20148,
+      "categories": [
+        "Flow content .",
+        "Heading content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "h3",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLHeadingElement",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 20149,
+      "categories": [
+        "Flow content .",
+        "Heading content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "h4",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLHeadingElement",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 20149,
+      "categories": [
+        "Flow content .",
+        "Heading content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "h5",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLHeadingElement",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 20150,
+      "categories": [
+        "Flow content .",
+        "Heading content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "h6",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLHeadingElement",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 20151,
+      "categories": [
+        "Flow content .",
+        "Heading content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "hgroup",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Zero or more p elements, followed by one h1 , h2 , h3 , h4 , h5 , or h6 element, followed by zero or more p elements, optionally intermixed with script-supporting elements .",
+      "sourceLine": 20232,
+      "categories": [
+        "Flow content .",
+        "Heading content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "header",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content , but with no header or footer element descendants.",
+      "sourceLine": 20277,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "footer",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content , but with no header or footer element descendants.",
+      "sourceLine": 20374,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "address",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content , but with no heading content descendants, no sectioning content descendants, and no header , footer , or address element descendants.",
+      "sourceLine": 20529,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "p",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLParagraphElement",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 21200,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "hr",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLHRElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 21351,
+      "categories": [
+        "Flow content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "pre",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLPreElement",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 21465,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "blockquote",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLQuoteElement",
+      "contentModel": "Flow content .",
+      "sourceLine": 21583,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "cite"
+      ]
+    },
+    {
+      "name": "ol",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLOListElement",
+      "contentModel": "Zero or more li and script-supporting elements.",
+      "sourceLine": 21772,
+      "categories": [
+        "Flow content .",
+        "If the element's children include at least one li element: Palpable content ."
+      ],
+      "attributes": [
+        "reversed",
+        "start",
+        "type"
+      ]
+    },
+    {
+      "name": "ul",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLUListElement",
+      "contentModel": "Zero or more li and script-supporting elements.",
+      "sourceLine": 21967,
+      "categories": [
+        "Flow content .",
+        "If the element's children include at least one li element: Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "menu",
+      "namespace": "HTML",
+      "sectionId": "the-menu-element",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLMenuElement",
+      "contentModel": "Zero or more li and script-supporting elements.",
+      "sourceLine": 22035,
+      "categories": [
+        "Flow content .",
+        "If the element's children include at least one li element: Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "li",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLLIElement",
+      "contentModel": "Flow content .",
+      "sourceLine": 22087,
+      "categories": [],
+      "attributes": [
+        "value"
+      ]
+    },
+    {
+      "name": "dl",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLDListElement",
+      "contentModel": "Either: Zero or more groups each consisting of one or more dt elements followed by one or more dd elements, optionally intermixed with script-supporting elements . Or: One or more div elements, optionally intermixed with script-supporting elements .",
+      "sourceLine": 22271,
+      "categories": [
+        "Flow content .",
+        "If the element's children include at least one name-value group: Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "dt",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content , but with no header , footer , sectioning content , or heading content descendants.",
+      "sourceLine": 22558,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "dd",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content .",
+      "sourceLine": 22608,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "figure",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Either: one figcaption element followed by flow content . Or: flow content followed by one figcaption element. Or: flow content .",
+      "sourceLine": 22653,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "figcaption",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content .",
+      "sourceLine": 22849,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "main",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content .",
+      "sourceLine": 22889,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "search",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content .",
+      "sourceLine": 22998,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "div",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLDivElement",
+      "contentModel": "If the element is a child of a dl element: One or more dt elements followed by one or more dd elements, optionally intermixed with script-supporting elements . Otherwise, if the element is a descendant of an option element, an optgroup element, or a select element: transparent . Otherwise: flow content .",
+      "sourceLine": 23110,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "a",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLAnchorElement",
+      "contentModel": "Transparent , but there must be no interactive content descendant, a element descendant, or descendant with the tabindex attribute specified.",
+      "sourceLine": 23189,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "If the element has an href attribute: Interactive content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "href",
+        "target",
+        "download",
+        "ping",
+        "rel",
+        "hreflang",
+        "type",
+        "referrerpolicy"
+      ]
+    },
+    {
+      "name": "em",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 23389,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "strong",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 23484,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "small",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 23581,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "s",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 23675,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "cite",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 23716,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "q",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 23843,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "cite"
+      ]
+    },
+    {
+      "name": "dfn",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content , but there must be no dfn element descendants.",
+      "sourceLine": 23945,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "title"
+      ]
+    },
+    {
+      "name": "abbr",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 24021,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "title"
+      ]
+    },
+    {
+      "name": "ruby",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "See prose.",
+      "sourceLine": 24151,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "rt",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 24657,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "rp",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Text .",
+      "sourceLine": 24691,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "data",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLDataElement",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 24758,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "value"
+      ]
+    },
+    {
+      "name": "time",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLTimeElement",
+      "contentModel": "If the element has a datetime attribute: Phrasing content . Otherwise: Text , but must match requirements described in prose below.",
+      "sourceLine": 24836,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "datetime"
+      ]
+    },
+    {
+      "name": "code",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25178,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "var",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25245,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "samp",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25321,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "kbd",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25388,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "sub",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25446,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "sup",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25446,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "i",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25517,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "b",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25581,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "u",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25673,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "mark",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25723,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "bdi",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25876,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "dir"
+      ]
+    },
+    {
+      "name": "bdo",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25943,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "dir"
+      ]
+    },
+    {
+      "name": "span",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLSpanElement",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 25984,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "br",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLBRElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 26037,
+      "categories": [
+        "Flow content .",
+        "Phrasing content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "wbr",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Nothing .",
+      "sourceLine": 26124,
+      "categories": [
+        "Flow content .",
+        "Phrasing content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "ins",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Transparent .",
+      "sourceLine": 30382,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "cite",
+        "datetime"
+      ]
+    },
+    {
+      "name": "del",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Transparent .",
+      "sourceLine": 30474,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "cite",
+        "datetime"
+      ]
+    },
+    {
+      "name": "picture",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLPictureElement",
+      "contentModel": "Zero or more source elements, followed by one img element, optionally intermixed with script-supporting elements .",
+      "sourceLine": 30733,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Embedded content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "source",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLSourceElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 30779,
+      "categories": [],
+      "attributes": [
+        "type",
+        "media",
+        "src",
+        "srcset",
+        "sizes",
+        "width",
+        "height"
+      ]
+    },
+    {
+      "name": "img",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLImageElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 31099,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Embedded content .",
+        "Form-associated element .",
+        "If the element has a usemap or controls attribute: Interactive content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "alt",
+        "src",
+        "srcset",
+        "sizes",
+        "crossorigin",
+        "usemap",
+        "ismap",
+        "controls",
+        "width",
+        "height",
+        "referrerpolicy",
+        "decoding",
+        "loading",
+        "fetchpriority"
+      ]
+    },
+    {
+      "name": "iframe",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLIFrameElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 35287,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Embedded content .",
+        "Interactive content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "src",
+        "srcdoc",
+        "name",
+        "sandbox",
+        "allow",
+        "allowfullscreen",
+        "width",
+        "height",
+        "referrerpolicy",
+        "loading"
+      ]
+    },
+    {
+      "name": "embed",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLEmbedElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 36227,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Embedded content .",
+        "Interactive content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "src",
+        "type",
+        "width",
+        "height"
+      ]
+    },
+    {
+      "name": "object",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLObjectElement",
+      "contentModel": "Transparent .",
+      "sourceLine": 36525,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Embedded content .",
+        "Listed form-associated element .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "data",
+        "type",
+        "name",
+        "form",
+        "width",
+        "height"
+      ]
+    },
+    {
+      "name": "video",
+      "namespace": "HTML",
+      "sectionId": "the-video-element",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLVideoElement",
+      "contentModel": "If the element has a src attribute: zero or more track elements, then transparent , but with no media element descendants. If the element does not have a src attribute: zero or more source elements, then zero or more track elements, then transparent , but with no media element descendants.",
+      "sourceLine": 37049,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Embedded content .",
+        "If the element has a controls attribute: Interactive content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "src",
+        "crossorigin",
+        "poster",
+        "preload",
+        "autoplay",
+        "playsinline",
+        "loop",
+        "muted",
+        "controls",
+        "loading",
+        "width",
+        "height"
+      ]
+    },
+    {
+      "name": "audio",
+      "namespace": "HTML",
+      "sectionId": "the-audio-element",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLAudioElement",
+      "contentModel": "If the element has a src attribute: zero or more track elements, then transparent , but with no media element descendants. If the element does not have a src attribute: zero or more source elements, then zero or more track elements, then transparent , but with no media element descendants.",
+      "sourceLine": 37555,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Embedded content .",
+        "If the element has a controls attribute: Interactive content .",
+        "If the element has a controls attribute: Palpable content ."
+      ],
+      "attributes": [
+        "src",
+        "crossorigin",
+        "preload",
+        "autoplay",
+        "loop",
+        "muted",
+        "controls",
+        "loading"
+      ]
+    },
+    {
+      "name": "track",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLTrackElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 37760,
+      "categories": [],
+      "attributes": [
+        "kind",
+        "src",
+        "srclang",
+        "label",
+        "default"
+      ]
+    },
+    {
+      "name": "map",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLMapElement",
+      "contentModel": "Transparent .",
+      "sourceLine": 44628,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "name"
+      ]
+    },
+    {
+      "name": "area",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLAreaElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 44727,
+      "categories": [
+        "Flow content .",
+        "Phrasing content ."
+      ],
+      "attributes": [
+        "alt",
+        "coords",
+        "shape",
+        "href",
+        "target",
+        "download",
+        "ping",
+        "rel",
+        "referrerpolicy",
+        "hreflang",
+        "type"
+      ]
+    },
+    {
+      "name": "table",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLTableElement",
+      "contentModel": "In this order: optionally a caption element, followed by zero or more colgroup elements, followed optionally by a thead element, followed by either zero or more tbody elements or one or more tr elements, followed optionally by a tfoot element, optionally intermixed with one or more script-supporting elements .",
+      "sourceLine": 45424,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "caption",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLTableCaptionElement",
+      "contentModel": "Flow content , but with no descendant table elements.",
+      "sourceLine": 46166,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "colgroup",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLTableColElement",
+      "contentModel": "If the span attribute is present: Nothing . If the span attribute is absent: Zero or more col and template elements.",
+      "sourceLine": 46260,
+      "categories": [],
+      "attributes": [
+        "span"
+      ]
+    },
+    {
+      "name": "col",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Nothing .",
+      "sourceLine": 46315,
+      "categories": [],
+      "attributes": [
+        "span"
+      ]
+    },
+    {
+      "name": "tbody",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLTableSectionElement",
+      "contentModel": "Zero or more tr and script-supporting elements.",
+      "sourceLine": 46357,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "thead",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Zero or more tr and script-supporting elements.",
+      "sourceLine": 46498,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "tfoot",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Zero or more tr and script-supporting elements.",
+      "sourceLine": 46573,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "tr",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLTableRowElement",
+      "contentModel": "Zero or more td , th , and script-supporting elements.",
+      "sourceLine": 46611,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "td",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLTableCellElement",
+      "contentModel": "Flow content .",
+      "sourceLine": 46793,
+      "categories": [],
+      "attributes": [
+        "colspan",
+        "rowspan",
+        "headers"
+      ]
+    },
+    {
+      "name": "th",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Flow content , but with no header , footer , sectioning content , or heading content descendants.",
+      "sourceLine": 46898,
+      "categories": [],
+      "attributes": [
+        "colspan",
+        "rowspan",
+        "headers",
+        "scope",
+        "abbr"
+      ]
+    },
+    {
+      "name": "form",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLFormElement",
+      "contentModel": "Flow content , but with no form element descendants.",
+      "sourceLine": 48852,
+      "categories": [
+        "Flow content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "accept-charset",
+        "action",
+        "autocomplete",
+        "enctype",
+        "method",
+        "name",
+        "novalidate",
+        "target",
+        "rel"
+      ]
+    },
+    {
+      "name": "label",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLLabelElement",
+      "contentModel": "Phrasing content , but with no descendant labelable elements unless it is the element's labeled control , and no descendant label elements.",
+      "sourceLine": 49324,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Interactive content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "for"
+      ]
+    },
+    {
+      "name": "input",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLInputElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 49557,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "If the type attribute is not in the Hidden state: Interactive content .",
+        "If the type attribute is not in the Hidden state: Listed , labelable , submittable , resettable , and autocapitalize-and-autocorrect inheriting form-associated element .",
+        "If the type attribute is in the Hidden state: Listed , submittable , resettable , and autocapitalize-and-autocorrect inheriting form-associated element .",
+        "If the type attribute is not in the Hidden state: Palpable content ."
+      ],
+      "attributes": [
+        "accept",
+        "alpha",
+        "alt",
+        "autocomplete",
+        "checked",
+        "colorspace",
+        "dirname",
+        "disabled",
+        "form",
+        "formaction",
+        "formenctype",
+        "formmethod",
+        "formnovalidate",
+        "formtarget",
+        "height",
+        "list",
+        "max",
+        "maxlength",
+        "min",
+        "minlength",
+        "multiple",
+        "name",
+        "pattern",
+        "placeholder",
+        "popovertarget",
+        "popovertargetaction",
+        "readonly",
+        "required",
+        "size",
+        "src",
+        "step",
+        "type",
+        "value",
+        "width",
+        "title"
+      ]
+    },
+    {
+      "name": "button",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLButtonElement",
+      "contentModel": "Phrasing content , but there must be no interactive content descendant and no descendant with the tabindex attribute specified. If the element is the first child of a select element, then it may also have one descendant selectedcontent element.",
+      "sourceLine": 56664,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Interactive content .",
+        "Listed , labelable , submittable , and autocapitalize-and-autocorrect inheriting form-associated element .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "command",
+        "commandfor",
+        "disabled",
+        "form",
+        "formaction",
+        "formenctype",
+        "formmethod",
+        "formnovalidate",
+        "formtarget",
+        "name",
+        "popovertarget",
+        "popovertargetaction",
+        "type",
+        "value"
+      ]
+    },
+    {
+      "name": "select",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLSelectElement",
+      "contentModel": "Zero or one button elements if the select is a drop-down box , followed by zero or more option elements, optgroup elements, hr elements, script-supporting elements , noscript elements, or div elements.",
+      "sourceLine": 57216,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Interactive content .",
+        "Listed , labelable , submittable , resettable , and autocapitalize-and-autocorrect inheriting form-associated element .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "autocomplete",
+        "disabled",
+        "form",
+        "multiple",
+        "name",
+        "required",
+        "size"
+      ]
+    },
+    {
+      "name": "datalist",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLDataListElement",
+      "contentModel": "Either: phrasing content . element descendant, since there might be zero suggestions -- Or: Zero or more option and script-supporting elements.",
+      "sourceLine": 58169,
+      "categories": [
+        "Flow content .",
+        "Phrasing content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "optgroup",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLOptGroupElement",
+      "contentModel": "Zero or one legend element followed by zero or more option elements, script-supporting elements , noscript elements, or div elements.",
+      "sourceLine": 58280,
+      "categories": [],
+      "attributes": [
+        "disabled",
+        "label"
+      ]
+    },
+    {
+      "name": "option",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLOptionElement",
+      "contentModel": "If the element has a label attribute and a value attribute: Nothing . If the element has a label attribute but no value attribute: Text . If the element has no label attribute and is not a descendant of a datalist element: Zero or more div elements or phrasing content , but there must be no interactive content descendant, datalist element descendant, object element descendant, or descendant with the tabindex attribute specified If the element has no label attribute and is a descendant of a datalist element: Text .",
+      "sourceLine": 58411,
+      "categories": [],
+      "attributes": [
+        "disabled",
+        "label",
+        "selected",
+        "value"
+      ]
+    },
+    {
+      "name": "textarea",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLTextAreaElement",
+      "contentModel": "Text .",
+      "sourceLine": 59007,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Interactive content .",
+        "Listed , labelable , submittable , resettable , and autocapitalize-and-autocorrect inheriting form-associated element .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "autocomplete",
+        "cols",
+        "dirname",
+        "disabled",
+        "form",
+        "maxlength",
+        "minlength",
+        "name",
+        "placeholder",
+        "readonly",
+        "required",
+        "rows",
+        "wrap"
+      ]
+    },
+    {
+      "name": "output",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLOutputElement",
+      "contentModel": "Phrasing content .",
+      "sourceLine": 59541,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Listed , labelable , resettable , and autocapitalize-and-autocorrect inheriting form-associated element .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "for",
+        "form",
+        "name"
+      ]
+    },
+    {
+      "name": "progress",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLProgressElement",
+      "contentModel": "Phrasing content , but there must be no progress element descendants.",
+      "sourceLine": 59748,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Labelable element .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "value",
+        "max"
+      ]
+    },
+    {
+      "name": "meter",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLMeterElement",
+      "contentModel": "Phrasing content , but there must be no meter element descendants.",
+      "sourceLine": 59929,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Labelable element .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "value",
+        "min",
+        "max",
+        "low",
+        "high",
+        "optimum"
+      ]
+    },
+    {
+      "name": "fieldset",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLFieldSetElement",
+      "contentModel": "Optionally, a legend element, followed by flow content .",
+      "sourceLine": 60322,
+      "categories": [
+        "Flow content .",
+        "Listed and autocapitalize-and-autocorrect inheriting form-associated element .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "disabled",
+        "form",
+        "name"
+      ]
+    },
+    {
+      "name": "legend",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLLegendElement",
+      "contentModel": "If the element is a child of an optgroup element: Phrasing content , but there must be no interactive content and no descendant with the tabindex attribute. Otherwise: Phrasing content , optionally intermixed with heading content .",
+      "sourceLine": 60533,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "selectedcontent",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLSelectedContentElement",
+      "contentModel": "Nothing .",
+      "sourceLine": 60593,
+      "categories": [
+        "Phrasing content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "details",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLDetailsElement",
+      "contentModel": "One summary element followed by flow content .",
+      "sourceLine": 65555,
+      "categories": [
+        "Flow content .",
+        "Interactive content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "name",
+        "open"
+      ]
+    },
+    {
+      "name": "summary",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "Phrasing content , optionally intermixed with heading content .",
+      "sourceLine": 65987,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "dialog",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLDialogElement",
+      "contentModel": "Flow content .",
+      "sourceLine": 66390,
+      "categories": [
+        "Flow content ."
+      ],
+      "attributes": [
+        "closedby",
+        "open"
+      ]
+    },
+    {
+      "name": "script",
+      "namespace": "HTML",
+      "sectionId": "the-script-element",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLScriptElement",
+      "contentModel": "If there is no src attribute, depends on the value of the type attribute, but must match script content restrictions . If there is a src attribute, the element must be either empty or contain only script documentation that also matches script content restrictions .",
+      "sourceLine": 67444,
+      "categories": [
+        "Metadata content .",
+        "Flow content .",
+        "Phrasing content .",
+        "Script-supporting element ."
+      ],
+      "attributes": [
+        "type",
+        "src",
+        "nomodule",
+        "async",
+        "defer",
+        "blocking",
+        "crossorigin",
+        "referrerpolicy",
+        "integrity",
+        "fetchpriority"
+      ]
+    },
+    {
+      "name": "noscript",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "",
+      "contentModel": "When scripting is disabled , in a head element: in any order, zero or more link elements, zero or more style elements, and zero or more meta elements. When scripting is disabled , not in a head element: transparent , but there must be no noscript element descendants. Otherwise: text that conforms to the requirements given in the prose.",
+      "sourceLine": 69234,
+      "categories": [
+        "Metadata content .",
+        "Flow content .",
+        "Phrasing content ."
+      ],
+      "attributes": []
+    },
+    {
+      "name": "template",
+      "namespace": "HTML",
+      "sectionId": "the-template-element",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLTemplateElement",
+      "contentModel": "Nothing (for clarification, see example ).",
+      "sourceLine": 69408,
+      "categories": [
+        "Metadata content .",
+        "Flow content .",
+        "Phrasing content .",
+        "Script-supporting element ."
+      ],
+      "attributes": [
+        "for",
+        "shadowrootmode",
+        "shadowrootdelegatesfocus",
+        "shadowrootserializable",
+        "shadowrootslotassignment",
+        "shadowrootclonable",
+        "shadowrootcustomelementregistry"
+      ]
+    },
+    {
+      "name": "slot",
+      "namespace": "HTML",
+      "sectionId": "the-slot-element",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLSlotElement",
+      "contentModel": "Transparent",
+      "sourceLine": 70043,
+      "categories": [
+        "Flow content .",
+        "Phrasing content ."
+      ],
+      "attributes": [
+        "name"
+      ]
+    },
+    {
+      "name": "canvas",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLCanvasElement",
+      "contentModel": "Transparent , but with no interactive content descendants except for a elements, img elements with usemap attributes, button elements, input elements whose type attribute are in the Checkbox or Radio Button states, input elements that are buttons , and select elements with a multiple attribute or a display size greater than 1.",
+      "sourceLine": 70195,
+      "categories": [
+        "Flow content .",
+        "Phrasing content .",
+        "Embedded content .",
+        "Palpable content ."
+      ],
+      "attributes": [
+        "width",
+        "height"
+      ]
+    },
+    {
+      "name": "applet",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154894,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "acronym",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154897,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "bgsound",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154900,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "dir",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154903,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "noframes",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154908,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "isindex",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154911,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "keygen",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154914,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "listing",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154923,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "menuitem",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154926,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "nextid",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154930,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "noembed",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154933,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "param",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154936,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "plaintext",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154940,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "rb",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154943,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "rtc",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154944,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "strike",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154948,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "xmp",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154951,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "basefont",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154954,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "big",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154955,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "blink",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154956,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "center",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154957,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "font",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154958,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "multicol",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154960,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "nobr",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154961,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "spacer",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154962,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "tt",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 154963,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "marquee",
+      "namespace": "HTML",
+      "sectionId": "the-marquee-element",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 155237,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "frameset",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 155421,
+      "categories": [],
+      "attributes": []
+    },
+    {
+      "name": "frame",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": true,
+      "globalAttributes": false,
+      "domInterface": "",
+      "contentModel": "",
+      "sourceLine": 155447,
+      "categories": [],
+      "attributes": []
+    }
+  ]
+}

@@ -1,0 +1,1188 @@
+{
+  "$schema": "RoboHTMLCompiler.HtmlAttributes.v1",
+  "source": "Reference/HTML/source",
+  "attributes": [
+    {
+      "name": "abbr",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "th"
+      ]
+    },
+    {
+      "name": "accept",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input"
+      ]
+    },
+    {
+      "name": "accept-charset",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "form"
+      ]
+    },
+    {
+      "name": "action",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "form"
+      ]
+    },
+    {
+      "name": "allow",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "iframe"
+      ]
+    },
+    {
+      "name": "allowfullscreen",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "iframe"
+      ]
+    },
+    {
+      "name": "alpha",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input"
+      ]
+    },
+    {
+      "name": "alt",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "area",
+        "img",
+        "input"
+      ]
+    },
+    {
+      "name": "as",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "link"
+      ]
+    },
+    {
+      "name": "async",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "script"
+      ]
+    },
+    {
+      "name": "autocomplete",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "form",
+        "input",
+        "select",
+        "textarea"
+      ]
+    },
+    {
+      "name": "autoplay",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "audio",
+        "video"
+      ]
+    },
+    {
+      "name": "blocking",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "link",
+        "script",
+        "style"
+      ]
+    },
+    {
+      "name": "charset",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "meta"
+      ]
+    },
+    {
+      "name": "checked",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input"
+      ]
+    },
+    {
+      "name": "cite",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "blockquote",
+        "del",
+        "ins",
+        "q"
+      ]
+    },
+    {
+      "name": "closedby",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "dialog"
+      ]
+    },
+    {
+      "name": "color",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "link"
+      ]
+    },
+    {
+      "name": "colorspace",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input"
+      ]
+    },
+    {
+      "name": "cols",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "textarea"
+      ]
+    },
+    {
+      "name": "colspan",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "td",
+        "th"
+      ]
+    },
+    {
+      "name": "command",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button"
+      ]
+    },
+    {
+      "name": "commandfor",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button"
+      ]
+    },
+    {
+      "name": "content",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "meta"
+      ]
+    },
+    {
+      "name": "controls",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "audio",
+        "img",
+        "video"
+      ]
+    },
+    {
+      "name": "coords",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "area"
+      ]
+    },
+    {
+      "name": "crossorigin",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "audio",
+        "img",
+        "link",
+        "script",
+        "video"
+      ]
+    },
+    {
+      "name": "data",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "object"
+      ]
+    },
+    {
+      "name": "datetime",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "del",
+        "ins",
+        "time"
+      ]
+    },
+    {
+      "name": "decoding",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "img"
+      ]
+    },
+    {
+      "name": "default",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "track"
+      ]
+    },
+    {
+      "name": "defer",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "script"
+      ]
+    },
+    {
+      "name": "dir",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "bdi",
+        "bdo"
+      ]
+    },
+    {
+      "name": "dirname",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input",
+        "textarea"
+      ]
+    },
+    {
+      "name": "disabled",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button",
+        "fieldset",
+        "input",
+        "link",
+        "optgroup",
+        "option",
+        "select",
+        "textarea"
+      ]
+    },
+    {
+      "name": "download",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "a",
+        "area"
+      ]
+    },
+    {
+      "name": "enctype",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "form"
+      ]
+    },
+    {
+      "name": "fetchpriority",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "img",
+        "link",
+        "script"
+      ]
+    },
+    {
+      "name": "for",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "label",
+        "output",
+        "template"
+      ]
+    },
+    {
+      "name": "form",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button",
+        "fieldset",
+        "input",
+        "object",
+        "output",
+        "select",
+        "textarea"
+      ]
+    },
+    {
+      "name": "formaction",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button",
+        "input"
+      ]
+    },
+    {
+      "name": "formenctype",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button",
+        "input"
+      ]
+    },
+    {
+      "name": "formmethod",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button",
+        "input"
+      ]
+    },
+    {
+      "name": "formnovalidate",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button",
+        "input"
+      ]
+    },
+    {
+      "name": "formtarget",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button",
+        "input"
+      ]
+    },
+    {
+      "name": "headers",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "td",
+        "th"
+      ]
+    },
+    {
+      "name": "height",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "canvas",
+        "embed",
+        "iframe",
+        "img",
+        "input",
+        "object",
+        "source",
+        "video"
+      ]
+    },
+    {
+      "name": "high",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "meter"
+      ]
+    },
+    {
+      "name": "href",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "a",
+        "area",
+        "base",
+        "link"
+      ]
+    },
+    {
+      "name": "hreflang",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "a",
+        "area",
+        "link"
+      ]
+    },
+    {
+      "name": "http-equiv",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "meta"
+      ]
+    },
+    {
+      "name": "imagesizes",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "link"
+      ]
+    },
+    {
+      "name": "imagesrcset",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "link"
+      ]
+    },
+    {
+      "name": "integrity",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "link",
+        "script"
+      ]
+    },
+    {
+      "name": "ismap",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "img"
+      ]
+    },
+    {
+      "name": "kind",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "track"
+      ]
+    },
+    {
+      "name": "label",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "optgroup",
+        "option",
+        "track"
+      ]
+    },
+    {
+      "name": "list",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input"
+      ]
+    },
+    {
+      "name": "loading",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "audio",
+        "iframe",
+        "img",
+        "video"
+      ]
+    },
+    {
+      "name": "loop",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "audio",
+        "video"
+      ]
+    },
+    {
+      "name": "low",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "meter"
+      ]
+    },
+    {
+      "name": "max",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input",
+        "meter",
+        "progress"
+      ]
+    },
+    {
+      "name": "maxlength",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input",
+        "textarea"
+      ]
+    },
+    {
+      "name": "media",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "link",
+        "meta",
+        "source",
+        "style"
+      ]
+    },
+    {
+      "name": "method",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "form"
+      ]
+    },
+    {
+      "name": "min",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input",
+        "meter"
+      ]
+    },
+    {
+      "name": "minlength",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input",
+        "textarea"
+      ]
+    },
+    {
+      "name": "multiple",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input",
+        "select"
+      ]
+    },
+    {
+      "name": "muted",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "audio",
+        "video"
+      ]
+    },
+    {
+      "name": "name",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button",
+        "details",
+        "fieldset",
+        "form",
+        "iframe",
+        "input",
+        "map",
+        "meta",
+        "object",
+        "output",
+        "select",
+        "slot",
+        "textarea"
+      ]
+    },
+    {
+      "name": "nomodule",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "script"
+      ]
+    },
+    {
+      "name": "novalidate",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "form"
+      ]
+    },
+    {
+      "name": "open",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "details",
+        "dialog"
+      ]
+    },
+    {
+      "name": "optimum",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "meter"
+      ]
+    },
+    {
+      "name": "pattern",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input"
+      ]
+    },
+    {
+      "name": "ping",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "a",
+        "area"
+      ]
+    },
+    {
+      "name": "placeholder",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input",
+        "textarea"
+      ]
+    },
+    {
+      "name": "playsinline",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "video"
+      ]
+    },
+    {
+      "name": "popovertarget",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button",
+        "input"
+      ]
+    },
+    {
+      "name": "popovertargetaction",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button",
+        "input"
+      ]
+    },
+    {
+      "name": "poster",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "video"
+      ]
+    },
+    {
+      "name": "preload",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "audio",
+        "video"
+      ]
+    },
+    {
+      "name": "readonly",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input",
+        "textarea"
+      ]
+    },
+    {
+      "name": "referrerpolicy",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "a",
+        "area",
+        "iframe",
+        "img",
+        "link",
+        "script"
+      ]
+    },
+    {
+      "name": "rel",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "a",
+        "area",
+        "form",
+        "link"
+      ]
+    },
+    {
+      "name": "required",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input",
+        "select",
+        "textarea"
+      ]
+    },
+    {
+      "name": "reversed",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "ol"
+      ]
+    },
+    {
+      "name": "rows",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "textarea"
+      ]
+    },
+    {
+      "name": "rowspan",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "td",
+        "th"
+      ]
+    },
+    {
+      "name": "sandbox",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "iframe"
+      ]
+    },
+    {
+      "name": "scope",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "th"
+      ]
+    },
+    {
+      "name": "selected",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "option"
+      ]
+    },
+    {
+      "name": "shadowrootclonable",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "template"
+      ]
+    },
+    {
+      "name": "shadowrootcustomelementregistry",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "template"
+      ]
+    },
+    {
+      "name": "shadowrootdelegatesfocus",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "template"
+      ]
+    },
+    {
+      "name": "shadowrootmode",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "template"
+      ]
+    },
+    {
+      "name": "shadowrootserializable",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "template"
+      ]
+    },
+    {
+      "name": "shadowrootslotassignment",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "template"
+      ]
+    },
+    {
+      "name": "shape",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "area"
+      ]
+    },
+    {
+      "name": "size",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input",
+        "select"
+      ]
+    },
+    {
+      "name": "sizes",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "img",
+        "link",
+        "source"
+      ]
+    },
+    {
+      "name": "span",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "col",
+        "colgroup"
+      ]
+    },
+    {
+      "name": "src",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "audio",
+        "embed",
+        "iframe",
+        "img",
+        "input",
+        "script",
+        "source",
+        "track",
+        "video"
+      ]
+    },
+    {
+      "name": "srcdoc",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "iframe"
+      ]
+    },
+    {
+      "name": "srclang",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "track"
+      ]
+    },
+    {
+      "name": "srcset",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "img",
+        "source"
+      ]
+    },
+    {
+      "name": "start",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "ol"
+      ]
+    },
+    {
+      "name": "step",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input"
+      ]
+    },
+    {
+      "name": "target",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "a",
+        "area",
+        "base",
+        "form"
+      ]
+    },
+    {
+      "name": "title",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "abbr",
+        "dfn",
+        "input",
+        "link",
+        "style"
+      ]
+    },
+    {
+      "name": "type",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "a",
+        "area",
+        "button",
+        "embed",
+        "input",
+        "link",
+        "object",
+        "ol",
+        "script",
+        "source"
+      ]
+    },
+    {
+      "name": "usemap",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "img"
+      ]
+    },
+    {
+      "name": "value",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "button",
+        "data",
+        "input",
+        "li",
+        "meter",
+        "option",
+        "progress"
+      ]
+    },
+    {
+      "name": "width",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "canvas",
+        "embed",
+        "iframe",
+        "img",
+        "input",
+        "object",
+        "source",
+        "video"
+      ]
+    },
+    {
+      "name": "wrap",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "textarea"
+      ]
+    }
+  ]
+}

@@ -6,14 +6,14 @@
 // JSON, HTML or CSS at run time:
 //
 //     Registry/*.json                 (hand authored vocabulary)
-//     Generated/Registry/*.json       (mined from Reference/HTML)
+//     CompilerKnowledge/Vocabulary/*.json       (mined from Reference/HTML)
 //                    |
 //                    v
 //             RegistryCompiler
 //                    |
-//                    +--> Generated/Include/RoboHTMLCompiler/GeneratedEnums.h
-//                    +--> Generated/Include/RoboHTMLCompiler/GeneratedRegistries.h
-//                    +--> Generated/Source/GeneratedRegistries.cpp
+//                    +--> CompilerKnowledge/Include/RoboHTMLCompiler/GeneratedEnums.h
+//                    +--> CompilerKnowledge/Include/RoboHTMLCompiler/GeneratedRegistries.h
+//                    +--> CompilerKnowledge/Source/GeneratedRegistries.cpp
 //
 // Cross references are validated: an unknown native kind, an unknown native
 // property or a route for an unregistered attribute is a hard error, so the
@@ -213,7 +213,8 @@ namespace
             LoadPropertyRegistry(handRegistryDirectory / "NativePropertyRegistry.json");
             LoadSemantics(handRegistryDirectory / "AttributeSemantics.json");
 
-            LoadDeprecatedElements(extractedRegistryDirectory / "DeprecatedElements.json");
+            LoadDeprecatedElements(extractedRegistryDirectory / "DeprecatedElements.json",
+                                   handRegistryDirectory / "ObsoleteVocabulary.json");
             LoadHtmlElements(extractedRegistryDirectory / "HtmlElements.json",
                              handRegistryDirectory / "ElementNormalization.json");
             LoadGlobalAttributes(extractedRegistryDirectory / "GlobalAttributes.json",
@@ -733,7 +734,10 @@ namespace
             }
         }
 
-        void LoadDeprecatedElements(const fs::path& path)
+        /// The mined obsolete vocabulary plus the hand-authored legacy list.
+        /// An entry is never implemented; it exists so that the compiler can
+        /// reject it precisely instead of reporting an unknown feature.
+        void LoadDeprecatedElements(const fs::path& path, const fs::path& legacyPath)
         {
             const JsonValue root = ReadJson(path);
             for (const std::string& name : root.GetStringArray("elements"))
@@ -744,6 +748,35 @@ namespace
             {
                 deprecatedAttributes.insert(name);
             }
+
+            if (!fs::exists(legacyPath))
+            {
+                return;
+            }
+
+            const JsonValue legacy = ReadJson(legacyPath);
+            for (const std::string& name : legacy.GetStringArray("elements"))
+            {
+                deprecatedElements.insert(name);
+            }
+            for (const JsonValue& entry : GetArray(legacy, "attributes"))
+            {
+                const std::string name = entry.IsString() ? entry.AsString() : entry.GetString("name");
+                if (!name.empty())
+                {
+                    deprecatedAttributes.insert(name);
+                }
+            }
+        }
+
+        static std::vector<JsonValue> GetArray(const JsonValue& value, const std::string& key)
+        {
+            const JsonValue* array = value.Find(key);
+            if (array == nullptr || !array->IsArray())
+            {
+                return {};
+            }
+            return array->GetElements();
         }
 
         void LoadSvgElements(const fs::path& path)
@@ -1415,10 +1448,10 @@ namespace
 int main(int argumentCount, char** argumentValues)
 {
     fs::path handRegistryDirectory = "Registry";
-    fs::path extractedRegistryDirectory = "Generated/Registry";
-    fs::path includeOutputDirectory = "Generated/Include/RoboHTMLCompiler";
-    fs::path sourceOutputDirectory = "Generated/Source";
-    fs::path coveragePath = "Generated/ImplementationCoverage.json";
+    fs::path extractedRegistryDirectory = "CompilerKnowledge/Vocabulary";
+    fs::path includeOutputDirectory = "CompilerKnowledge/Include/RoboHTMLCompiler";
+    fs::path sourceOutputDirectory = "CompilerKnowledge/Source";
+    fs::path coveragePath = "CompilerKnowledge/ImplementationCoverage.json";
 
     if (argumentCount > 1) handRegistryDirectory = argumentValues[1];
     if (argumentCount > 2) extractedRegistryDirectory = argumentValues[2];

@@ -1,0 +1,180 @@
+{
+  "$schema": "RoboHTMLCompiler.ReferenceAudit.v1",
+  "generatedBy": "RoboHTMLCompiler SpecExtractor",
+  "consume": false,
+  "referenceState": "consumed",
+  "policy": "A reference document is consumed only when every element and attribute it defines is implemented by the compiler or registered as obsolete and rejected by it. Obsolete vocabulary is never implemented: it is registered so the compiler can report a precise error instead of an unknown feature.",
+  "documents": [],
+  "consumedHistory": [
+    {
+      "document": "Reference/HTML/review-drafts/2018-07.wattsi",
+      "elements": 112,
+      "attributes": 102,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2019-01.wattsi",
+      "elements": 112,
+      "attributes": 101,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2019-07.wattsi",
+      "elements": 112,
+      "attributes": 102,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2020-01.wattsi",
+      "elements": 112,
+      "attributes": 101,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2020-07.wattsi",
+      "elements": 112,
+      "attributes": 102,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2021-01.wattsi",
+      "elements": 139,
+      "attributes": 100,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2021-07.wattsi",
+      "elements": 140,
+      "attributes": 100,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2022-01.wattsi",
+      "elements": 140,
+      "attributes": 100,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2022-07.wattsi",
+      "elements": 140,
+      "attributes": 101,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2023-01.wattsi",
+      "elements": 140,
+      "attributes": 101,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2023-07.wattsi",
+      "elements": 141,
+      "attributes": 104,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2024-01.wattsi",
+      "elements": 141,
+      "attributes": 106,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2024-07.wattsi",
+      "elements": 141,
+      "attributes": 108,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2025-01.wattsi",
+      "elements": 141,
+      "attributes": 111,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2025-07.wattsi",
+      "elements": 141,
+      "attributes": 114,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2026-01.wattsi",
+      "elements": 142,
+      "attributes": 114,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    },
+    {
+      "document": "Reference/HTML/review-drafts/2026-07.wattsi",
+      "elements": 142,
+      "attributes": 115,
+      "covered": true,
+      "missingElements": [],
+      "missingAttributes": [],
+      "consumable": true,
+      "consumed": true
+    }
+  ]
+}

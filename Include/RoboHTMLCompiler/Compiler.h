@@ -27,6 +27,7 @@
 #include "RoboHTMLCompiler/Validation.h"
 
 #include <filesystem>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -46,6 +47,18 @@ namespace RoboHTMLCompiler
         std::filesystem::path sourceDirectory;
         std::filesystem::path outputDirectory;
         std::string applicationName;
+
+        /// Explicit entry document. When empty the document is discovered from
+        /// sourceDirectory (applicationName.html, then index.html, then any
+        /// *.html). Batch compilation sets it once per document.
+        std::filesystem::path documentPath;
+
+        /// Load only the behaviour modules the document actually references.
+        /// A directory of documents otherwise shares every *.js file with every
+        /// document, so a script belonging to one page would be linked against
+        /// all the others.
+        bool referencedScriptsOnly = false;
+
         ValidationOptions validation;
         bool generateWebTarget = true;
         bool generateNativeTarget = true;
@@ -70,12 +83,45 @@ namespace RoboHTMLCompiler
         std::filesystem::path reportDirectory;
     };
 
+    /// One document of a batch compilation.
+    struct BatchDocument
+    {
+        std::string documentName;                  // "task-list.html"
+        std::string applicationName;               // "TaskList"
+        std::filesystem::path documentPath;
+        std::filesystem::path outputDirectory;
+
+        bool succeeded = false;
+        std::size_t errorCount = 0;
+        std::size_t sourceElementCount = 0;
+        std::size_t nativeElementCount = 0;
+        std::size_t styleCount = 0;
+        std::size_t eventBindingCount = 0;
+
+        /// Formatted errors, when the document failed.
+        std::string diagnostics;
+
+        CompilationResult result;
+    };
+
+    struct BatchCompilationResult
+    {
+        std::filesystem::path sourceDirectory;
+        std::filesystem::path outputDirectory;
+        std::vector<BatchDocument> documents;
+        std::size_t compiledCount = 0;
+        std::size_t failedCount = 0;
+        std::filesystem::path reportPath;
+
+        bool Succeeded() const { return !documents.empty() && failedCount == 0; }
+    };
+
     class Compiler
     {
     public:
         explicit Compiler(DiagnosticSink& diagnostics);
 
-        /// Discovers the application sources referenced by an entry document.
+        /// Resolves the application sources referenced by an entry document.
         bool DiscoverSources(const std::filesystem::path& sourceDirectory,
                              const std::string& applicationName,
                              ApplicationSource& application);
@@ -83,18 +129,30 @@ namespace RoboHTMLCompiler
         /// Runs the full pipeline.
         CompilationResult Compile(const CompilationOptions& options);
 
+        /// Compiles every HTML document in the source directory, each into its
+        /// own output subdirectory named after the document. One document that
+        /// fails does not stop the others; the batch report records all of it.
+        BatchCompilationResult CompileBatch(const CompilationOptions& options);
+
     private:
+        /// Resolves the stylesheets and scripts that sit next to a document.
+        bool CollectCompanionSources(ApplicationSource& application);
+
         bool LoadStyleSheets(const ApplicationSource& application,
                              const CompilationOptions& options,
                              StyleSheetCompiler& styleSheetCompiler);
 
         bool LoadBehaviourModules(const ApplicationSource& application,
+                                  const CompilationOptions& options,
+                                  const std::set<std::string>& referencedScripts,
                                   JavaScriptModuleCompiler& behaviourModule);
 
         void WriteCompilationReport(const CompilationOptions& options,
                                     const CompilationResult& result,
                                     const MarkupDocument& document,
                                     const NativeUiModel& model) const;
+
+        void WriteBatchReport(const BatchCompilationResult& batch) const;
 
         DiagnosticSink& diagnostics;
         const Registry& registry;

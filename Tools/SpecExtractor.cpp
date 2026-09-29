@@ -9,12 +9,12 @@
 //             v
 //     SpecExtractor
 //             |
-//             +--> Generated/Registry/HtmlElements.json
-//             +--> Generated/Registry/HtmlAttributes.json
-//             +--> Generated/Registry/GlobalAttributes.json
-//             +--> Generated/Registry/EventHandlerAttributes.json
-//             +--> Generated/Registry/DeprecatedElements.json
-//             +--> Generated/ImplementationCoverage.json
+//             +--> CompilerKnowledge/Vocabulary/HtmlElements.json
+//             +--> CompilerKnowledge/Vocabulary/HtmlAttributes.json
+//             +--> CompilerKnowledge/Vocabulary/GlobalAttributes.json
+//             +--> CompilerKnowledge/Vocabulary/EventHandlerAttributes.json
+//             +--> CompilerKnowledge/Vocabulary/DeprecatedElements.json
+//             +--> CompilerKnowledge/ImplementationCoverage.json
 //
 // The reference document is treated as an implementation checklist: everything
 // it defines must end up either in a registry or in an explicit
@@ -666,19 +666,20 @@ namespace
             const fs::path specSource = referenceDirectory / "source";
             if (!fs::exists(specSource))
             {
-                std::cerr << "[SpecExtractor] reference document not found: " << specSource.string() << "\n";
-                return false;
+                // Every reference document has been consumed. The generated
+                // registries are authoritative from here on, so regenerating is
+                // a no-op rather than a failure.
+                std::cout << "[SpecExtractor] no reference document left to mine: " << specSource.string()
+                          << "\n";
+                std::cout << "[SpecExtractor] reference fully consumed; CompilerKnowledge/Vocabulary is authoritative\n";
+                RefreshConsumedCoverage(coverageOutputPath, referenceDirectory);
+                return true;
             }
 
-            std::cout << "[SpecExtractor] reading " << specSource.string() << "\n";
-            document = std::make_unique<SpecDocument>(ReadWholeFile(specSource));
-
-            IndexHeadings();
-            CollectElements();
-            CollectGlobalAttributes();
-            CollectEventHandlerAttributes();
-            BuildAttributeIndex();
-            CollectDeprecatedAttributes();
+            if (!MineDocument(specSource))
+            {
+                return false;
+            }
 
             std::cout << "[SpecExtractor] elements:            " << elements.size() << "\n";
             std::cout << "[SpecExtractor] global attributes:   " << globalAttributes.size() << "\n";
@@ -699,6 +700,447 @@ namespace
             return true;
         }
 
+        // -------------------------------------------------------------------
+        // Reference audit
+        //
+        // The reference directory is an implementation checklist: a document is
+        // only consumed once every element and attribute it defines is either
+        // implemented by the compiler or registered as obsolete and rejected by
+        // it. Obsolete vocabulary is never implemented.
+        // -------------------------------------------------------------------
+
+        /// The vocabulary the compiler already implements or deliberately
+        /// rejects.
+        struct Vocabulary
+        {
+            std::set<std::string> elements;
+            std::set<std::string> attributes;
+            std::set<std::string> obsoleteElements;
+            std::set<std::string> obsoleteAttributes;
+        };
+
+        /// One reference document and the vocabulary it defines that the
+        /// compiler does not account for yet.
+        struct DocumentAudit
+        {
+            std::string document;
+            std::size_t elementCount = 0;
+            std::size_t attributeCount = 0;
+            std::vector<std::string> missingElements;
+            std::vector<std::string> missingAttributes;
+
+            bool IsCovered() const
+            {
+                return missingElements.empty() && missingAttributes.empty();
+            }
+        };
+
+        /// Audits every reference document under the directory and, with
+        /// consume, deletes the ones the compiler fully accounts for.
+        bool Sweep(const fs::path& referenceDirectory,
+                   const fs::path& generatedRegistryDirectory,
+                   const fs::path& handRegistryDirectory,
+                   const fs::path& reportPath,
+                   bool consume)
+        {
+            const std::vector<fs::path> documents = CollectDocuments(referenceDirectory);
+            if (documents.empty())
+            {
+                JsonValue report = JsonValue::MakeObject();
+                report.Set("$schema", JsonValue::MakeString("RoboHTMLCompiler.ReferenceAudit.v1"));
+                report.Set("generatedBy", JsonValue::MakeString("RoboHTMLCompiler SpecExtractor"));
+                report.Set("consume", JsonValue::MakeBoolean(consume));
+                report.Set("referenceState", JsonValue::MakeString("consumed"));
+                report.Set("policy", JsonValue::MakeString(AuditPolicy()));
+                report.Set("documents", JsonValue::MakeArray());
+
+                JsonValue consumedHistory = JsonValue::MakeArray();
+                std::set<std::string> alreadyConsumed;
+                CollectConsumedHistory(reportPath, consumedHistory, alreadyConsumed);
+                report.Set("consumedHistory", std::move(consumedHistory));
+
+                WriteFile(reportPath, report.Serialize(true));
+                std::cout << "[SpecExtractor] no reference documents found under "
+                          << referenceDirectory.string()
+                          << "; consumption history preserved in " << reportPath.string() << "\n";
+                return true;
+            }
+
+            const Vocabulary vocabulary = LoadVocabulary(generatedRegistryDirectory, handRegistryDirectory);
+
+            JsonValue report = JsonValue::MakeObject();
+            report.Set("$schema", JsonValue::MakeString("RoboHTMLCompiler.ReferenceAudit.v1"));
+            report.Set("generatedBy", JsonValue::MakeString("RoboHTMLCompiler SpecExtractor"));
+            report.Set("consume", JsonValue::MakeBoolean(consume));
+            report.Set("policy", JsonValue::MakeString(AuditPolicy()));
+
+            // Consumed documents stay in the report as history, so the audit
+            // trail survives later runs over the shrunken reference.
+            JsonValue history = JsonValue::MakeArray();
+            std::set<std::string> seenHistory;
+            CollectConsumedHistory(reportPath, history, seenHistory);
+
+            JsonValue records = JsonValue::MakeArray();
+            std::size_t consumedCount = 0;
+            std::size_t pendingCount = 0;
+
+            for (const fs::path& documentPath : documents)
+            {
+                if (!MineDocument(documentPath))
+                {
+                    return false;
+                }
+
+                const DocumentAudit audit = Audit(documentPath, vocabulary);
+
+                std::cout << "[SpecExtractor] " << (audit.IsCovered() ? "covered " : "pending ")
+                          << audit.document << "  elements: " << audit.elementCount
+                          << "  attributes: " << audit.attributeCount << "\n";
+
+                if (!audit.IsCovered())
+                {
+                    ++pendingCount;
+                    for (const std::string& name : audit.missingElements)
+                    {
+                        std::cout << "[SpecExtractor]   not implemented: <" << name << ">\n";
+                    }
+                    for (const std::string& name : audit.missingAttributes)
+                    {
+                        std::cout << "[SpecExtractor]   not implemented: attribute " << name << "\n";
+                    }
+                }
+
+                JsonValue record = JsonValue::MakeObject();
+                record.Set("document", JsonValue::MakeString(audit.document));
+                record.Set("elements", JsonValue::MakeInteger(static_cast<long long>(audit.elementCount)));
+                record.Set("attributes", JsonValue::MakeInteger(static_cast<long long>(audit.attributeCount)));
+                record.Set("covered", JsonValue::MakeBoolean(audit.IsCovered()));
+
+                JsonValue missingElements = JsonValue::MakeArray();
+                for (const std::string& name : audit.missingElements)
+                {
+                    missingElements.Append(JsonValue::MakeString(name));
+                }
+                record.Set("missingElements", std::move(missingElements));
+
+                JsonValue missingAttributes = JsonValue::MakeArray();
+                for (const std::string& name : audit.missingAttributes)
+                {
+                    missingAttributes.Append(JsonValue::MakeString(name));
+                }
+                record.Set("missingAttributes", std::move(missingAttributes));
+
+                // The Wattsi review drafts are revision snapshots: once their
+                // vocabulary is accounted for they are redundant. The
+                // preprocessed standard is the regeneration input, so it is
+                // audited but retained.
+                const bool consumable = documentPath.extension() == ".wattsi";
+                if (!consumable)
+                {
+                    std::cout << "[SpecExtractor] retained " << audit.document
+                              << " (regeneration input, not a revision snapshot)\n";
+                }
+                record.Set("consumable", JsonValue::MakeBoolean(consumable));
+
+                bool consumed = false;
+                if (consume && consumable && audit.IsCovered())
+                {
+                    std::error_code errorCode;
+                    fs::remove(documentPath, errorCode);
+                    if (errorCode)
+                    {
+                        std::cerr << "[SpecExtractor] failed to consume " << documentPath.string() << ": "
+                                  << errorCode.message() << "\n";
+                    }
+                    else
+                    {
+                        consumed = true;
+                        ++consumedCount;
+                    }
+                }
+                record.Set("consumed", JsonValue::MakeBoolean(consumed));
+
+                if (consumed && seenHistory.insert(audit.document).second)
+                {
+                    history.Append(record);
+                }
+
+                records.Append(std::move(record));
+            }
+
+            report.Set("documents", std::move(records));
+            report.Set("consumedHistory", std::move(history));
+            WriteFile(reportPath, report.Serialize(true));
+
+            std::cout << "[SpecExtractor] " << consumedCount << " consumed, " << pendingCount
+                      << " still pending\n";
+            return true;
+        }
+
+        /// Once the reference is gone the mined vocabulary sections of the
+        /// coverage manifest must survive, but its file inventory must stop
+        /// claiming to describe files that no longer exist. The retired paths
+        /// are kept so the manifest still records what the reference was.
+        static void RefreshConsumedCoverage(const fs::path& coveragePath, const fs::path& referenceDirectory)
+        {
+            std::error_code errorCode;
+            if (!fs::is_regular_file(coveragePath, errorCode))
+            {
+                return;
+            }
+
+            std::string error;
+            const std::optional<JsonValue> parsed = JsonValue::Parse(ReadWholeFile(coveragePath), &error);
+            if (!parsed.has_value())
+            {
+                return;
+            }
+
+            JsonValue root = *parsed;
+
+            JsonValue retired = JsonValue::MakeArray();
+            std::set<std::string> seen;
+            auto carry = [&](const char* key) {
+                const JsonValue* array = root.Find(key);
+                if (array == nullptr || !array->IsArray())
+                {
+                    return;
+                }
+                for (const JsonValue& entry : array->GetElements())
+                {
+                    const std::string path =
+                        entry.IsString() ? entry.AsString() : entry.GetString("path");
+                    if (!path.empty() && seen.insert(path).second)
+                    {
+                        retired.Append(JsonValue::MakeString(path));
+                    }
+                }
+            };
+            carry("retiredReferences");
+            carry("references");
+
+            root.Set("referenceState", JsonValue::MakeString("consumed"));
+            root.Set("retiredReferences", std::move(retired));
+            root.Set("references", JsonValue::MakeArray());
+
+            WriteFile(coveragePath, root.Serialize(true));
+            std::cout << "[SpecExtractor] coverage manifest refreshed for the consumed reference\n";
+        }
+
+        /// The rule the audit enforces, recorded verbatim in every report.
+        static const char* AuditPolicy()
+        {
+            return "A reference document is consumed only when every element and attribute it defines "
+                   "is implemented by the compiler or registered as obsolete and rejected by it. "
+                   "Obsolete vocabulary is never implemented: it is registered so the compiler can "
+                   "report a precise error instead of an unknown feature.";
+        }
+
+        /// Copies the already-consumed entries of a previous audit report into
+        /// the new one.
+        static void CollectConsumedHistory(const fs::path& reportPath,
+                                          JsonValue& history,
+                                          std::set<std::string>& seen)
+        {
+            std::error_code errorCode;
+            if (!fs::is_regular_file(reportPath, errorCode))
+            {
+                return;
+            }
+
+            std::string error;
+            const std::optional<JsonValue> previous = JsonValue::Parse(ReadWholeFile(reportPath), &error);
+            if (!previous.has_value())
+            {
+                return;
+            }
+
+            static const char* const keys[] = { "consumedHistory", "documents" };
+            for (const char* key : keys)
+            {
+                const JsonValue* array = previous->Find(key);
+                if (array == nullptr || !array->IsArray())
+                {
+                    continue;
+                }
+
+                for (const JsonValue& entry : array->GetElements())
+                {
+                    if (!entry.GetBoolean("consumed"))
+                    {
+                        continue;
+                    }
+
+                    const std::string document = entry.GetString("document");
+                    if (document.empty() || !seen.insert(document).second)
+                    {
+                        continue;
+                    }
+                    history.Append(entry);
+                }
+            }
+        }
+
+        /// Every reference document that carries vocabulary: the preprocessed
+        /// standard and the Wattsi review drafts.
+        static std::vector<fs::path> CollectDocuments(const fs::path& referenceDirectory)
+        {
+            std::vector<fs::path> documents;
+
+            const fs::path specSource = referenceDirectory / "source";
+            std::error_code errorCode;
+            if (fs::is_regular_file(specSource, errorCode))
+            {
+                documents.push_back(specSource);
+            }
+
+            for (fs::recursive_directory_iterator iterator(referenceDirectory, errorCode), end;
+                 iterator != end && !errorCode;
+                 iterator.increment(errorCode))
+            {
+                if (!iterator->is_regular_file() || iterator->path().extension() != ".wattsi")
+                {
+                    continue;
+                }
+                documents.push_back(iterator->path());
+            }
+
+            std::sort(documents.begin(), documents.end());
+            return documents;
+        }
+
+        /// The compiler's vocabulary, read from the generated registry JSON and
+        /// the hand-authored registries.
+        static Vocabulary LoadVocabulary(const fs::path& generatedDirectory, const fs::path& handDirectory)
+        {
+            Vocabulary vocabulary;
+
+            ReadNames(generatedDirectory / "HtmlElements.json", "elements", "name", vocabulary.elements);
+            ReadNames(generatedDirectory / "HtmlAttributes.json", "attributes", "name", vocabulary.attributes);
+            ReadNames(generatedDirectory / "GlobalAttributes.json", "attributes", "name", vocabulary.attributes);
+            ReadNames(generatedDirectory / "EventHandlerAttributes.json", "attributes", "name",
+                      vocabulary.attributes);
+            ReadNames(generatedDirectory / "DeprecatedElements.json", "elements", "name",
+                      vocabulary.obsoleteElements);
+            ReadNames(generatedDirectory / "DeprecatedElements.json", "attributes", "name",
+                      vocabulary.obsoleteAttributes);
+
+            ReadNames(handDirectory / "ElementNormalization.json", "elements", "source", vocabulary.elements);
+            ReadNames(handDirectory / "AttributeRouting.json", "routes", "attribute", vocabulary.attributes);
+            ReadNames(handDirectory / "GlobalAttributeExtensions.json", "attributes", "name",
+                      vocabulary.attributes);
+            ReadNames(handDirectory / "ObsoleteVocabulary.json", "elements", "name", vocabulary.obsoleteElements);
+            ReadNames(handDirectory / "ObsoleteVocabulary.json", "attributes", "name",
+                      vocabulary.obsoleteAttributes);
+            ReadNames(handDirectory / "SvgElementRegistry.json", "elements", "name", vocabulary.elements);
+            ReadNames(handDirectory / "SvgAttributeRegistry.json", "attributes", "name", vocabulary.attributes);
+            ReadNames(handDirectory / "MathMlElementRegistry.json", "elements", "name", vocabulary.elements);
+            ReadNames(handDirectory / "MathMlAttributeRegistry.json", "attributes", "name",
+                      vocabulary.attributes);
+            ReadNames(handDirectory / "AriaAttributeRegistry.json", "attributes", "name",
+                      vocabulary.attributes);
+
+            return vocabulary;
+        }
+
+        static void ReadNames(const fs::path& path,
+                              const std::string& arrayKey,
+                              const std::string& field,
+                              std::set<std::string>& target)
+        {
+            std::error_code errorCode;
+            if (!fs::is_regular_file(path, errorCode))
+            {
+                return;
+            }
+
+            std::string error;
+            const std::optional<JsonValue> root = JsonValue::Parse(ReadWholeFile(path), &error);
+            if (!root.has_value())
+            {
+                return;
+            }
+
+            const JsonValue* array = root->Find(arrayKey);
+            if (array == nullptr || !array->IsArray())
+            {
+                return;
+            }
+
+            for (const JsonValue& entry : array->GetElements())
+            {
+                const std::string name = entry.IsString() ? entry.AsString() : entry.GetString(field);
+                if (!name.empty())
+                {
+                    target.insert(ToLower(name));
+                }
+            }
+        }
+
+        DocumentAudit Audit(const fs::path& documentPath, const Vocabulary& vocabulary) const
+        {
+            DocumentAudit audit;
+            audit.document = DisplayPath(documentPath);
+            audit.elementCount = elements.size();
+            audit.attributeCount = elementAttributes.size();
+
+            for (const ExtractedElement& element : elements)
+            {
+                const std::string name = ToLower(element.name);
+                if (vocabulary.elements.count(name) == 0 && vocabulary.obsoleteElements.count(name) == 0)
+                {
+                    audit.missingElements.push_back(name);
+                }
+            }
+
+            for (const auto& entry : elementAttributes)
+            {
+                const std::string name = ToLower(entry.first);
+                if (vocabulary.attributes.count(name) == 0 && vocabulary.obsoleteAttributes.count(name) == 0)
+                {
+                    audit.missingAttributes.push_back(name);
+                }
+            }
+
+            std::sort(audit.missingElements.begin(), audit.missingElements.end());
+            std::sort(audit.missingAttributes.begin(), audit.missingAttributes.end());
+            return audit;
+        }
+
+        static std::string DisplayPath(const fs::path& path)
+        {
+            std::error_code errorCode;
+            const fs::path relative = fs::relative(path, fs::current_path(), errorCode);
+            if (errorCode)
+            {
+                return path.generic_string();
+            }
+            return relative.generic_string();
+        }
+
+        /// Mines one reference document into the extractor's working state.
+        bool MineDocument(const fs::path& documentPath)
+        {
+            if (!fs::exists(documentPath))
+            {
+                std::cerr << "[SpecExtractor] reference document not found: " << documentPath.string()
+                          << "\n";
+                return false;
+            }
+
+            Reset();
+            std::cout << "[SpecExtractor] reading " << documentPath.string() << "\n";
+            document = std::make_unique<SpecDocument>(ReadWholeFile(documentPath));
+
+            IndexHeadings();
+            CollectElements();
+            CollectGlobalAttributes();
+            CollectEventHandlerAttributes();
+            BuildAttributeIndex();
+            CollectDeprecatedAttributes();
+            return true;
+        }
+
     private:
         std::unique_ptr<SpecDocument> document;
         std::vector<std::size_t> headingIndices;            // tag indices of headings, in order
@@ -708,6 +1150,18 @@ namespace
         std::map<std::string, ExtractedAttribute> elementAttributes;
         std::set<std::string> obsoleteElementNames;
         std::set<std::string> obsoleteAttributeNames;
+
+        void Reset()
+        {
+            document.reset();
+            headingIndices.clear();
+            elements.clear();
+            globalAttributes.clear();
+            eventHandlerAttributes.clear();
+            elementAttributes.clear();
+            obsoleteElementNames.clear();
+            obsoleteAttributeNames.clear();
+        }
 
         static std::string ReadWholeFile(const fs::path& path)
         {
@@ -898,48 +1352,63 @@ namespace
                 }
 
                 const SpecTag& heading = TagAt(headingIndices[headingPosition]);
-                const std::string name = ElementNameFromHeading(headingIndices[headingPosition]);
-                if (name.empty() || FindElement(name) != nullptr)
+                const std::vector<std::string> names = ElementNamesFromHeading(headingIndices[headingPosition]);
+                if (names.empty())
                 {
                     continue;
                 }
 
                 const bool obsolete = RegionIsObsolete(headingPosition);
 
-                ExtractedElement extracted;
-                extracted.name = name;
-                extracted.obsolete = obsolete;
-                extracted.line = document->LineForOffset(heading.startOffset);
-                extracted.sectionId = heading.GetAttribute("id");
-                ExtractElementDetails(headingPosition, extracted);
-                elements.push_back(extracted);
-
-                if (obsolete)
+                for (const std::string& name : names)
                 {
-                    obsoleteElementNames.insert(name);
+                    if (FindElement(name) != nullptr)
+                    {
+                        continue;
+                    }
+
+                    ExtractedElement extracted;
+                    extracted.name = name;
+                    extracted.obsolete = obsolete;
+                    extracted.line = document->LineForOffset(heading.startOffset);
+                    extracted.sectionId = heading.GetAttribute("id");
+                    ExtractElementDetails(headingPosition, extracted);
+                    elements.push_back(extracted);
+
+                    if (obsolete)
+                    {
+                        obsoleteElementNames.insert(name);
+                    }
                 }
             }
         }
 
-        /// The element name carried by a section heading: either the heading's
-        /// own identifier, a <dfn id="the-NAME-element"> inside it, or the text
-        /// of the heading's <dfn>.
-        std::string ElementNameFromHeading(std::size_t headingIndex) const
+        /// The element names carried by a section heading. One heading may name
+        /// several elements ("The h1, h2, h3, h4, h5, and h6 elements"), and an
+        /// older revision may identify them only through the heading's own
+        /// identifier or through the text of each <dfn> inside it.
+        std::vector<std::string> ElementNamesFromHeading(std::size_t headingIndex) const
         {
+            std::vector<std::string> names;
             const SpecTag& heading = TagAt(headingIndex);
 
             const std::string fromHeading =
                 ElementNameFromIdentifier(ToLower(heading.GetAttribute("id")));
             if (!fromHeading.empty())
             {
-                return fromHeading;
+                names.push_back(fromHeading);
             }
+
+            // The heading's content runs to its matching end tag, not to the end
+            // of the opening tag.
+            const std::size_t headingEnd =
+                document->MatchingEndTagOffset(headingIndex, heading.endOffset);
 
             const std::size_t first = document->FirstTagAtOrAfter(heading.startOffset);
             for (std::size_t index = first; index < document->Tags().size(); ++index)
             {
                 const SpecTag& tag = TagAt(index);
-                if (tag.startOffset >= heading.endOffset)
+                if (tag.startOffset >= headingEnd)
                 {
                     break;
                 }
@@ -948,21 +1417,20 @@ namespace
                     continue;
                 }
 
-                const std::string fromDfn = ElementNameFromIdentifier(ToLower(tag.GetAttribute("id")));
-                if (!fromDfn.empty())
+                std::string name = ElementNameFromIdentifier(ToLower(tag.GetAttribute("id")));
+                if (name.empty())
                 {
-                    return fromDfn;
+                    name = ToLower(Trim(document->TextBetween(
+                        tag.endOffset, document->MatchingEndTagOffset(index, headingEnd))));
                 }
 
-                const std::string name = ToLower(Trim(
-                    document->TextBetween(tag.endOffset, document->MatchingEndTagOffset(index, heading.endOffset))));
-                if (IsValidElementName(name))
+                if (IsValidElementName(name) && std::find(names.begin(), names.end(), name) == names.end())
                 {
-                    return name;
+                    names.push_back(name);
                 }
             }
 
-            return std::string();
+            return names;
         }
 
         /// Position within headingIndices of the heading that encloses an offset.
@@ -1652,23 +2120,71 @@ namespace
 int main(int argumentCount, char** argumentValues)
 {
     fs::path referenceDirectory = "Reference/HTML";
-    fs::path registryOutputDirectory = "Generated/Registry";
-    fs::path coverageOutputPath = "Generated/ImplementationCoverage.json";
+    fs::path registryOutputDirectory = "CompilerKnowledge/Vocabulary";
+    fs::path coverageOutputPath = "CompilerKnowledge/ImplementationCoverage.json";
+    fs::path handRegistryDirectory = "Registry";
+    fs::path auditReportPath = "CompilerKnowledge/ReferenceAudit.json";
 
-    if (argumentCount > 1)
+    bool sweep = false;
+    bool consume = false;
+
+    std::vector<std::string> positional;
+    for (int index = 1; index < argumentCount; ++index)
     {
-        referenceDirectory = argumentValues[1];
+        const std::string argument = argumentValues[index];
+
+        if (argument == "--sweep")
+        {
+            sweep = true;
+            continue;
+        }
+        if (argument == "--consume")
+        {
+            consume = true;
+            continue;
+        }
+        if (argument == "--hand-registry" && index + 1 < argumentCount)
+        {
+            handRegistryDirectory = argumentValues[++index];
+            continue;
+        }
+        if (argument == "--audit-report" && index + 1 < argumentCount)
+        {
+            auditReportPath = argumentValues[++index];
+            continue;
+        }
+
+        positional.push_back(argument);
     }
-    if (argumentCount > 2)
+
+    if (positional.size() > 0)
     {
-        registryOutputDirectory = argumentValues[2];
+        referenceDirectory = positional[0];
     }
-    if (argumentCount > 3)
+    if (positional.size() > 1)
     {
-        coverageOutputPath = argumentValues[3];
+        registryOutputDirectory = positional[1];
+    }
+    if (positional.size() > 2)
+    {
+        coverageOutputPath = positional[2];
     }
 
     SpecExtractor extractor;
+
+    if (sweep)
+    {
+        if (!extractor.Sweep(referenceDirectory,
+                             registryOutputDirectory,
+                             handRegistryDirectory,
+                             auditReportPath,
+                             consume))
+        {
+            return 1;
+        }
+        return 0;
+    }
+
     if (!extractor.Run(referenceDirectory, registryOutputDirectory, coverageOutputPath))
     {
         return 1;
