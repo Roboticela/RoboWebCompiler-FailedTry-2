@@ -235,6 +235,33 @@ namespace
         return true;
     }
 
+    /// "the-html-element" -> "html". Older revisions of the reference identify
+    /// an element's section with such an identifier instead of a <dfn element>
+    /// marker; an identifier that does not name exactly one element yields an
+    /// empty string.
+    std::string ElementNameFromIdentifier(const std::string& identifier)
+    {
+        static const std::string prefix = "the-";
+        static const std::string suffix = "-element";
+
+        if (identifier.size() <= prefix.size() + suffix.size())
+        {
+            return std::string();
+        }
+        if (identifier.compare(0, prefix.size(), prefix) != 0)
+        {
+            return std::string();
+        }
+        if (identifier.compare(identifier.size() - suffix.size(), suffix.size(), suffix) != 0)
+        {
+            return std::string();
+        }
+
+        const std::string name =
+            identifier.substr(prefix.size(), identifier.size() - prefix.size() - suffix.size());
+        return IsValidElementName(name) ? name : std::string();
+    }
+
     /// Strips the "*", "†" style markers the standard appends to inline code.
     std::string CleanCodeName(const std::string& value)
     {
@@ -845,6 +872,97 @@ namespace
                     obsoleteElementNames.insert(name);
                 }
             }
+
+            CollectElementsFromElementLists();
+        }
+
+        /// Older revisions describe an element with an element list and a
+        /// section heading rather than a <dfn element> marker, and some
+        /// revisions mark only part of their vocabulary that way. Every element
+        /// list whose element is not already known is recovered from its
+        /// heading, which keeps every revision auditable.
+        void CollectElementsFromElementLists()
+        {
+            for (std::size_t index = 0; index < document->Tags().size(); ++index)
+            {
+                const SpecTag& tag = TagAt(index);
+                if (tag.isEndTag || tag.name != "dl" || !tag.HasClass("element"))
+                {
+                    continue;
+                }
+
+                const std::size_t headingPosition = HeadingPositionFor(tag.startOffset);
+                if (headingPosition >= headingIndices.size())
+                {
+                    continue;
+                }
+
+                const SpecTag& heading = TagAt(headingIndices[headingPosition]);
+                const std::string name = ElementNameFromHeading(headingIndices[headingPosition]);
+                if (name.empty() || FindElement(name) != nullptr)
+                {
+                    continue;
+                }
+
+                const bool obsolete = RegionIsObsolete(headingPosition);
+
+                ExtractedElement extracted;
+                extracted.name = name;
+                extracted.obsolete = obsolete;
+                extracted.line = document->LineForOffset(heading.startOffset);
+                extracted.sectionId = heading.GetAttribute("id");
+                ExtractElementDetails(headingPosition, extracted);
+                elements.push_back(extracted);
+
+                if (obsolete)
+                {
+                    obsoleteElementNames.insert(name);
+                }
+            }
+        }
+
+        /// The element name carried by a section heading: either the heading's
+        /// own identifier, a <dfn id="the-NAME-element"> inside it, or the text
+        /// of the heading's <dfn>.
+        std::string ElementNameFromHeading(std::size_t headingIndex) const
+        {
+            const SpecTag& heading = TagAt(headingIndex);
+
+            const std::string fromHeading =
+                ElementNameFromIdentifier(ToLower(heading.GetAttribute("id")));
+            if (!fromHeading.empty())
+            {
+                return fromHeading;
+            }
+
+            const std::size_t first = document->FirstTagAtOrAfter(heading.startOffset);
+            for (std::size_t index = first; index < document->Tags().size(); ++index)
+            {
+                const SpecTag& tag = TagAt(index);
+                if (tag.startOffset >= heading.endOffset)
+                {
+                    break;
+                }
+                if (tag.isEndTag || tag.name != "dfn")
+                {
+                    continue;
+                }
+
+                const std::string fromDfn = ElementNameFromIdentifier(ToLower(tag.GetAttribute("id")));
+                if (!fromDfn.empty())
+                {
+                    return fromDfn;
+                }
+
+                const std::string name = ToLower(Trim(
+                    document->TextBetween(tag.endOffset, document->MatchingEndTagOffset(index, heading.endOffset))));
+                if (IsValidElementName(name))
+                {
+                    return name;
+                }
+            }
+
+            return std::string();
         }
 
         /// Position within headingIndices of the heading that encloses an offset.

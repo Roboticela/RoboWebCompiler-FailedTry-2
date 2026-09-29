@@ -248,23 +248,23 @@ namespace RoboHTMLCompiler
                 continue;
             }
 
-            // 2. JavaScript source may never appear in markup.
+            // 2. JavaScript source may never appear in markup. Every 'on*'
+            //    attribute is an event handler content attribute, whether or not
+            //    the reference still defines it, so it is always an inline
+            //    JavaScript violation rather than an unknown attribute.
             const AttributeDefinition* eventHandler =
                 registry.FindAttribute(MarkupNamespace::Html, attribute.name, element.sourceTag);
             if ((eventHandler != nullptr && eventHandler->isEventHandler) || StartsWith(attribute.name, "on"))
             {
-                if (eventHandler != nullptr && eventHandler->isEventHandler)
-                {
-                    diagnostics.Error(DiagnosticCode::InlineEventHandlerAttribute,
-                                      attribute.location,
-                                      "Inline JavaScript event handlers are not allowed.",
-                                      std::string(),
-                                      "Bind the behaviour from a JavaScript module.",
-                                      QuoteValue(attribute),
-                                      "element.addEventListener(\"" +
-                                          std::string(attribute.name.substr(2)) + "\", handler)");
-                    continue;
-                }
+                diagnostics.Error(DiagnosticCode::InlineEventHandlerAttribute,
+                                  attribute.location,
+                                  "Inline JavaScript event handlers are not allowed.",
+                                  std::string(),
+                                  "Bind the behaviour from a JavaScript module.",
+                                  QuoteValue(attribute),
+                                  "element.addEventListener(\"" + std::string(attribute.name.substr(2)) +
+                                      "\", handler)");
+                continue;
             }
 
             // 3. Application metadata is intentionally extensible.
