@@ -58,17 +58,24 @@ namespace RoboTest
         return ValidateDocument(WrapBody(body), sink, options);
     }
 
-    /// True when the sink contains an error with the given code.
-    inline bool HasError(const DiagnosticSink& sink, DiagnosticCode code)
+    /// The first error with the given code, so a test can assert on where the
+    /// report points and not only that it happened.
+    inline const Diagnostic* FindDiagnostic(const DiagnosticSink& sink, DiagnosticCode code)
     {
         for (const Diagnostic& diagnostic : sink.GetDiagnostics())
         {
             if (diagnostic.severity == Severity::Error && diagnostic.code == code)
             {
-                return true;
+                return &diagnostic;
             }
         }
-        return false;
+        return nullptr;
+    }
+
+    /// True when the sink contains an error with the given code.
+    inline bool HasError(const DiagnosticSink& sink, DiagnosticCode code)
+    {
+        return FindDiagnostic(sink, code) != nullptr;
     }
 
     inline std::string FormatDiagnostics(const DiagnosticSink& sink)

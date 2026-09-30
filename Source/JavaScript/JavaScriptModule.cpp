@@ -21,6 +21,78 @@ namespace RoboHTMLCompiler
             return line;
         }
 
+        /// One-based character number in the line that contains `offset`.
+        int ColumnOf(const std::string& text, std::size_t offset)
+        {
+            std::size_t lineStart = 0;
+
+            for (std::size_t index = 0; index < offset && index < text.size(); ++index)
+            {
+                if (text[index] == '\n')
+                {
+                    lineStart = index + 1;
+                }
+            }
+
+            return static_cast<int>(offset - lineStart) + 1;
+        }
+
+        /// The text of one line, without its terminator, so a report can show
+        /// the code the reader has to change.
+        std::string LineTextOf(const std::string& text, int line)
+        {
+            int current = 1;
+            std::size_t start = 0;
+
+            for (;;)
+            {
+                if (current == line || start >= text.size())
+                {
+                    break;
+                }
+
+                const std::size_t newline = text.find('\n', start);
+                if (newline == std::string::npos)
+                {
+                    start = text.size();
+                    break;
+                }
+
+                start = newline + 1;
+                ++current;
+            }
+
+            if (start >= text.size())
+            {
+                return std::string();
+            }
+
+            std::size_t end = text.find('\n', start);
+            if (end == std::string::npos)
+            {
+                end = text.size();
+            }
+
+            std::string result = text.substr(start, end - start);
+            while (!result.empty() && (result.back() == '\r' || result.back() == ' ' || result.back() == '\t'))
+            {
+                result.pop_back();
+            }
+
+            std::size_t firstNonSpace = 0;
+            while (firstNonSpace < result.size() && (result[firstNonSpace] == ' ' || result[firstNonSpace] == '\t'))
+            {
+                ++firstNonSpace;
+            }
+
+            if (firstNonSpace > 0)
+            {
+                result.erase(0, firstNonSpace);
+            }
+
+            return result;
+        }
+
         bool IsIdentifierCharacter(char character)
         {
             return std::isalnum(static_cast<unsigned char>(character)) != 0 || character == '_' ||
@@ -138,6 +210,35 @@ namespace RoboHTMLCompiler
         ScanModule(fileName, source);
     }
 
+    void JavaScriptModuleCompiler::RecordQuery(const std::string& targetId,
+                                              const std::string& fileName,
+                                              const std::string& source,
+                                              std::size_t offset)
+    {
+        if (targetId.empty())
+        {
+            return;
+        }
+
+        // The same id is often used twice - declared once, listened to once -
+        // and one position is enough to fix it, so the first one is kept.
+        for (const QueryBinding& existing : elementQueries)
+        {
+            if (existing.targetId == targetId)
+            {
+                return;
+            }
+        }
+
+        QueryBinding query;
+        query.targetId = targetId;
+        query.sourceFile = fileName;
+        query.line = LineOf(source, offset);
+        query.column = ColumnOf(source, offset);
+        query.sourceLine = LineTextOf(source, query.line);
+        elementQueries.push_back(std::move(query));
+    }
+
     void JavaScriptModuleCompiler::ScanModule(const std::string& fileName, const std::string& source)
     {
         // Variable -> element id, discovered from
@@ -179,17 +280,40 @@ namespace RoboHTMLCompiler
                     continue;
                 }
 
+                // The position reported is the first character of the id itself,
+                // inside its quotes, past a leading '#' when the query uses one.
+                std::size_t idOffset = cursor + 1;
+
                 if (query == "querySelector" && !argument.empty() && argument[0] == '#')
                 {
                     argument = argument.substr(1);
+                    ++idOffset;
+                }
+                else if (query == "querySelector")
+                {
+                    // `querySelector(".row")` is not an element id, and pretending
+                    // it is would report a missing element named `.row`. The
+                    // compiler follows id lookups; anything else is named here, at
+                    // the line that uses it.
+                    const SourceLocation location{ fileName, LineOf(source, cursor), ColumnOf(source, cursor),
+                                                   cursor };
+
+                    diagnostics.Error(
+                        DiagnosticCode::MalformedBehaviorScript,
+                        location,
+                        "The script looks up an element with \"" + argument + "\", and only element id "
+                        "lookups are compiled.",
+                        "A compiled application finds its elements by id, so the interaction table can name "
+                        "one element per lookup.",
+                        "Give the element an id and look it up with document.getElementById(\"the-id\") or "
+                        "document.querySelector(\"#the-id\").",
+                        argument);
+
+                    position = cursor;
+                    continue;
                 }
 
-                if (!argument.empty() &&
-                    std::find(referencedElementIds.begin(), referencedElementIds.end(), argument) ==
-                        referencedElementIds.end())
-                {
-                    referencedElementIds.push_back(argument);
-                }
+                RecordQuery(argument, fileName, source, idOffset);
 
                 std::string variableName;
                 if (FindAssignedVariable(source, position, variableName))
@@ -320,11 +444,7 @@ namespace RoboHTMLCompiler
                 binding.line = LineOf(source, position);
                 eventBindings.push_back(std::move(binding));
 
-                if (std::find(referencedElementIds.begin(), referencedElementIds.end(), targetId) ==
-                    referencedElementIds.end())
-                {
-                    referencedElementIds.push_back(targetId);
-                }
+                RecordQuery(targetId, fileName, source, position);
             }
 
             position = cursor;
@@ -355,22 +475,31 @@ namespace RoboHTMLCompiler
     {
         const std::size_t errorsBefore = diagnostics.ErrorCount();
 
-        // Every referenced element must exist in the validated document.
-        for (const std::string& elementId : referencedElementIds)
+        // Every element a behaviour module looks up must exist in the page it is
+        // compiled for.
+        for (const QueryBinding& query : elementQueries)
         {
-            if (document.FindElementById(elementId) == nullptr)
+            if (document.FindElementById(query.targetId) != nullptr)
             {
-                SourceLocation location;
-                location.file = document.sourceFile;
-
-                diagnostics.Error(DiagnosticCode::UnresolvedScriptResource,
-                                  location,
-                                  "The behaviour module references element id '" + elementId +
-                                      "', which does not exist in the document.",
-                                  "The generated interaction table would contain a dangling binding.",
-                                  "Add id=\"" + elementId + "\" in the markup, or correct the reference.",
-                                  elementId);
+                continue;
             }
+
+            SourceLocation location;
+            // The report points into the script, at the line that asks for the
+            // missing element: that is the line the reader has to change.
+            location.file = query.sourceFile.empty() ? document.sourceFile : query.sourceFile;
+            location.line = query.line > 0 ? query.line : 1;
+            location.column = query.column > 0 ? query.column : 1;
+            location.offset = 0;
+
+            diagnostics.Error(DiagnosticCode::UnresolvedScriptResource,
+                              location,
+                              "The script asks for element id \"" + query.targetId +
+                                  "\", but this page has no element with that id.",
+                              std::string(),
+                              "Give the element id=\"" + query.targetId +
+                                  "\" in the HTML file, or correct the id in the script so the two match exactly.",
+                              query.sourceLine);
         }
 
         return diagnostics.ErrorCount() == errorsBefore;

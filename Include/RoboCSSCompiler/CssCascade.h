@@ -60,8 +60,19 @@ namespace RoboCSSCompiler
         /// The value of a property, or nullptr when nothing specified it.
         const CSSValue* Get(CSSPropertyId id) const;
 
-        /// Stores a value, replacing an earlier one.
-        void Set(CSSPropertyId id, CSSValue value);
+        /// Stores a value, replacing an earlier one. `source` is where the value
+        /// was written, when it came from a declaration. The location is kept by
+        /// value: a computed style outlives the parse that produced it - the
+        /// result carries it out of the cascade - and a pointer into a
+        /// stylesheet would be a lifetime the style cannot promise. Keeping the
+        /// location lets a later stage report a problem with a value at the line
+        /// it was written on instead of at the element that happened to use it.
+        void Set(CSSPropertyId id, CSSValue value, const CSSSourceLocation& source = CSSSourceLocation{});
+
+        /// Where a property's value was written, or an invalid location when the
+        /// value came from somewhere else (an initial value, or a value the
+        /// compiler resolved itself).
+        CSSSourceLocation SourceLocationOf(CSSPropertyId id) const;
 
         /// Removes a property, which is what `unset` does to an inherited
         /// property that the parent did not set.
@@ -95,6 +106,8 @@ namespace RoboCSSCompiler
 
     private:
         std::vector<std::pair<CSSPropertyId, CSSValue>> values;
+        /// Where each value came from, kept sorted and in step with `values`.
+        std::vector<std::pair<CSSPropertyId, CSSSourceLocation>> sources;
         std::map<std::string, std::vector<CSSComponentValue>> customProperties;
     };
 

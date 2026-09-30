@@ -362,6 +362,78 @@ namespace RoboCSSCompiler
         return nullptr;
     }
 
+    const char* CSSPropertyRegistry::SuggestSimilarName(const std::string& name) const
+    {
+        // Only near misses: a reader who wrote `colour` wants `color`, and a
+        // reader who wrote `grid` wants a different answer than a guess.
+        const auto distanceWithin = [](const std::string& left, const std::string& right, std::size_t limit) {
+            if (left.size() > right.size() + limit || right.size() > left.size() + limit)
+            {
+                return limit + 1;
+            }
+
+            std::vector<std::size_t> previous(right.size() + 1);
+            std::vector<std::size_t> current(right.size() + 1);
+
+            for (std::size_t index = 0; index <= right.size(); ++index)
+            {
+                previous[index] = index;
+            }
+
+            for (std::size_t row = 1; row <= left.size(); ++row)
+            {
+                current[0] = row;
+                std::size_t rowMinimum = current[0];
+
+                for (std::size_t column = 1; column <= right.size(); ++column)
+                {
+                    const std::size_t substitution =
+                        previous[column - 1] + (left[row - 1] == right[column - 1] ? 0 : 1);
+                    const std::size_t deletion = previous[column] + 1;
+                    const std::size_t insertion = current[column - 1] + 1;
+                    current[column] = std::min(substitution, std::min(deletion, insertion));
+                    rowMinimum = std::min(rowMinimum, current[column]);
+                }
+
+                if (rowMinimum > limit)
+                {
+                    return limit + 1;
+                }
+
+                previous.swap(current);
+            }
+
+            return previous[right.size()];
+        };
+
+        const char* best = nullptr;
+        std::size_t bestDistance = 3;
+
+        for (const CSSPropertyDefinition& definition : Properties())
+        {
+            const std::size_t distance = distanceWithin(name, definition.name, 2);
+
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = definition.name;
+            }
+        }
+
+        for (const CSSShorthandDefinition& shorthand : Shorthands())
+        {
+            const std::size_t distance = distanceWithin(name, shorthand.name, 2);
+
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = shorthand.name;
+            }
+        }
+
+        return best;
+    }
+
     bool CSSPropertyRegistry::IsKnownUnsupportedName(const std::string& name) const
     {
         // A property this compiler compiles is never reported as unimplemented,

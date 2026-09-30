@@ -94,8 +94,22 @@ namespace RoboHTMLCompiler
         std::string found;
         std::string expected;
 
+        /// The tool the reader has to fix the problem in, and the code it should
+        /// be reported under, when they are not this compiler's own.
+        ///
+        /// A CSS problem is a RoboCSSCompiler problem: it is reported under its
+        /// RCC code, by name, so that a reader who looks up RCC010 in the CSS
+        /// documentation finds the CSS documentation. Both fields empty - the
+        /// usual case - means "this compiler, this code".
+        std::string tool;
+        std::string codeOverride;
+
         /// The canonical code such as "MHTML001".
         std::string CodeString() const;
+
+        /// The tool that owns the diagnostic: "RoboHTMLCompiler" or
+        /// "RoboCSSCompiler".
+        std::string ToolName() const;
 
         /// Additional code accepted for this diagnostic, or an empty string.
         std::string AliasString() const;
@@ -148,6 +162,12 @@ namespace RoboHTMLCompiler
 
         /// Renders only errors.
         std::string FormatErrors() const;
+
+        /// Renders only warnings. A warning is a feature the compiler read and
+        /// could not apply - `max-width` is one - so a build that prints its
+        /// errors and hides its warnings silently does nothing for a declaration
+        /// the author wrote.
+        std::string FormatWarnings() const;
 
     private:
         std::vector<Diagnostic> diagnostics;

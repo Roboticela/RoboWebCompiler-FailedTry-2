@@ -19,162 +19,157 @@ namespace RoboHTMLCompiler
         const DiagnosticInfo DiagnosticCatalog[] = {
             { DiagnosticCode::InlineCssAttribute, "MHTML001", "RHC1007",
               "Inline CSS is forbidden",
-              "RoboHTMLCompiler keeps structure, appearance and behaviour in separate languages. Appearance lives "
-              "in CSS or Tailwind stylesheets that the style compiler owns, so a style content attribute would "
-              "bypass build-time style resolution and reintroduce runtime CSS parsing.",
-              "Replace style=\"...\" with a class reference and define the rule in a stylesheet." },
+              "A style attribute puts CSS inside the HTML file, and the compiler reads CSS before it builds "
+              "the page. It cannot read a style attribute at that point.",
+              "Give the element a class and write the rule in a .css file, for example class=\"card\" with "
+              ".card { padding: 16px }." },
 
             { DiagnosticCode::InlineEventHandlerAttribute, "MHTML002", "",
               "Inline JavaScript event handlers are forbidden",
-              "Content attribute event handlers embed JavaScript source inside markup. Behaviour is a separate "
-              "language with its own frontend, so inline handlers are rejected and never compiled.",
-              "Use a JavaScript module: element.addEventListener(\"click\", handler)." },
+              "An attribute such as onclick puts JavaScript inside the HTML file, and this compiler reads "
+              "JavaScript from .js files instead.",
+              "Move the code into a .js file and write element.addEventListener(\"click\", handler)." },
 
             { DiagnosticCode::AttributeNotAllowed, "MHTML003", "",
               "Attribute is not valid for this element",
-              "The reference vocabulary declares which attributes may appear on which elements. Silently accepting "
-              "an attribute would invent semantics the element does not have.",
-              "Remove the attribute, or use an element that the attribute is defined for." },
+              "HTML gives each element its own list of attributes, and this attribute is not on the list for "
+              "this element.",
+              "Remove the attribute, or use an element that does allow it." },
 
             { DiagnosticCode::UnknownHtmlElement, "MHTML004", "",
               "Unknown HTML element",
-              "The element is not part of the registered vocabulary and does not follow the custom element naming "
-              "rules, so the compiler cannot assign it a native category.",
-              "Check the spelling, or register the element as a custom element (lowercase, containing a hyphen)." },
+              "The compiler does not know this tag. It is not an HTML element, and it is not a valid custom "
+              "element name either.",
+              "Check the spelling, or name a custom element with lowercase letters and a hyphen, for example "
+              "<my-panel>." },
 
             { DiagnosticCode::UnknownAttribute, "MHTML005", "",
               "Unknown attribute",
-              "Unknown attributes are never allowed to disappear silently: an unrecognised attribute usually means "
-              "a typo or a feature the compiler does not yet implement. data-* attributes are the documented "
-              "extension mechanism.",
-              "Remove the attribute, correct its spelling, or use a data-* attribute." },
+              "This attribute is not part of HTML, so the compiler will not guess what it means.",
+              "Correct the spelling, remove it, or use a data-* attribute for values of your own." },
 
             { DiagnosticCode::UnknownAriaAttribute, "MHTML006", "",
               "Unknown ARIA attribute",
-              "ARIA attributes are validated against the ARIA registry and mapped into typed accessibility "
-              "properties; an unrecognised aria-* attribute would have to be treated as an opaque string.",
-              "Use an ARIA attribute from the registry, or remove the attribute." },
+              "This aria-* attribute is not one of the ARIA names the compiler knows.",
+              "Check the spelling against the ARIA list, or remove the attribute." },
 
             { DiagnosticCode::InlineStyleElement, "RHC1001", "",
               "Inline <style> is forbidden",
-              "A <style> element embeds CSS source inside HTML. Stylesheets must live in their own files so the "
-              "style compiler can resolve them at build time.",
-              "Move the rules into an external .css file referenced by the application." },
+              "A <style> block puts CSS inside the HTML file, and the compiler reads the CSS files first.",
+              "Move the rules into a .css file and link it: <link rel=\"stylesheet\" href=\"app.css\">." },
 
             { DiagnosticCode::InlineScriptContent, "RHC1002", "",
               "Inline JavaScript is forbidden",
-              "JavaScript source inside markup cannot be compiled as a separate module and would force the native "
-              "runtime to carry a browser-style script engine.",
-              "Move the code into a .js file and reference it with <script src=\"...\">." },
+              "Code inside a <script> block sits in the HTML file, and this compiler reads JavaScript from .js "
+              "files instead.",
+              "Move the code into a .js file and load it with <script src=\"app.js\" defer></script>." },
 
             { DiagnosticCode::ObsoleteElement, "RHC1004", "",
               "Obsolete element",
-              "The reference marks this element as obsolete: it has no modern native equivalent and the compiler "
-              "will not invent semantics for it.",
-              "Use the replacement element the reference recommends." },
+              "HTML no longer has this element, so there is nothing for the compiler to build.",
+              "Use the element that replaced it. The message names it." },
 
             { DiagnosticCode::ObsoleteAttribute, "RHC1005", "",
               "Obsolete attribute",
-              "The reference marks this attribute as obsolete. Compiling it would require inventing behaviour that "
-              "no longer exists.",
-              "Remove the attribute and express the intent with current vocabulary or a stylesheet." },
+              "HTML no longer has this attribute, so its meaning is gone.",
+              "Remove it and express the same idea with a class and a CSS rule, or with a data-* attribute." },
 
             { DiagnosticCode::InvalidCustomElementName, "RHC1006", "",
               "Invalid custom element name",
-              "Custom element names must be lowercase, contain at least one hyphen, and start with an ASCII letter.",
-              "Rename the element, for example <my-component>." },
+              "A custom element name must use lowercase letters, contain a hyphen, and start with a letter.",
+              "Rename it, for example <my-panel>." },
 
             { DiagnosticCode::DuplicateAttribute, "RHC1008", "",
               "Duplicate attribute",
-              "An element may not carry the same attribute twice; the value would be ambiguous.",
-              "Remove the duplicate attribute." },
+              "The same attribute is written twice, so the compiler would not know which value to use.",
+              "Keep one of the two and delete the other." },
 
             { DiagnosticCode::MalformedMarkup, "RHC1009", "",
               "Malformed markup",
-              "The markup could not be tokenised, so no reliable AST exists. The compiler never guesses at the "
-              "author's intent.",
-              "Fix the markup at the reported position." },
+              "The HTML at this position does not follow the HTML rules, so no page can be built from it.",
+              "Fix the HTML at the line and column shown above." },
 
             { DiagnosticCode::UnexpectedEndTag, "RHC1010", "",
               "Unexpected end tag",
-              "An end tag was found that does not match any open element, so the document structure is ambiguous.",
-              "Remove the end tag or add the matching start tag." },
+              "This closing tag does not close anything, so the structure of the page is unclear.",
+              "Delete the closing tag, or add the matching opening tag before it." },
 
             { DiagnosticCode::MissingRequiredAttribute, "RHC1011", "",
               "Required attribute is missing",
-              "The element has no useful native representation without this attribute.",
-              "Add the attribute listed in the suggestion." },
+              "Without this attribute the element cannot be built.",
+              "Add the attribute named in the message above." },
 
             { DiagnosticCode::InvalidAttributeValue, "RHC1012", "",
               "Invalid attribute value",
-              "The value is outside the vocabulary the registry defines for this attribute, which would leave the "
-              "native property in an undefined state.",
-              "Use one of the accepted values listed in the suggestion." },
+              "This value is not one of the values HTML allows for this attribute.",
+              "Use one of the values listed in the message above." },
 
             { DiagnosticCode::InvalidInputType, "RHC1013", "",
               "Unknown input type",
-              "The input element is specialised from its type attribute at compile time, so an unregistered type "
-              "cannot be lowered to a native control.",
-              "Use a registered input type." },
+              "The compiler builds a different control for each input type, and it does not know this one.",
+              "Use a type from the HTML list, for example text, email, password or number." },
 
             { DiagnosticCode::MissingDocumentElement, "RHC1014", "",
               "Missing document element",
-              "A compilable application needs an <html> document element so the native tree has a single root.",
-              "Wrap the content in <html> ... </html>." },
+              "Every page needs one <html> element to be the root of the built app.",
+              "Put the whole page inside <html> ... </html>." },
 
             { DiagnosticCode::UnresolvedStyleReference, "MCSS001", "",
               "Unresolved style reference",
-              "A class token is referenced by the markup but no stylesheet rule or Tailwind utility defines it, so "
-              "the build-time style resolution would silently drop styling.",
-              "Define the class in a stylesheet or correct the class name." },
+              "The HTML uses this class, but no CSS rule defines it, so the element would be built without the "
+              "style you meant to give it.",
+              "Add a rule for the class in a .css file, or correct the class name in the HTML." },
 
             { DiagnosticCode::MalformedStyleSheet, "MCSS002", "",
               "Malformed stylesheet",
-              "The stylesheet could not be parsed, so no style resolution is possible.",
-              "Fix the reported position in the stylesheet." },
+              "The CSS at this position does not follow the CSS rules, so the styles cannot be read.",
+              "Fix the CSS at the line and column shown above." },
 
             { DiagnosticCode::UnresolvedScriptResource, "MJS001", "",
               "Unresolved script or element reference",
-              "The behaviour module references an element that does not exist in the validated document, so the "
-              "generated interaction table would contain a dangling binding.",
-              "Add the missing id in the markup or correct the reference." },
+              "A click or an input on that id would have nothing to run on, so the compiler stops before it "
+              "builds the page.",
+              "Add the id to the element in the HTML file, or correct the id in the .js file. The two must "
+              "match letter for letter." },
 
             { DiagnosticCode::MalformedBehaviorScript, "MJS002", "",
               "Malformed behaviour module",
-              "The behaviour module could not be analysed.",
-              "Fix the reported position in the script." },
+              "The JavaScript does something this compiler does not accept, so no interaction can be built "
+              "from it.",
+              "Fix the JavaScript at the line and column shown above." },
 
             { DiagnosticCode::InvalidSvgAttribute, "MSVG001", "",
               "Invalid SVG attribute for this element",
-              "SVG attributes are individually registered and scoped to the elements the specification permits.",
-              "Remove the attribute, or use it on an element the registry allows." },
+              "SVG gives each element its own list of attributes, and this attribute is not on the list for this "
+              "element.",
+              "Remove the attribute, or use it on an SVG element that allows it." },
 
             { DiagnosticCode::UnknownSvgElement, "MSVG002", "",
               "Unknown SVG element",
-              "SVG is a first-class namespace with its own vocabulary; an unrecognised element cannot be given an "
-              "SVG native category.",
-              "Correct the element name." },
+              "This tag is not an SVG element the compiler knows.",
+              "Check the spelling of the SVG element name." },
 
             { DiagnosticCode::InvalidMathMlAttribute, "MMATH001", "",
               "Invalid MathML attribute for this element",
-              "MathML attributes are individually registered and scoped to the elements the specification permits.",
-              "Remove the attribute, or use it on an element the registry allows." },
+              "MathML gives each element its own list of attributes, and this attribute is not on the list for "
+              "this element.",
+              "Remove the attribute, or use it on a MathML element that allows it." },
 
             { DiagnosticCode::UnknownMathMlElement, "MMATH002", "",
               "Unknown MathML element",
-              "MathML is a first-class namespace with its own vocabulary and layout representation.",
-              "Correct the element name." },
+              "This tag is not a MathML element the compiler knows.",
+              "Check the spelling of the MathML element name." },
 
             { DiagnosticCode::MissingSourceFile, "RHC2001", "",
               "Source file is missing",
-              "An application source referenced by the project could not be read.",
-              "Check the file path in the project directory." },
+              "The compiler was asked to read this file or folder, and it is not there.",
+              "Check the path for typing mistakes, and make sure the file or folder really exists." },
 
             { DiagnosticCode::GeneratedOutputInvalid, "RHC2002", "",
               "Generated output failed validation",
-              "The compiler validates its own browser output before declaring success, so a malformed build can "
-              "never be reported as successful.",
-              "This is a compiler defect; please report it with the generated document." },
+              "The compiler checks the code it writes, and this check failed. This is a fault in the compiler, "
+              "not in your page.",
+              "Send the message above and the generated file to the authors of the compiler." },
         };
 
         const DiagnosticInfo* Lookup(DiagnosticCode code)
@@ -217,7 +212,21 @@ namespace RoboHTMLCompiler
 
     std::string Diagnostic::CodeString() const
     {
-        return GetDiagnosticCodeString(code);
+        return codeOverride.empty() ? std::string(GetDiagnosticCodeString(code)) : codeOverride;
+    }
+
+    std::string Diagnostic::ToolName() const
+    {
+        if (!tool.empty())
+        {
+            return tool;
+        }
+
+        // The code says who owns it: a CSS problem belongs to the CSS compiler,
+        // and everything else to this one. Naming the tool in the report matters
+        // because the two compilers have separate documentation.
+        const std::string codeText = CodeString();
+        return codeText.compare(0, 3, "RCC") == 0 ? "RoboCSSCompiler" : "RoboHTMLCompiler";
     }
 
     std::string Diagnostic::AliasString() const
@@ -230,9 +239,13 @@ namespace RoboHTMLCompiler
         const DiagnosticInfo* info = Lookup(code);
 
         std::ostringstream output;
-        output << "MyDevKit Error " << GetDiagnosticCodeString(code);
+        // The word matches the severity: a warning that reads "Error" teaches a
+        // reader to distrust the line above the code.
+        output << ToolName() << (severity == Severity::Error ? " Error " : " Warning ") << CodeString();
 
-        const char* alias = GetDiagnosticAlias(code);
+        // An alias is this compiler's own second name for a code, so a code that
+        // came from another tool has none.
+        const char* alias = codeOverride.empty() ? GetDiagnosticAlias(code) : "";
         if (alias != nullptr && alias[0] != '\0')
         {
             output << " (alias " << alias << ")";
@@ -255,15 +268,20 @@ namespace RoboHTMLCompiler
             output << "\nUse:\n    " << expected << "\n";
         }
 
+        // The catalog explains this compiler's codes. A code that came from
+        // another tool brings its own words and must not be given an explanation
+        // that belongs to a different failure.
+        const bool usesCatalog = codeOverride.empty();
+
         const std::string effectiveExplanation =
-            this->explanation.empty() && info != nullptr ? info->explanation : this->explanation;
+            this->explanation.empty() && info != nullptr && usesCatalog ? info->explanation : this->explanation;
         if (!effectiveExplanation.empty())
         {
             output << "\n" << effectiveExplanation << "\n";
         }
 
         const std::string effectiveFix =
-            suggestedFix.empty() && info != nullptr ? info->suggestedFix : suggestedFix;
+            suggestedFix.empty() && info != nullptr && usesCatalog ? info->suggestedFix : suggestedFix;
         if (!effectiveFix.empty())
         {
             output << "\nSuggested fix:\n    " << effectiveFix << "\n";
@@ -283,7 +301,7 @@ namespace RoboHTMLCompiler
             ++warningCount;
         }
 
-        if (diagnostic.message.empty())
+        if (diagnostic.message.empty() && diagnostic.codeOverride.empty())
         {
             diagnostic.message = GetDiagnosticTitle(diagnostic.code);
         }
@@ -348,6 +366,26 @@ namespace RoboHTMLCompiler
         for (const Diagnostic& diagnostic : diagnostics)
         {
             if (diagnostic.severity != Severity::Error)
+            {
+                continue;
+            }
+            if (!first)
+            {
+                output << "\n";
+            }
+            first = false;
+            output << diagnostic.Format() << "\n";
+        }
+        return output.str();
+    }
+
+    std::string DiagnosticSink::FormatWarnings() const
+    {
+        std::ostringstream output;
+        bool first = true;
+        for (const Diagnostic& diagnostic : diagnostics)
+        {
+            if (diagnostic.severity != Severity::Warning)
             {
                 continue;
             }

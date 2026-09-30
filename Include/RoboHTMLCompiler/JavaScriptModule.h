@@ -38,11 +38,22 @@ namespace RoboHTMLCompiler
     };
 
     /// A DOM query discovered in the behaviour source.
+    ///
+    /// The position is kept because this is the one thing in the pipeline whose
+    /// failure is almost always fixed by looking at one line: the script asks
+    /// for an element id, and the answer is either to write that id in the
+    /// markup or to correct it here. "Line 1, column 1 of" the document tells
+    /// the reader nothing; the line of the query tells them everything.
     struct QueryBinding
     {
         std::string targetId;
         std::string sourceFile;
         int line = 0;
+        /// One-based character number in that line, at the first character of
+        /// the id.
+        int column = 0;
+        /// The source line itself, so the report can show the code at fault.
+        std::string sourceLine;
     };
 
     class JavaScriptModuleCompiler
@@ -64,14 +75,22 @@ namespace RoboHTMLCompiler
 
         const std::vector<ScriptResource>& GetScriptResources() const { return scriptResources; }
         const std::vector<EventBinding>& GetEventBindings() const { return eventBindings; }
-        const std::vector<std::string>& GetReferencedElementIds() const { return referencedElementIds; }
+        /// Every element identity the behaviour modules look up, in the order
+        /// they were discovered, with the position that asked for it.
+        const std::vector<QueryBinding>& GetElementQueries() const { return elementQueries; }
 
     private:
         void ScanModule(const std::string& fileName, const std::string& source);
 
+        /// Records one query, keeping the first position an id was asked for at.
+        void RecordQuery(const std::string& targetId,
+                         const std::string& fileName,
+                         const std::string& source,
+                         std::size_t offset);
+
         DiagnosticSink& diagnostics;
         std::vector<ScriptResource> scriptResources;
         std::vector<EventBinding> eventBindings;
-        std::vector<std::string> referencedElementIds;
+        std::vector<QueryBinding> elementQueries;
     };
 }

@@ -391,8 +391,14 @@ namespace RoboHTMLCompiler
                                         static_cast<std::uint8_t>(alpha * 255.0f + 0.5f) };
         }
 
-        /// The compiler's warning form has no `found` field, so the subject
-        /// becomes part of the sentence rather than being dropped.
+        /// Reports a declaration the compiler compiled and could not apply.
+        ///
+        /// It is a CSS problem and it is reported as one: the CSS compiler's
+        /// name, its own RCC code, and the declaration as the subject rather than
+        /// a parenthesis inside the sentence. The location is the caller's, which
+        /// is the declaration's own when the cascade kept track of it: a warning
+        /// that points at the line of the element that used the style sends the
+        /// reader to the wrong file.
         void WarnAboutStyle(DiagnosticSink& diagnostics,
                             const SourceLocation& location,
                             std::string message,
@@ -400,13 +406,37 @@ namespace RoboHTMLCompiler
                             std::string suggestion,
                             std::string subject)
         {
-            if (!subject.empty())
+            Diagnostic diagnostic;
+            diagnostic.code = DiagnosticCode::MalformedStyleSheet;
+            diagnostic.severity = Severity::Warning;
+            diagnostic.tool = "RoboCSSCompiler";
+            diagnostic.codeOverride =
+                RoboCSSCompiler::ToString(RoboCSSCompiler::CSSDiagnosticCode::UnsupportedFeature);
+            diagnostic.location = location;
+            diagnostic.message = std::move(message);
+            diagnostic.explanation = std::move(detail);
+            diagnostic.suggestedFix = std::move(suggestion);
+            diagnostic.found = std::move(subject);
+            diagnostics.Report(std::move(diagnostic));
+        }
+
+        /// The element location replaced by the declaration's own when the cascade
+        /// kept track of where the value was written. A CSS problem reported at
+        /// the line of the element that used the style sends the reader to the
+        /// wrong file.
+        SourceLocation DeclarationLocation(const RoboCSSCompiler::CSSComputedStyle& computed,
+                                          RoboCSSCompiler::CSSPropertyId id,
+                                          const SourceLocation& fallback)
+        {
+            const RoboCSSCompiler::CSSSourceLocation written = computed.SourceLocationOf(id);
+
+            if (!written.IsValid())
             {
-                message += " (" + subject + ")";
+                return fallback;
             }
 
-            diagnostics.Warning(DiagnosticCode::MalformedStyleSheet, location, std::move(message),
-                                std::move(detail), std::move(suggestion));
+            return SourceLocation{ written.file, static_cast<int>(written.line),
+                                   static_cast<int>(written.column), written.offset };
         }
 
         /// The lowerer. One instance per compilation, holding the diagnostic sink
@@ -446,10 +476,10 @@ namespace RoboHTMLCompiler
                 {
                     if (Value(computed, maximum) != nullptr)
                     {
-                        ReportNotLowered(maximum, location,
-                                         "the native box model carries a minimum size and no maximum",
-                                         "Remove the declaration, or express the bound as a minimum on the "
-                                         "content.");
+                        ReportNotLowered(computed, maximum, location,
+                                         "The native box model has a minimum size and no maximum, so a maximum "
+                                         "bound cannot be stored.",
+                                         "Remove the declaration, or use min-width and min-height instead.");
                     }
                 }
 
@@ -479,16 +509,19 @@ namespace RoboHTMLCompiler
 
             /// Reports a feature the compiler parsed and computed but cannot put
             /// into the native style table.
-            void ReportNotLowered(CSSPropertyId id, const SourceLocation& location, const char* reason,
+            void ReportNotLowered(const RoboCSSCompiler::CSSComputedStyle& computed, CSSPropertyId id,
+                                  const SourceLocation& location, const char* reason,
                                   const char* suggestion)
             {
                 const RoboCSSCompiler::CSSPropertyDefinition* definition =
                     RoboCSSCompiler::CSSPropertyRegistry::Instance().Find(id);
                 const char* name = definition != nullptr ? definition->name : "property";
 
+                // The declaration's own line: that is the line the reader has to
+                // change, and it is in the stylesheet rather than in the page.
                 WarnAboutStyle(diagnostics,
-                                    location,
-                                    std::string("CSS property '") + name + "' is compiled but not applied.",
+                                    DeclarationLocation(computed, id, location),
+                                    std::string("'") + name + "' is compiled but not applied.",
                                     reason,
                                     suggestion,
                                     name);
@@ -521,7 +554,8 @@ namespace RoboHTMLCompiler
                 }
                 else
                 {
-                    ReportNotLowered(CSSPropertyId::Display, location, "the native layout engine has four display "
+                    ReportNotLowered(computed, CSSPropertyId::Display, location,
+                                     "the native layout engine has four display "
                                                                       "kinds",
                                      "Use block, inline, inline-block or none.");
                     return;
@@ -567,7 +601,7 @@ namespace RoboHTMLCompiler
                     }
                     else
                     {
-                        ReportNotLowered(id, location, "the native layout engine sizes from a length or the "
+                        ReportNotLowered(computed, id, location, "the native layout engine sizes from a length or the "
                                                        "content",
                                          "Use a length, auto or none.");
                         return;
@@ -594,7 +628,7 @@ namespace RoboHTMLCompiler
 
                     if (fraction < 0.0f)
                     {
-                        ReportNotLowered(id, location, "this viewport unit has no native equivalent",
+                        ReportNotLowered(computed, id, location, "this viewport unit has no native equivalent",
                                          "Use vw, vh, vmin, vmax or a length.");
                         return;
                     }
@@ -970,7 +1004,7 @@ namespace RoboHTMLCompiler
                 // field nothing reads would be support in name only.
                 if (Value(computed, CSSPropertyId::LineHeight) != nullptr)
                 {
-                    ReportNotLowered(CSSPropertyId::LineHeight, location,
+                    ReportNotLowered(computed, CSSPropertyId::LineHeight, location,
                                      "the native text engine derives line height from the font's metrics, and the "
                                      "compiled style has no field that overrides it",
                                      "Set the font size instead, or remove the declaration.");
@@ -1300,26 +1334,34 @@ namespace RoboHTMLCompiler
             const SourceLocation location{ file, static_cast<int>(entry.location.line),
                                            static_cast<int>(entry.location.column), entry.location.offset };
 
-            // The CSS code space is preserved in the message: RCC001 is a
-            // different failure from RCC010, and a report that flattened both
-            // into "styles.css is broken" would hide which one it was.
-            const std::string message = std::string(RoboCSSCompiler::ToString(entry.code)) + ": " + entry.message;
+            // A CSS problem is reported as a CSS problem: by the CSS compiler's
+            // own name and its own code. Folding RCC001 and RCC010 into "the
+            // stylesheet is malformed" would hide which of the two it was, and
+            // printing the code into the message would leave the report
+            // claiming a code that the header line does not agree with.
+            Diagnostic diagnostic;
+            diagnostic.code = DiagnosticCode::MalformedStyleSheet;
+            diagnostic.tool = "RoboCSSCompiler";
+            diagnostic.codeOverride = RoboCSSCompiler::ToString(entry.code);
+            diagnostic.location = location;
+            diagnostic.explanation = entry.detail;
+            diagnostic.suggestedFix = entry.suggestion;
+            diagnostic.found = entry.subject;
 
             if (entry.severity == RoboCSSCompiler::CSSSeverity::Error)
             {
-                diagnostics.Error(DiagnosticCode::MalformedStyleSheet, location, message, entry.detail,
-                                  entry.suggestion, entry.subject);
+                diagnostic.severity = Severity::Error;
+                diagnostic.message = entry.message;
             }
             else
             {
-                // The warning form has no `found` field, so the subject becomes
-                // part of the sentence rather than being dropped.
-                const std::string full =
-                    entry.subject.empty() ? message : message + " (" + entry.subject + ")";
-
-                diagnostics.Warning(DiagnosticCode::MalformedStyleSheet, location, full, entry.detail,
-                                    entry.suggestion);
+                // The subject is already in `found`, so the message stays the
+                // sentence it is.
+                diagnostic.severity = Severity::Warning;
+                diagnostic.message = entry.message;
             }
+
+            diagnostics.Report(std::move(diagnostic));
         }
 
         cssDiagnostics.Clear();

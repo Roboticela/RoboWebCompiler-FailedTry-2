@@ -26,6 +26,23 @@
 
 namespace
 {
+    /// Prints the warnings a build produced. A warning is something the compiler
+    /// read and could not apply - a declaration the native style table has no
+    /// field for, an at-rule the runtime has no feature for - so a successful
+    /// build that hid them would leave the author believing the declaration did
+    /// something.
+    void ReportWarnings(const RoboHTMLCompiler::DiagnosticSink& diagnostics, bool quiet)
+    {
+        if (quiet || diagnostics.WarningCount() == 0)
+        {
+            return;
+        }
+
+        std::cout << "\nWarnings (" << diagnostics.WarningCount()
+                  << ") - compiled, but not applied:\n\n"
+                  << diagnostics.FormatWarnings();
+    }
+
     void PrintUsage()
     {
         std::cout <<
@@ -231,12 +248,32 @@ int main(int argumentCount, char** argumentValues)
 
         if (!batch.Succeeded() || diagnostics.HasErrors())
         {
-            if (batch.documents.empty())
+            // A batch reports the batch-level problem - the folder is wrong, say
+            // - and each document that failed reports its own, printed as it was
+            // compiled.
+            if (diagnostics.HasErrors())
             {
                 std::cerr << "\n" << diagnostics.FormatErrors();
             }
-            std::cerr << "\nBatch compilation failed: " << batch.failedCount << " of "
-                      << batch.documents.size() << " document(s) did not compile.\n";
+
+            if (batch.documents.empty())
+            {
+                // Nothing was even read, so counting documents would only
+                // produce "0 of 0", which reads as if everything had worked.
+                std::cerr << "\nNothing was compiled: the problem above stopped the run before any document "
+                             "was read.\n";
+            }
+            else
+            {
+                const std::size_t failed = batch.failedCount;
+                const std::size_t total = batch.documents.size();
+
+                std::cerr << "\nBatch compilation failed: " << failed << " of " << total << " "
+                          << (total == 1 ? "document" : "documents") << " could not be compiled.\n";
+                std::cerr << "No native output was produced for "
+                          << (failed == 1 ? "it." : "those documents.") << "\n";
+            }
+
             return 1;
         }
 
@@ -250,6 +287,17 @@ int main(int argumentCount, char** argumentValues)
             {
                 std::cout << "  " << document.documentName << "  ->  " << document.applicationName
                           << "NativeModel.{h,cpp}" << "\n";
+            }
+
+            for (const BatchDocument& document : batch.documents)
+            {
+                if (document.warningCount == 0)
+                {
+                    continue;
+                }
+
+                std::cout << "\nWarnings in " << document.documentName << " - compiled, but not applied:\n\n"
+                          << document.warnings;
             }
         }
 
@@ -290,5 +338,6 @@ int main(int argumentCount, char** argumentValues)
         }
     }
 
+    ReportWarnings(diagnostics, quiet);
     return 0;
 }

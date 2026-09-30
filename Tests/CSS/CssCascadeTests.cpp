@@ -521,6 +521,80 @@ ROBO_TEST(CssCascade, UnsupportedFeaturesAreReportedNotApplied)
     ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Color), std::string("#ff0000"));
 }
 
+ROBO_TEST(CssCascade, UnknownPropertySuggestsTheNearbyName)
+{
+    Fixture fixture;
+    fixture.Build("body { colour: red }");
+
+    ROBO_CHECK(fixture.diagnostics.HasErrors());
+    ROBO_CHECK(HasCode(fixture.diagnostics, CSSDiagnosticCode::UnknownProperty));
+
+    // `colour` is a near miss for `color`: the report has to name both the
+    // name that was written and the one the reader probably meant, because
+    // "there is no such property" alone leaves them to find it themselves.
+    std::string message;
+    for (const CSSDiagnostic& entry : fixture.diagnostics.Entries())
+    {
+        if (entry.code == CSSDiagnosticCode::UnknownProperty)
+        {
+            message = entry.message;
+            break;
+        }
+    }
+
+    ROBO_CHECK(message.find("colour") != std::string::npos);
+    ROBO_CHECK(message.find("'color'") != std::string::npos);
+}
+
+ROBO_TEST(CssCascade, UnknownPropertyWithoutANearNameOnlySaysNo)
+{
+    Fixture fixture;
+    fixture.Build("body { zzzzzzzz: red }");
+
+    ROBO_CHECK(fixture.diagnostics.HasErrors());
+
+    // Nothing in the registry is close to this name, so the compiler must not
+    // invent a guess: a wrong suggestion is worse than none.
+    for (const CSSDiagnostic& entry : fixture.diagnostics.Entries())
+    {
+        if (entry.code == CSSDiagnosticCode::UnknownProperty)
+        {
+            ROBO_CHECK(entry.message.find("Did you mean") == std::string::npos);
+        }
+    }
+}
+
+ROBO_TEST(CssCascade, ComputedValuesRememberWhereTheyWereWritten)
+{
+    Fixture fixture;
+    fixture.Build("html { color: red }\nbody { padding: 1px }");
+
+    const CSSComputedStyle* body = fixture.Body();
+    ROBO_CHECK(body != nullptr);
+
+    if (body == nullptr)
+    {
+        return;
+    }
+
+    // The colour is inherited from the `html` rule on line 1, and the location
+    // follows the value to the ancestor that declared it rather than staying on
+    // the element that used it.
+    const CSSSourceLocation color = body->SourceLocationOf(CSSPropertyId::Color);
+    ROBO_CHECK(color.IsValid());
+    ROBO_CHECK_EQ(color.file, std::string("test.css"));
+    ROBO_CHECK(color.line == 1);
+
+    // The padding is expanded from the shorthand on line 2: every longhand it
+    // produced points at the one declaration the reader wrote.
+    const CSSSourceLocation padding = body->SourceLocationOf(CSSPropertyId::PaddingTop);
+    ROBO_CHECK(padding.IsValid());
+    ROBO_CHECK(padding.line == 2);
+
+    // A property nothing declared has no declaration to point at.
+    ROBO_CHECK(!body->SourceLocationOf(CSSPropertyId::BorderTopWidth).IsValid());
+}
+
 ROBO_TEST(CssCascade, AllInitialResetsEveryProperty)
 {
     Fixture fixture;

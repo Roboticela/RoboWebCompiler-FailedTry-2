@@ -239,6 +239,11 @@ namespace RoboCSSCompiler
         /// diagnostic's subject.
         const char* DescribeUnsupported(const std::string& name) const;
 
+        /// The property or shorthand whose name is closest to `name`, or nullptr
+        /// when nothing is close. Used to answer a mistyped property name with
+        /// the name the reader probably meant instead of only saying no.
+        const char* SuggestSimilarName(const std::string& name) const;
+
         const std::vector<CSSPropertyDefinition>& Properties() const { return properties; }
         const std::vector<CSSShorthandDefinition>& Shorthands() const { return shorthands; }
         const std::vector<const char*>& UnsupportedNames() const { return unsupportedNames; }

@@ -38,10 +38,18 @@ ROBO_TEST(Behaviour, QuerySelectorIdFormIsRecognised)
     JavaScriptModuleCompiler compiler(sink);
     compiler.AddModule("app.js", "const el = document.querySelector(\"#panel\");\n");
 
-    ROBO_CHECK_EQ(compiler.GetReferencedElementIds().size(), static_cast<std::size_t>(1));
-    if (!compiler.GetReferencedElementIds().empty())
+    ROBO_CHECK_EQ(compiler.GetElementQueries().size(), static_cast<std::size_t>(1));
+    if (!compiler.GetElementQueries().empty())
     {
-        ROBO_CHECK_EQ(compiler.GetReferencedElementIds()[0], std::string("panel"));
+        ROBO_CHECK_EQ(compiler.GetElementQueries()[0].targetId, std::string("panel"));
+        ROBO_CHECK_EQ(compiler.GetElementQueries()[0].sourceLine,
+                      std::string("const el = document.querySelector(\"#panel\");"));
+
+        // The query remembers where it was written, and it points at the id
+        // itself: the '#' is not part of the id.
+        ROBO_CHECK_EQ(compiler.GetElementQueries()[0].line, 1);
+        ROBO_CHECK_EQ(compiler.GetElementQueries()[0].column,
+                      static_cast<int>(compiler.GetElementQueries()[0].sourceLine.find("panel")) + 1);
     }
 }
 
@@ -61,6 +69,23 @@ ROBO_TEST(Behaviour, DanglingReferencesAreReported)
 
     ROBO_CHECK(!compiler.LinkAgainstDocument(*document));
     ROBO_CHECK(HasError(sink, DiagnosticCode::UnresolvedScriptResource));
+
+    // The report points at the script line that asks for the missing element,
+    // not at the document, which is what tells the reader where to look.
+    const Diagnostic* reported = FindDiagnostic(sink, DiagnosticCode::UnresolvedScriptResource);
+    ROBO_CHECK(reported != nullptr);
+
+    if (reported != nullptr)
+    {
+        ROBO_CHECK_EQ(reported->location.file, std::string("app.js"));
+        ROBO_CHECK_EQ(reported->location.line, 1);
+        ROBO_CHECK(reported->message.find("nope") != std::string::npos);
+        ROBO_CHECK(reported->found.find("getElementById") != std::string::npos);
+
+        // The character number and the shown line have to agree: a reader who
+        // counts along the line must land on the id.
+        ROBO_CHECK_EQ(reported->location.column, static_cast<int>(reported->found.find("nope")) + 1);
+    }
 }
 
 ROBO_TEST(Behaviour, ResolvableReferencesLinkCleanly)

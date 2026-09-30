@@ -115,9 +115,9 @@ namespace RoboHTMLCompiler
         {
             diagnostics.Error(DiagnosticCode::MissingSourceFile,
                               SourceLocation{ sourceDirectory.generic_string(), 1, 1, 0 },
-                              "The application source directory does not exist.",
-                              std::string(),
-                              "Point the compiler at a directory containing the application sources.",
+                              "The compiler was asked to read the application folder and it is not there.",
+                              "The path does not point at a folder the compiler can read.",
+                              "Give the folder that holds the .html, .css and .js files.",
                               sourceDirectory.generic_string());
             return false;
         }
@@ -154,9 +154,10 @@ namespace RoboHTMLCompiler
         {
             diagnostics.Error(DiagnosticCode::MissingSourceFile,
                               SourceLocation{ sourceDirectory.generic_string(), 1, 1, 0 },
-                              "No HTML document was found in the application directory.",
-                              std::string(),
-                              "Add an index.html (or <ApplicationName>.html) entry document.",
+                              "This folder has no .html file in it, so there is nothing to compile.",
+                              "The compiler looks for index.html, then <ApplicationName>.html, then any .html "
+                              "file, and found none.",
+                              "Add index.html, or name the file after the application.",
                               sourceDirectory.generic_string());
             return false;
         }
@@ -500,12 +501,22 @@ namespace RoboHTMLCompiler
         std::error_code errorCode;
         if (!std::filesystem::is_directory(options.sourceDirectory, errorCode))
         {
-            diagnostics.Error(DiagnosticCode::MissingSourceFile,
-                              SourceLocation{ options.sourceDirectory.generic_string(), 1, 1, 0 },
-                              "The application source directory does not exist.",
-                              std::string(),
-                              "Point the compiler at a directory containing the application sources.",
-                              options.sourceDirectory.generic_string());
+            // A file here is worth naming as a file: "the directory does not
+            // exist" about a path the reader can see on disk sends them looking
+            // for the wrong mistake.
+            const bool isFile = std::filesystem::is_regular_file(options.sourceDirectory, errorCode);
+
+            diagnostics.Error(
+                DiagnosticCode::MissingSourceFile,
+                SourceLocation{ options.sourceDirectory.generic_string(), 1, 1, 0 },
+                isFile ? "This is a file, not a folder, and batch compilation reads a folder."
+                       : "The compiler was asked to read this folder and it is not there.",
+                isFile ? "The compiler compiles every .html file in a folder when it is asked for a batch, so it "
+                         "needs the folder rather than one of its files."
+                       : "The path does not point at anything the compiler can read.",
+                isFile ? "Give the folder that contains the document, or drop --all to compile one file."
+                       : "Check the path for typing mistakes, and make sure the folder exists.",
+                options.sourceDirectory.generic_string());
             return batch;
         }
 
@@ -529,9 +540,10 @@ namespace RoboHTMLCompiler
         {
             diagnostics.Error(DiagnosticCode::MissingSourceFile,
                               SourceLocation{ options.sourceDirectory.generic_string(), 1, 1, 0 },
-                              "No HTML document was found in the application directory.",
-                              std::string(),
-                              "Add at least one .html document to compile.",
+                              "This folder has no .html file in it, so there is nothing to compile.",
+                              "The compiler reads the .html files in the folder it is given, and this one holds "
+                              "none.",
+                              "Put the page you want to compile in this folder.",
                               options.sourceDirectory.generic_string());
             return batch;
         }
@@ -561,7 +573,9 @@ namespace RoboHTMLCompiler
 
             document.succeeded = document.result.succeeded && !documentSink.HasErrors();
             document.errorCount = documentSink.ErrorCount();
+            document.warningCount = documentSink.WarningCount();
             document.diagnostics = documentSink.FormatErrors();
+            document.warnings = document.warningCount == 0 ? std::string() : documentSink.FormatWarnings();
             document.sourceElementCount = document.result.elementCount;
             document.nativeElementCount = document.result.nativeElementCount;
             document.styleCount = document.result.styleCount;

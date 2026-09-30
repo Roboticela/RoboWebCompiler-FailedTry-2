@@ -111,6 +111,7 @@ namespace RoboHTMLCompiler
 
         bool succeeded = false;
         std::size_t errorCount = 0;
+        std::size_t warningCount = 0;
         std::size_t sourceElementCount = 0;
         std::size_t nativeElementCount = 0;
         std::size_t styleCount = 0;
@@ -118,6 +119,11 @@ namespace RoboHTMLCompiler
 
         /// Formatted errors, when the document failed.
         std::string diagnostics;
+
+        /// Formatted warnings, when the document produced any. A warning is
+        /// something the compiler read and did not apply, so it is reported even
+        /// though the document compiled.
+        std::string warnings;
 
         CompilationResult result;
     };

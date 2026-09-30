@@ -9,6 +9,11 @@
 
 namespace RoboCSSCompiler
 {
+    /// The message a mistyped property name gets: the name, and the name the
+    /// writer probably meant when one is close. Defined with the coverage report
+    /// below and declared here for the cascade that reports it.
+    std::string UnknownPropertyMessage(const std::string& name);
+
     namespace
     {
         const char* UserAgentFileName = "<native-defaults>";
@@ -573,13 +578,31 @@ namespace RoboCSSCompiler
         return nullptr;
     }
 
-    void CSSComputedStyle::Set(CSSPropertyId id, CSSValue value)
+    namespace
+    {
+        /// The property id is the ordering key of both `values` and `sources`, so
+        /// one comparator keeps them in the same order.
+        bool OrderById(CSSPropertyId left, CSSPropertyId right)
+        {
+            return static_cast<int>(left) < static_cast<int>(right);
+        }
+    }
+
+    void CSSComputedStyle::Set(CSSPropertyId id, CSSValue value, const CSSSourceLocation& source)
     {
         for (std::pair<CSSPropertyId, CSSValue>& entry : values)
         {
             if (entry.first == id)
             {
                 entry.second = std::move(value);
+                for (std::pair<CSSPropertyId, CSSSourceLocation>& entrySource : sources)
+                {
+                    if (entrySource.first == id)
+                    {
+                        entrySource.second = source;
+                        break;
+                    }
+                }
                 return;
             }
         }
@@ -588,8 +611,28 @@ namespace RoboCSSCompiler
         std::sort(values.begin(), values.end(),
                   [](const std::pair<CSSPropertyId, CSSValue>& left,
                      const std::pair<CSSPropertyId, CSSValue>& right) {
-                      return static_cast<int>(left.first) < static_cast<int>(right.first);
+                      return OrderById(left.first, right.first);
                   });
+
+        sources.emplace_back(id, source);
+        std::sort(sources.begin(), sources.end(),
+                  [](const std::pair<CSSPropertyId, CSSSourceLocation>& left,
+                     const std::pair<CSSPropertyId, CSSSourceLocation>& right) {
+                      return OrderById(left.first, right.first);
+                  });
+    }
+
+    CSSSourceLocation CSSComputedStyle::SourceLocationOf(CSSPropertyId id) const
+    {
+        for (const std::pair<CSSPropertyId, CSSSourceLocation>& entry : sources)
+        {
+            if (entry.first == id)
+            {
+                return entry.second;
+            }
+        }
+
+        return CSSSourceLocation{};
     }
 
     void CSSComputedStyle::Remove(CSSPropertyId id)
@@ -599,7 +642,16 @@ namespace RoboCSSCompiler
             if (values[index].first == id)
             {
                 values.erase(values.begin() + static_cast<std::ptrdiff_t>(index));
-                return;
+                break;
+            }
+        }
+
+        for (std::size_t index = 0; index < sources.size(); ++index)
+        {
+            if (sources[index].first == id)
+            {
+                sources.erase(sources.begin() + static_cast<std::ptrdiff_t>(index));
+                break;
             }
         }
     }
@@ -1499,9 +1551,10 @@ namespace RoboCSSCompiler
         {
             diagnostics.Error(CSSDiagnosticCode::UnknownProperty,
                               declaration.location,
-                              "Unknown property: '" + declaration.property + "'.",
-                              "not a property this compiler knows",
-                              "Correct the name, or remove the declaration.",
+                              UnknownPropertyMessage(declaration.property),
+                              "CSS has no property with this name, and the compiler will not guess what you "
+                              "meant.",
+                              "Use the real property name, or delete this line.",
                               declaration.property);
             return;
         }
@@ -1534,7 +1587,7 @@ namespace RoboCSSCompiler
                     {
                         if (const CSSValue* inherited = parent->Get(id))
                         {
-                            out.Set(id, *inherited);
+                            out.Set(id, *inherited, parent->SourceLocationOf(id));
                             applied = true;
                         }
                     }
@@ -1543,7 +1596,7 @@ namespace RoboCSSCompiler
                 {
                     if (const CSSValue* inherited = parent->Get(id))
                     {
-                        out.Set(id, *inherited);
+                        out.Set(id, *inherited, parent->SourceLocationOf(id));
                         applied = true;
                     }
                     else if (definition->inherited)
@@ -1576,7 +1629,7 @@ namespace RoboCSSCompiler
                 {
                     if (const CSSValue* inherited = parent->Get(id))
                     {
-                        out.Set(id, *inherited);
+                        out.Set(id, *inherited, parent->SourceLocationOf(id));
                         applied = true;
                         return;
                     }
@@ -1693,7 +1746,7 @@ namespace RoboCSSCompiler
             {
                 if (const CSSValue* inherited = parent->Get(id))
                 {
-                    out.Set(id, *inherited);
+                    out.Set(id, *inherited, parent->SourceLocationOf(id));
                     applied = true;
                 }
             }
@@ -1701,7 +1754,7 @@ namespace RoboCSSCompiler
             return;
         }
 
-        out.Set(id, std::move(parsed));
+        out.Set(id, std::move(parsed), declaration.location);
         applied = true;
     }
 
@@ -1758,7 +1811,7 @@ namespace RoboCSSCompiler
 
                 if (inherited != nullptr)
                 {
-                    out.Set(definition.id, *inherited);
+                    out.Set(definition.id, *inherited, parent->SourceLocationOf(definition.id));
                     continue;
                 }
             }
@@ -1864,7 +1917,7 @@ namespace RoboCSSCompiler
 
                 for (std::pair<CSSPropertyId, CSSValue>& pair : expanded)
                 {
-                    out.Set(pair.first, std::move(pair.second));
+                    out.Set(pair.first, std::move(pair.second), declaration.location);
                 }
 
                 continue;
@@ -1874,9 +1927,11 @@ namespace RoboCSSCompiler
             {
                 diagnostics.Warning(CSSDiagnosticCode::UnsupportedFeature,
                                     declaration.location,
-                                    "Property '" + name + "' is not implemented.",
-                                    "the reference defines it and this compiler does not compile it yet",
-                                    "Remove the declaration, or write it with a supported property.",
+                                    "This compiler does not compile '" + name + "' yet.",
+                                    "The CSS rules define this property and support for it is not built yet, "
+                                    "so the declaration is reported and left out of the compiled style.",
+                                    "Remove the declaration, or write the effect with a property the compiler "
+                                    "supports.",
                                     name);
                 continue;
             }
@@ -1887,9 +1942,10 @@ namespace RoboCSSCompiler
             {
                 diagnostics.Error(CSSDiagnosticCode::UnknownProperty,
                                   declaration.location,
-                                  "Unknown property: '" + name + "'.",
-                                  "not a property this compiler knows",
-                                  "Correct the name, or remove the declaration.",
+                                  UnknownPropertyMessage(name),
+                                  "CSS has no property with this name, and the compiler will not guess what you "
+                                  "meant.",
+                                  "Use the real property name, or delete this line.",
                                   name);
                 continue;
             }
@@ -1910,7 +1966,9 @@ namespace RoboCSSCompiler
 
                 if (const CSSValue* inherited = parent->Get(id))
                 {
-                    out.Set(id, *inherited);
+                    // The value came from the ancestor that declared it, so the
+                    // location follows it there.
+                    out.Set(id, *inherited, parent->SourceLocationOf(id));
                 }
             }
         }
@@ -2025,6 +2083,21 @@ namespace RoboCSSCompiler
     // -----------------------------------------------------------------------
     // Coverage
     // -----------------------------------------------------------------------
+
+    std::string UnknownPropertyMessage(const std::string& name)
+    {
+        // `colour: red` is the mistake this message exists for: the answer the
+        // reader needs is not "no", it is "color".
+        std::string message = "There is no CSS property named '" + name + "'.";
+
+        const char* similar = CSSPropertyRegistry::Instance().SuggestSimilarName(name);
+        if (similar != nullptr)
+        {
+            message += " Did you mean '" + std::string(similar) + "'?";
+        }
+
+        return message;
+    }
 
     CSSCoverageReport BuildCoverageReport()
     {

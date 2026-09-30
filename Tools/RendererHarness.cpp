@@ -38,6 +38,38 @@ namespace RoboTools
             return true;
         }
 
+        /// True when a script file is the resource the document asked for.
+        ///
+        /// A document names a resource the way the browser would: `app.js`, or
+        /// `./scripts/app.js`. The file on disk is known by its name, so the
+        /// comparison is on the last path segment.
+        bool IsReferencedScript(const std::string& fileName,
+                               const std::vector<std::string>& references)
+        {
+            for (const std::string& reference : references)
+            {
+                std::string candidate = reference;
+
+                while (candidate.compare(0, 2, "./") == 0)
+                {
+                    candidate.erase(0, 2);
+                }
+
+                const std::size_t slash = candidate.find_last_of('/');
+                if (slash != std::string::npos)
+                {
+                    candidate = candidate.substr(slash + 1);
+                }
+
+                if (candidate == fileName)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// Loads every stylesheet and script beside a document, which is what the
         /// compiler driver does: an application directory is the unit of
         /// compilation, and the document names its classes without naming the
@@ -125,20 +157,40 @@ namespace RoboTools
         styleSheetCompiler.ValidateStyleReferences(*document);
 
         // --- behaviour -----------------------------------------------------
-        JavaScriptModuleCompiler behaviourModule(sink);
-
-        if (!scripts.empty())
-        {
-            for (const std::pair<std::string, std::string>& script : scripts)
+        // Only the modules this document references belong to it. A directory can
+        // hold one script per page - the multi-page example does - and loading all
+        // of them would link every page's behaviour against every other page's
+        // ids.
+        std::vector<std::string> referencedScripts;
+        document->ForEachElement([&referencedScripts](const ElementNode& element) {
+            if (element.ns != MarkupNamespace::Html || element.sourceTag != "script")
             {
-                ScriptResource resource;
-                resource.reference = script.first;
-                behaviourModule.AddScriptResource(resource);
-                behaviourModule.AddModule(script.first, script.second);
+                return;
             }
 
-            behaviourModule.LinkAgainstDocument(*document);
+            const AttributeNode* source = element.FindAttribute("src");
+            if (source != nullptr && !source->value.empty())
+            {
+                referencedScripts.push_back(source->value);
+            }
+        });
+
+        JavaScriptModuleCompiler behaviourModule(sink);
+
+        for (const std::pair<std::string, std::string>& script : scripts)
+        {
+            if (!IsReferencedScript(script.first, referencedScripts))
+            {
+                continue;
+            }
+
+            ScriptResource resource;
+            resource.reference = script.first;
+            behaviourModule.AddScriptResource(resource);
+            behaviourModule.AddModule(script.first, script.second);
         }
+
+        behaviourModule.LinkAgainstDocument(*document);
 
         if (sink.HasErrors())
         {
