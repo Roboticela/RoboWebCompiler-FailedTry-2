@@ -62,18 +62,33 @@ namespace RoboHTMLCompiler
             return selectors;
         }
 
-        int LineOf(const std::string& text, std::size_t offset)
+        // Diagnostics need a line number for every rule they report, but computing
+        // one by scanning from the start of the stylesheet turns a linear parse into
+        // a quadratic one (a 10,000-rule sheet spent most of its time counting
+        // newlines). Line starts are recorded once per stylesheet instead.
+        class LineIndex
         {
-            int line = 1;
-            for (std::size_t index = 0; index < offset && index < text.size(); ++index)
+        public:
+            explicit LineIndex(const std::string& text)
             {
-                if (text[index] == '\n')
+                std::size_t offset = text.find('\n');
+                while (offset != std::string::npos)
                 {
-                    ++line;
+                    lineStarts.push_back(offset + 1);
+                    offset = text.find('\n', offset + 1);
                 }
             }
-            return line;
-        }
+
+            // One-based, matching the old scan: newlines strictly before the offset.
+            int LineOf(std::size_t offset) const
+            {
+                const auto after = std::upper_bound(lineStarts.begin(), lineStarts.end(), offset);
+                return static_cast<int>(after - lineStarts.begin()) + 1;
+            }
+
+        private:
+            std::vector<std::size_t> lineStarts;
+        };
 
         void MergeDeclaration(std::vector<StyleDeclaration>& declarations, const StyleDeclaration& declaration)
         {
@@ -101,11 +116,17 @@ namespace RoboHTMLCompiler
 
     void StyleSheetCompiler::AddStyleSheet(const std::string& sheetName, const std::string& cssText)
     {
+        // Both consumers need the text: this class answers class-name queries for
+        // the web target, and the CSS compiler parses the same text into typed
+        // computed styles for the native target.
+        sources.push_back(LoadedStyleSheet{ sheetName, cssText });
+
         ParseRules(sheetName, cssText);
 
         // Tailwind directives are a build instruction, not runtime CSS. They are
         // recorded so the generated stylesheet can explain where the utilities
         // came from.
+        const LineIndex lines(cssText);
         std::size_t directivePosition = 0;
         while ((directivePosition = cssText.find("@tailwind", directivePosition)) != std::string::npos)
         {
@@ -115,7 +136,7 @@ namespace RoboHTMLCompiler
                                (terminator == std::string::npos ? cssText.size() : terminator) - directivePosition);
 
             diagnostics.Warning(DiagnosticCode::MalformedStyleSheet,
-                                SourceLocation{ sheetName, LineOf(cssText, directivePosition), 1, directivePosition },
+                                SourceLocation{ sheetName, lines.LineOf(directivePosition), 1, directivePosition },
                                 "Tailwind directive '" + Trim(directive) + "' resolved at build time.",
                                 std::string(),
                                 "Tailwind utilities used by the markup are expanded into typed declarations.");
@@ -130,11 +151,24 @@ namespace RoboHTMLCompiler
 
     void StyleSheetCompiler::ParseRules(const std::string& sheetName, const std::string& cssText)
     {
+        const LineIndex lines(cssText);
         std::size_t position = 0;
+
+        // The first comment at or after `position`. A search from `position` is
+        // O(rest of the sheet), and a sheet of 10,000 rules performed one per
+        // rule: the search for a comment that does not exist scanned the whole
+        // file every time. Reusing the previous answer while it still lies ahead
+        // of `position` keeps the total work linear in the sheet.
+        std::size_t nextComment = cssText.find("/*", position);
 
         while (position < cssText.size())
         {
-            const std::size_t commentBegin = cssText.find("/*", position);
+            if (nextComment < position)
+            {
+                nextComment = cssText.find("/*", position);
+            }
+
+            const std::size_t commentBegin = nextComment;
             const std::size_t ruleBegin = cssText.find('{', position);
 
             if (commentBegin != std::string::npos && (ruleBegin == std::string::npos || commentBegin < ruleBegin))
@@ -154,7 +188,7 @@ namespace RoboHTMLCompiler
             if (ruleEnd == std::string::npos)
             {
                 diagnostics.Error(DiagnosticCode::MalformedStyleSheet,
-                                  SourceLocation{ sheetName, LineOf(cssText, ruleBegin), 1, ruleBegin },
+                                  SourceLocation{ sheetName, lines.LineOf(ruleBegin), 1, ruleBegin },
                                   "Unterminated rule block in stylesheet.",
                                   std::string(),
                                   "Add the missing '}'.");
@@ -166,7 +200,7 @@ namespace RoboHTMLCompiler
             StyleRule rule;
             rule.sheetName = sheetName;
             rule.selectorText = selectorText;
-            rule.line = LineOf(cssText, position);
+            rule.line = lines.LineOf(position);
             rule.selectors = SplitSelectors(selectorText);
 
             std::size_t declarationPosition = 0;

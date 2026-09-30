@@ -6,11 +6,24 @@
 # HTML or CSS at run time.
 # ---------------------------------------------------------------------------
 
+# The runtime is a separate library. The compiler lowers documents into its
+# data format and validates that output with the runtime's own validator, so the
+# dependency runs compiler -> runtime and never the other way round.
+add_subdirectory(RoboRenderer)
+
+# CSS is a source language, so it has its own frontend. The dependency runs
+# compiler -> CSS: the CSS library is usable on its own, with no knowledge of the
+# HTML AST, and the compiler adapts its document tree to the view CSS asks for.
+add_subdirectory(RoboCSSCompiler)
+
 set(RoboCoreSources
     "${CMAKE_CURRENT_SOURCE_DIR}/AST/Ast.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CodeGeneration/CompiledUiBuilder.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CodeGeneration/RuntimeTargetGenerator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CodeGeneration/NativeTargetGenerator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CodeGeneration/WebTargetGenerator.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Compiler/Compiler.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/CSS/CssStyleBuilder.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CSS/StyleResolver.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CSS/TailwindUtilities.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Diagnostics/Diagnostics.cpp"
@@ -43,6 +56,8 @@ target_include_directories(RoboHTMLCompilerLib
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}"
 )
+
+target_link_libraries(RoboHTMLCompilerLib PUBLIC RoboRenderer RoboCSSCompilerLib)
 
 target_compile_features(RoboHTMLCompilerLib PUBLIC cxx_std_17)
 

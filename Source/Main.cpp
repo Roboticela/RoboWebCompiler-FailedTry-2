@@ -7,7 +7,7 @@
 //     --output <directory>       Root output directory (default: build)
 //     --name <applicationName>   Application name (default: derived from the document)
 //     --all                      Compile every HTML document in the directory
-//     --target <web|native|all>  Output targets (default: all)
+//     --target <web|native|runtime|all>  Output targets (default: all)
 //     --strictness <lax|strict|pedantic>
 //     --allow-obsolete           Accept obsolete elements and attributes
 //     --no-ir                    Do not emit the IR dump
@@ -41,7 +41,8 @@ namespace
             "  --name <applicationName>   Application name (default: derived from the document)\n"
             "  --all                      Compile every HTML document in the directory, each into\n"
             "                             its own <output>/<DocumentName> subdirectory\n"
-            "  --target <web|native|all>  Output targets (default: all)\n"
+            "  --target <web|native|runtime|all>\n"
+            "                             Output targets (default: all)\n"
             "  --strictness <lax|strict|pedantic>\n"
             "  --allow-obsolete           Accept obsolete elements and attributes\n"
             "  --no-ir                    Do not emit the IR dump\n"
@@ -52,6 +53,7 @@ namespace
             "Generated output:\n"
             "  <output>/GeneratedHTML/<document>.html  browser compatible HTML\n"
             "  <output>/GeneratedNative/              strongly typed C++ model\n"
+            "  <output>/GeneratedRuntime/             compiled UI for RoboRenderer\n"
             "  <output>/GeneratedIR/                  machine readable native IR\n"
             "  <output>/GeneratedReports/             compilation report and diagnostics\n";
     }
@@ -91,6 +93,7 @@ int main(int argumentCount, char** argumentValues)
     CompilationOptions options;
     options.generateWebTarget = true;
     options.generateNativeTarget = true;
+    options.generateRuntimeTarget = true;
 
     for (int index = 1; index < argumentCount; ++index)
     {
@@ -128,16 +131,25 @@ int main(int argumentCount, char** argumentValues)
             {
                 options.generateWebTarget = true;
                 options.generateNativeTarget = false;
+                options.generateRuntimeTarget = false;
             }
             else if (target == "native")
             {
                 options.generateWebTarget = false;
                 options.generateNativeTarget = true;
+                options.generateRuntimeTarget = false;
+            }
+            else if (target == "runtime")
+            {
+                options.generateWebTarget = false;
+                options.generateNativeTarget = false;
+                options.generateRuntimeTarget = true;
             }
             else
             {
                 options.generateWebTarget = true;
                 options.generateNativeTarget = true;
+                options.generateRuntimeTarget = true;
             }
             continue;
         }
@@ -259,6 +271,9 @@ int main(int argumentCount, char** argumentValues)
         std::cout << "  source elements:   " << result.elementCount << "\n";
         std::cout << "  native elements:   " << result.nativeElementCount << "\n";
         std::cout << "  interned styles:   " << result.styleCount << "\n";
+        std::cout << "  computed styles:   " << result.computedStyleCount << "\n";
+        std::cout << "  native styles:     " << result.nativeStyleCount << "\n";
+        std::cout << "  styled elements:   " << result.styledElementCount << "\n";
         std::cout << "  event bindings:    " << result.eventBindingCount << "\n";
 
         if (result.webTarget.generated)

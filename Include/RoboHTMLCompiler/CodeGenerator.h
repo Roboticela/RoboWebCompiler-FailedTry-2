@@ -10,6 +10,7 @@
 #pragma once
 
 #include "RoboHTMLCompiler/Ast.h"
+#include "RoboHTMLCompiler/CssStyleBuilder.h"
 #include "RoboHTMLCompiler/Diagnostics.h"
 #include "RoboHTMLCompiler/Ir.h"
 #include "RoboHTMLCompiler/JavaScriptModule.h"
@@ -34,6 +35,17 @@ namespace RoboHTMLCompiler
         std::filesystem::path headerPath;
         std::filesystem::path sourcePath;
         std::filesystem::path irDumpPath;
+        bool generated = false;
+    };
+
+    struct RuntimeTargetResult
+    {
+        std::filesystem::path headerPath;
+        std::filesystem::path sourcePath;
+        std::size_t elementCount = 0;
+        std::size_t resourceCount = 0;
+        std::size_t stringCount = 0;
+        std::size_t bindingCount = 0;
         bool generated = false;
     };
 
@@ -78,6 +90,32 @@ namespace RoboHTMLCompiler
                       NativeTargetResult& result);
 
         static std::string RenderIrDump(const NativeUiModel& model, const std::string& applicationName);
+
+    private:
+        DiagnosticSink& diagnostics;
+        const Registry& registry;
+    };
+
+    /// Emits the compiled UI as ordinary C++ data: `static constexpr` tables of
+    /// the flat representation declared in RoboRenderer/CompiledUi.h.
+    ///
+    /// No renderer function is generated. The generated translation unit only
+    /// describes the application; the reusable layout, text, paint and input
+    /// algorithms live in RoboRenderer, where they are compiled once instead of
+    /// once per element.
+    class RuntimeTargetGenerator
+    {
+    public:
+        RuntimeTargetGenerator(DiagnosticSink& diagnostics, const Registry& registry);
+
+        /// `authoredStyles` is the CSS the document resolved to; it becomes the
+        /// generated style table. Optional, so a caller that only wants the
+        /// structure can omit it.
+        bool Generate(const NativeUiModel& model,
+                      const std::string& applicationName,
+                      const std::filesystem::path& outputDirectory,
+                      RuntimeTargetResult& result,
+                      const CssStyleTable* authoredStyles = nullptr);
 
     private:
         DiagnosticSink& diagnostics;

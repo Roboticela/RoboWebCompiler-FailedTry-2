@@ -1,6 +1,7 @@
 #include "RoboHTMLCompiler/NativeTreeBuilder.h"
 
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 
 namespace RoboHTMLCompiler
@@ -16,6 +17,64 @@ namespace RoboHTMLCompiler
 
             const std::string value = ToLowerAscii(attribute.value);
             return value != "false" && value != "0" && !value.empty();
+        }
+
+        /// Normalises one direct text run of a mixed-content element. Internal
+        /// whitespace collapses to a single space, while a leading or trailing
+        /// space is kept: those are the separators an element boundary splits,
+        /// and losing them would glue "Hello" and "world" from
+        /// `<p>Hello <b>world</b></p>` together.
+        std::string NormalizeTextRun(const std::string& value)
+        {
+            if (value.empty())
+            {
+                return value;
+            }
+
+            const bool leadingSpace = std::isspace(static_cast<unsigned char>(value.front())) != 0;
+            const bool trailingSpace = value.size() > 1 &&
+                                       std::isspace(static_cast<unsigned char>(value.back())) != 0;
+
+            std::string collapsed;
+            collapsed.reserve(value.size());
+
+            bool pendingSpace = false;
+            for (const char character : value)
+            {
+                if (std::isspace(static_cast<unsigned char>(character)) != 0)
+                {
+                    pendingSpace = !collapsed.empty();
+                    continue;
+                }
+
+                if (pendingSpace)
+                {
+                    collapsed.push_back(' ');
+                    pendingSpace = false;
+                }
+
+                collapsed.push_back(character);
+            }
+
+            if (collapsed.empty())
+            {
+                // A whitespace-only run still separates its neighbours.
+                return std::string(" ");
+            }
+
+            std::string result;
+            result.reserve(collapsed.size() + 2);
+            if (leadingSpace)
+            {
+                result.push_back(' ');
+            }
+            result += collapsed;
+            if (trailingSpace)
+            {
+                result.push_back(' ');
+            }
+
+            return result;
         }
 
         std::uint32_t ToUnsigned(const std::string& value, std::uint32_t fallback)
@@ -443,6 +502,21 @@ namespace RoboHTMLCompiler
         if (definition != nullptr)
         {
             native->accessibility.level = definition->headingLevel;
+
+            // The kind alone cannot describe the element: capture the rest of
+            // the definition's nature here, at compile time, so the runtime
+            // never has to re-derive it from a tag name.
+            native->nature.inlineContent = definition->isPhrasing;
+            native->nature.interactive = definition->isInteractive;
+            native->nature.formAssociated = definition->isFormAssociated;
+            native->nature.orderedList = definition->isOrderedList;
+            native->nature.preservesWhitespace = definition->isRawText ||
+                                                 native->kind == ElementKind::PreformattedText;
+        }
+
+        if (native->kind == ElementKind::CustomElement)
+        {
+            native->nature.inlineContent = false;
         }
 
         // Styling is resolved at build time into an interned StyleId.
@@ -483,23 +557,83 @@ namespace RoboHTMLCompiler
             model.idIndex[native->content.id] = native->id;
         }
 
-        // Direct text children become the element's text content.
-        const std::string directText = TrimAscii(element.DirectTextContent());
-        if (!directText.empty())
-        {
-            native->content.text = directText;
-        }
-
+        bool hasElementChildren = false;
         for (const std::unique_ptr<Node>& child : element.children)
         {
-            if (child->kind != NodeKind::Element)
+            if (child->kind == NodeKind::Element)
             {
-                continue;
+                hasElementChildren = true;
+                break;
             }
+        }
 
-            std::unique_ptr<NativeElement> nativeChild =
-                Build(*static_cast<const ElementNode*>(child.get()), model);
-            native->AddChild(std::move(nativeChild));
+        // Text-only content stays in one place: the element's own text field.
+        //
+        // As soon as the content is mixed, the position of each text run
+        // relative to the child elements is part of what the document means, so
+        // each run is lowered into its own Text child in document order. The
+        // runtime then receives an ordered inline sequence and never has to
+        // work out where a sentence was interrupted.
+        if (!hasElementChildren)
+        {
+            const std::string directText = TrimAscii(element.DirectTextContent());
+            if (!directText.empty())
+            {
+                native->content.text = directText;
+            }
+        }
+        else
+        {
+            const bool preservesWhitespace =
+                native->kind == ElementKind::PreformattedText ||
+                native->kind == ElementKind::TextArea ||
+                native->kind == ElementKind::ScriptResource ||
+                native->kind == ElementKind::StyleSheet;
+
+            // Whitespace between block-level siblings collapses away; it is only
+            // a separator when it sits next to inline content. Resolving that here
+            // keeps the runtime from carrying empty text runs through layout.
+            bool previousElementWasInline = false;
+
+            for (const std::unique_ptr<Node>& child : element.children)
+            {
+                if (child->kind == NodeKind::Text)
+                {
+                    const TextNode& textNode = *static_cast<const TextNode*>(child.get());
+                    const std::string run =
+                        preservesWhitespace ? textNode.text : NormalizeTextRun(textNode.text);
+                    if (run.empty())
+                    {
+                        continue;
+                    }
+                    if (!preservesWhitespace && run == " " && !previousElementWasInline)
+                    {
+                        continue;
+                    }
+
+                    auto runElement = std::make_unique<NativeElement>();
+                    runElement->kind = ElementKind::Text;
+                    runElement->id = nextElementId++;
+                    runElement->content.text = run;
+                    runElement->source.tag = element.sourceTag;
+                    runElement->source.ns = element.ns;
+                    runElement->source.file = textNode.location.file;
+                    runElement->source.line = textNode.location.line;
+                    runElement->source.column = textNode.location.column;
+                    native->AddChild(std::move(runElement));
+                    continue;
+                }
+
+                if (child->kind != NodeKind::Element)
+                {
+                    continue;
+                }
+
+                std::unique_ptr<NativeElement> nativeChild =
+                    Build(*static_cast<const ElementNode*>(child.get()), model);
+                previousElementWasInline = nativeChild->nature.inlineContent;
+                native->AddChild(std::move(nativeChild));
+            }
         }
 
         return native;

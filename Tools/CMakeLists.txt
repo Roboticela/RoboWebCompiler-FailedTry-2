@@ -30,6 +30,65 @@ add_executable(RegistryCompiler "${CMAKE_CURRENT_SOURCE_DIR}/RegistryCompiler.cp
 target_link_libraries(RegistryCompiler PRIVATE RoboHTMLCompilerTooling)
 set_target_properties(RegistryCompiler PROPERTIES FOLDER "RoboHTMLCompilerTools")
 
+# The CSS reference is Bikeshed source rather than wattsi source, so it has its
+# own extractor; it feeds the same Vocabulary/ directory and the same
+# consumption discipline as the HTML pipeline above.
+add_executable(CssSpecExtractor "${CMAKE_CURRENT_SOURCE_DIR}/CssSpecExtractor.cpp")
+target_link_libraries(CssSpecExtractor PRIVATE RoboHTMLCompilerTooling)
+set_target_properties(CssSpecExtractor PROPERTIES FOLDER "RoboHTMLCompilerTools")
+
+if(MSVC)
+    target_compile_options(CssSpecExtractor PRIVATE /W4 /permissive-)
+else()
+    target_compile_options(CssSpecExtractor PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+# ---------------------------------------------------------------------------
+# RoboRenderer harness, viewer and benchmarks
+#
+#     RoboRendererHarness   compile a document in process into the compiled UI
+#                           data RoboRenderer consumes. Shared by the viewer,
+#                           the benchmarks and the renderer tests, so all three
+#                           exercise the real compiler pipeline.
+#     RoboViewer            render a document to an image
+#     RoboBench             measure the runtime and print a report
+# ---------------------------------------------------------------------------
+
+add_library(RoboRendererHarness STATIC "${CMAKE_CURRENT_SOURCE_DIR}/RendererHarness.cpp")
+
+target_include_directories(RoboRendererHarness
+    PUBLIC
+        "${CMAKE_SOURCE_DIR}/Tools"
+)
+
+target_link_libraries(RoboRendererHarness PUBLIC RoboHTMLCompilerLib RoboRenderer)
+
+target_compile_features(RoboRendererHarness PUBLIC cxx_std_17)
+
+set_target_properties(RoboRendererHarness PROPERTIES OUTPUT_NAME "RoboRendererHarness" FOLDER "RoboRendererTools")
+
+if(MSVC)
+    target_compile_options(RoboRendererHarness PRIVATE /W4 /permissive-)
+else()
+    target_compile_options(RoboRendererHarness PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
+add_executable(RoboViewer "${CMAKE_CURRENT_SOURCE_DIR}/RoboViewer.cpp")
+target_link_libraries(RoboViewer PRIVATE RoboRendererHarness)
+set_target_properties(RoboViewer PROPERTIES FOLDER "RoboRendererTools")
+
+add_executable(RoboBench "${CMAKE_CURRENT_SOURCE_DIR}/RoboBench.cpp")
+target_link_libraries(RoboBench PRIVATE RoboRendererHarness)
+set_target_properties(RoboBench PROPERTIES FOLDER "RoboRendererTools")
+
+if(MSVC)
+    target_compile_options(RoboViewer PRIVATE /W4 /permissive-)
+    target_compile_options(RoboBench PRIVATE /W4 /permissive-)
+else()
+    target_compile_options(RoboViewer PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(RoboBench PRIVATE -Wall -Wextra -Wpedantic)
+endif()
+
 # ---------------------------------------------------------------------------
 # Regeneration pipeline
 # ---------------------------------------------------------------------------
@@ -91,11 +150,42 @@ add_custom_target(RoboConsumeReferences
     USES_TERMINAL
 )
 
+set(RoboCssGeneratedHeader "${CMAKE_SOURCE_DIR}/CompilerKnowledge/Include/RoboCSSCompiler/GeneratedCssVocabulary.h")
+set(RoboCssAuditFile "${CMAKE_SOURCE_DIR}/CompilerKnowledge/CssReferenceAudit.json")
+
+add_custom_target(RoboExtractCssReferences
+    COMMAND CssSpecExtractor
+            "${RoboCssReferenceDirectory}"
+            "${RoboGeneratedRegistryDirectory}"
+            --header "${RoboCssGeneratedHeader}"
+            --audit "${RoboCssAuditFile}"
+    DEPENDS CssSpecExtractor
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "Mining the CSS reference into the generated vocabulary"
+    USES_TERMINAL
+)
+
+# Retiring a module is how the reference shrinks: the modules named in
+# -DRoboCssRetireModules are recorded as consumed and their directories removed.
+add_custom_target(RoboRetireCssReferences
+    COMMAND CssSpecExtractor
+            "${RoboCssReferenceDirectory}"
+            "${RoboGeneratedRegistryDirectory}"
+            --header "${RoboCssGeneratedHeader}"
+            --audit "${RoboCssAuditFile}"
+            --retire "${RoboCssRetireModules}"
+    DEPENDS CssSpecExtractor
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMENT "Retiring consumed CSS reference modules"
+    USES_TERMINAL
+)
+
 add_custom_target(RoboGenerateRegistries
-    DEPENDS RoboExtractReferences RoboCompileRegistries
+    DEPENDS RoboExtractReferences RoboExtractCssReferences RoboCompileRegistries
     COMMENT "Regenerating the complete RoboHTMLCompiler registry pipeline"
 )
 
 set_target_properties(RoboExtractReferences RoboCompileRegistries RoboGenerateRegistries
     RoboAuditReferences RoboConsumeReferences
+    RoboExtractCssReferences RoboRetireCssReferences
     PROPERTIES FOLDER "RoboHTMLCompilerTools")

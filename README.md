@@ -2,7 +2,7 @@
 
 A strict, registry-driven HTML / SVG / MathML → native C++ data-model compiler.
 
-RoboHTMLCompiler reads a web application source tree and lowers it into two
+RoboHTMLCompiler reads a web application source tree and lowers it into three
 parallel, inspectable targets:
 
 * **Web target** – browser-compatible HTML plus one generated stylesheet and one
@@ -12,6 +12,8 @@ parallel, inspectable targets:
 * **Native target** – strongly typed C++ that builds a `NativeElement` UI model,
   plus a machine-readable IR dump. The native runtime never parses HTML, CSS or
   JavaScript.
+* **Runtime target** – the same model flattened into the compiled UI tables that
+  `RoboRenderer` consumes: see [Docs/RoboRenderer.md](Docs/RoboRenderer.md).
 
 The compiler is deliberately strict. It never repairs, reinterprets or partially
 compiles source: a document either satisfies every rule or the build fails with
@@ -84,6 +86,19 @@ may carry its own non-standard attributes. Everything else is an error.
 | `MMATH001` / `MMATH002`  | invalid MathML attribute / unknown MathML element   |
 | `RHC2001` / `RHC2002`    | missing source file / invalid generated output      |
 
+The runtime has its own code space, so a log never has to be disambiguated by
+which component printed it:
+
+| Code                  | Meaning                                                        |
+| --------------------- | -------------------------------------------------------------- |
+| `RRE001` / `RRE002`   | invalid element id / invalid child or sibling index            |
+| `RRE003` / `RRE004`   | invalid resource id / category outside the HTML-only phase     |
+| `RRE005` / `RRE006`   | unusable layout data / graphics backend failure                |
+| `RRE007` / `RRE008`   | unknown event binding / invalid string index                   |
+| `RRE009` / `RRE010`   | invalid style index / resource failed to load or decode        |
+| `RRE011` / `RRE012`   | unusable compiled document / duplicate identifier              |
+| `RRE013`              | element not reachable from the root                            |
+
 ---
 
 ## 2. Pipeline
@@ -102,7 +117,11 @@ Examples/<App>/                     Registry/*.json        CompilerKnowledge/Voc
         |        HtmlValidator / SvgValidator / MathMlValidator
         |              |
         |              v
-        |        NativeTreeBuilder ──► Ir.h NativeElement tree ──► NativeTargetGenerator
+        |        NativeTreeBuilder ──► Ir.h NativeElement tree
+        |              |                    |
+        |              |                    +──► NativeTargetGenerator
+        |              |                    |
+        |              |                    +──► CompiledUiBuilder ──► GeneratedRuntime/
         |              |
         |              v
         |        StyleSheetCompiler + TailwindUtilities + JavaScriptModuleCompiler
@@ -120,6 +139,21 @@ Examples/<App>/                     Registry/*.json        CompilerKnowledge/Voc
 * `Include/RoboHTMLCompiler/Ir.h` – the native IR. Elements carry a compact
   `ElementKind`, typed state, typed content and typed `NativeAttribute` records
   instead of an untyped attribute dictionary.
+* `Include/RoboHTMLCompiler/CompiledUiBuilder.h` – the flattening step. It turns
+  the native IR into the dense, deduplicated tables `RoboRenderer` reads, and it
+  is the only place the two projects' data models meet.
+
+### The runtime
+
+`RoboRenderer` is the native runtime and rendering system: layout, text
+measurement and line breaking, hit testing, input, a typed display list and a
+graphics backend. It contains no HTML or CSS parsing, no selectors and no
+JavaScript, because the compiler already answered every question those would ask.
+It has its own reference document:
+
+➡ **[Docs/RoboRenderer.md](Docs/RoboRenderer.md)** – the compiled contract, the
+layout, text, input, paint and backend engines, the `RRE` diagnostics, the frame
+loop, the tools, the visual tests and the measured numbers.
 
 ### One category, many tags
 
@@ -149,8 +183,16 @@ integration points that hand their subtree back to the HTML vocabulary.
 CMakeLists.txt              top-level project, shared options and output layout
 CMakePresets.json           debug / release / relwithdebinfo presets
 Include/RoboHTMLCompiler/   public compiler headers
+Include/RoboRenderer/       public runtime headers (the compiled contract and
+                            every engine's API)
 Source/                     compiler implementation (lexer, parsers, validation,
                             CSS, JavaScript, native lowering, code generation, CLI)
+Source/RoboRenderer/        runtime implementation (layout, text, style, state,
+                            input, paint, backend, resources, codecs, validation)
+Docs/RoboRenderer.md        the runtime's reference document
+Docs/RoboCSSCompiler.md     the CSS compiler's reference document: the module
+                            split, the diagnostics, what is implemented and
+                            what is reported, and compile-time scaling
 Registry/                   hand-authored vocabulary (kinds, properties,
                             normalisation, routing, ARIA, SVG, MathML, semantics)
 CompilerKnowledge/          the compiler's knowledge, checked in as real code
@@ -159,10 +201,14 @@ CompilerKnowledge/          the compiler's knowledge, checked in as real code
   Source/                   registry tables implementation
   ImplementationCoverage.json   machine-readable coverage report
   ReferenceAudit.json       the audit trail of the consumed reference
-Tools/                      SpecExtractor, RegistryCompiler, JSON helper, drivers
-Tests/                      component and integration suites (custom framework)
+Tools/                      SpecExtractor, RegistryCompiler, JSON helper, drivers,
+                            RoboViewer, RoboBench, RendererHarness
+Tests/                      component, integration and renderer suites
+Tests/RoboRenderer/         runtime suites (contract, style, text, layout, paint,
+                            backend, images, input, resources, visual)
 Examples/BasicApp/          a single-document HTML + CSS + JS application
 Examples/MultiPage/         three documents in one folder, one model each
+RoboBench.md                the current benchmark report, produced by RoboBench
 ```
 
 `CompilerKnowledge/` is **not** build output. It is generated once by the
@@ -201,8 +247,10 @@ ctest --preset release
 ```
 
 The build produces `build/bin/RoboHTMLCompiler.exe`, `build/bin/RoboHTMLCompilerTests.exe`
-and, when the tools are enabled, `build/bin/SpecExtractor.exe` and
-`build/bin/RegistryCompiler.exe`.
+and, when the tools are enabled, `build/bin/SpecExtractor.exe`,
+`build/bin/RegistryCompiler.exe`, `build/bin/RoboViewer.exe` (render one document
+to an image) and `build/bin/RoboBench.exe` (measure the runtime and write a
+report).
 
 ---
 
@@ -352,7 +400,8 @@ RoboHTMLCompiler [options] [sourceDirectory]
   --name <applicationName>   Application name (default: derived from the document)
   --all                      Compile every HTML document in the directory, each into
                              its own <output>/<DocumentName> subdirectory
-  --target <web|native|all>  Output targets (default: all)
+  --target <web|native|runtime|all>
+                             Output targets (default: all)
   --strictness <lax|strict|pedantic>
   --allow-obsolete           Accept obsolete elements and attributes
   --no-ir                    Do not emit the IR dump
@@ -373,6 +422,8 @@ then any `*.html`).
 <output>/GeneratedHTML/scripts.js           behaviour summary
 <output>/GeneratedNative/<App>NativeModel.h     typed model declaration
 <output>/GeneratedNative/<App>NativeModel.cpp   typed model construction
+<output>/GeneratedRuntime/<App>CompiledUi.h     compiled UI for RoboRenderer
+<output>/GeneratedRuntime/<App>CompiledUi.cpp
 <output>/GeneratedIR/<App>.ir.json          machine-readable native IR
 <output>/GeneratedReports/CompilationReport.json
 <output>/GeneratedReports/Diagnostics.json
@@ -397,11 +448,21 @@ build/bin/RoboHTMLCompilerTests.exe            # or ctest --preset release
 build/bin/RoboHTMLCompilerTests.exe Svg        # filter by suite
 ```
 
-Suites: `Registry`, `Validation` (separation + attribute rules), `HTML`
-(element coverage), `SVG`, `MathML`, `CSS`, `JavaScript`, `NativeModel` and
-`Integration` (end-to-end compilation of the example and of temporary
+Compiler suites: `Registry`, `Validation` (separation + attribute rules),
+`HTML` (element coverage), `SVG`, `MathML`, `CSS`, `JavaScript`, `NativeModel`
+and `Integration` (end-to-end compilation of the example and of temporary
 applications). `ctest` also registers `RoboHTMLCompilerExample`, which compiles
 `Examples/BasicApp`.
+
+Runtime suites: `RuntimeContract` (the compiler→renderer seam), `Style`, `Text`,
+`Layout`, `Paint`, `Backend`, `Images`, `Input`, `Resources` and `Visual`
+(rendered frames compared against recorded references). The generated-UI suite
+runs the renderer against compiled data the compiler emitted, not only against
+data a test built in memory.
+
+The first `Visual` run *records* its reference frames under
+`Tests/Reference/RoboRenderer/` and reports that it did; later runs compare.
+That directory is gitignored, because a reference frame is a local recording.
 
 ---
 

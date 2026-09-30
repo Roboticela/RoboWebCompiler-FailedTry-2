@@ -51,6 +51,12 @@ set(RoboGeneratedRegistryDirectory "${CMAKE_SOURCE_DIR}/CompilerKnowledge/Vocabu
 # reports that and leaves CompilerKnowledge/Vocabulary/ authoritative.
 set(RoboReferenceDirectory "${CMAKE_SOURCE_DIR}/Reference/HTML" CACHE PATH "Standards reference directory (optional)")
 
+# The CSS reference is the CSS Working Group's drafts. It is mined by
+# CssSpecExtractor into CompilerKnowledge/Vocabulary/CssVocabulary.json and the
+# generated header, and retired module by module as the compiler accounts for it.
+set(RoboCssReferenceDirectory "${CMAKE_SOURCE_DIR}/Reference/CSS" CACHE PATH "CSS standards reference directory (optional)")
+set(RoboCssRetireModules "" CACHE STRING "CSS reference modules to retire (comma separated)")
+
 # Default target name for the compiler executable.
 set(RoboCompilerExecutableName "RoboHTMLCompiler")
 

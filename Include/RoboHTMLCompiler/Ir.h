@@ -199,6 +199,23 @@ namespace RoboHTMLCompiler
         std::string commandTarget;
     };
 
+    /// Compile-time nature of the element, taken from the element definition.
+    ///
+    /// This is knowledge only the compiler has: many source tags collapse into
+    /// one ElementKind, so the kind alone cannot say whether an element flows
+    /// inline (<span>, <a>, <em>) or is a block (<p>, <div>, <li>), whether it
+    /// is interactive, or whether it is an ordered list. Rather than making the
+    /// runtime guess, the compiler records it here and the compiled data carries
+    /// it to the renderer.
+    struct ElementNature
+    {
+        bool inlineContent = false;
+        bool interactive = false;
+        bool formAssociated = false;
+        bool orderedList = false;
+        bool preservesWhitespace = false;
+    };
+
     /// Debug and browser-compatibility metadata. Removable in release builds.
     struct SourceMetadata
     {
@@ -362,6 +379,7 @@ namespace RoboHTMLCompiler
         MediaProperties media;
         TableProperties table;
         InteractionProperties interaction;
+        ElementNature nature;
         CustomMetadata customMetadata;
         SourceMetadata source;
 

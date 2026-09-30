@@ -30,11 +30,6 @@ namespace RoboHTMLCompiler
             stream << contents;
         }
 
-        std::string BaseName(const std::filesystem::path& path)
-        {
-            return path.stem().string();
-        }
-
         /// "task-list.html" -> "TaskList": a valid C++ identifier that names the
         /// generated native model of a document.
         std::string ApplicationNameFromDocument(const std::filesystem::path& path)
@@ -252,6 +247,7 @@ namespace RoboHTMLCompiler
 
         result.webTargetDirectory = options.outputDirectory / "GeneratedHTML";
         result.nativeTargetDirectory = options.outputDirectory / "GeneratedNative";
+        result.runtimeTargetDirectory = options.outputDirectory / "GeneratedRuntime";
         result.irDirectory = options.outputDirectory / "GeneratedIR";
         result.reportDirectory = options.outputDirectory / "GeneratedReports";
 
@@ -386,9 +382,32 @@ namespace RoboHTMLCompiler
             model.scriptResources.push_back(resource.reference);
         }
 
+        // --- Stage 5b: authored CSS -> native styles --------------------------
+        //
+        // The cascade runs here, once, over the document the compiler has already
+        // built. Everything a browser does per frame - matching, specificity, the
+        // cascade, inheritance, shorthand expansion - has happened by the time
+        // this returns, and what comes out is the native value of every property
+        // the renderer consumes.
+        CssLengthContext cssContext;
+        cssContext.viewportWidth = options.viewportWidth > 0.0f ? options.viewportWidth : 1024.0f;
+        cssContext.viewportHeight = options.viewportHeight > 0.0f ? options.viewportHeight : 768.0f;
+
+        CssStyleTable styleTable;
+        CssStyleBuilder styleBuilder(diagnostics);
+
+        if (!styleBuilder.Build(*document, styleSheetCompiler.GetSources(), cssContext, styleTable))
+        {
+            std::cerr << "[RoboHTMLCompiler] CSS compilation failed\n";
+            return result;
+        }
+
         result.elementCount = document->CollectElements().size();
         result.nativeElementCount = model.CountElements();
         result.styleCount = model.styleTable.size();
+        result.computedStyleCount = styleTable.computedStyleCount;
+        result.nativeStyleCount = styleTable.styles.empty() ? 0 : styleTable.styles.size() - 1;
+        result.styledElementCount = styleTable.styledElementCount;
         result.eventBindingCount = model.eventBindings.size();
 
         // --- Stage 6: code generation ----------------------------------------
@@ -412,6 +431,20 @@ namespace RoboHTMLCompiler
                 std::cerr << "[RoboHTMLCompiler] native target generation failed\n";
                 return result;
             }
+        }
+
+        if (options.generateRuntimeTarget)
+        {
+            RuntimeTargetGenerator runtimeTarget(diagnostics, registry);
+            if (!runtimeTarget.Generate(model, options.applicationName, result.runtimeTargetDirectory,
+                                       result.runtimeTarget, &styleTable))
+            {
+                std::cerr << "[RoboHTMLCompiler] runtime target generation failed\n";
+                return result;
+            }
+
+            result.runtimeElementCount = result.runtimeTarget.elementCount;
+            result.runtimeResourceCount = result.runtimeTarget.resourceCount;
         }
 
         if (options.emitIrDump)
@@ -592,6 +625,14 @@ namespace RoboHTMLCompiler
             {
                 outputs.push_back(Quote(document.result.nativeTarget.irDumpPath.generic_string()));
             }
+            if (!document.result.runtimeTarget.headerPath.empty())
+            {
+                outputs.push_back(Quote(document.result.runtimeTarget.headerPath.generic_string()));
+            }
+            if (!document.result.runtimeTarget.sourcePath.empty())
+            {
+                outputs.push_back(Quote(document.result.runtimeTarget.sourcePath.generic_string()));
+            }
 
             report << "    {\n";
             report << "      \"document\": " << Quote(document.documentName) << ",\n";
@@ -632,7 +673,12 @@ namespace RoboHTMLCompiler
         report << "    \"sourceElements\": " << document.CollectElements().size() << ",\n";
         report << "    \"nativeElements\": " << result.nativeElementCount << ",\n";
         report << "    \"internedStyles\": " << result.styleCount << ",\n";
+        report << "    \"computedStyles\": " << result.computedStyleCount << ",\n";
+        report << "    \"nativeStyles\": " << result.nativeStyleCount << ",\n";
+        report << "    \"styledElements\": " << result.styledElementCount << ",\n";
         report << "    \"eventBindings\": " << result.eventBindingCount << ",\n";
+        report << "    \"runtimeElements\": " << result.runtimeElementCount << ",\n";
+        report << "    \"runtimeResources\": " << result.runtimeResourceCount << ",\n";
         report << "    \"scriptResources\": " << model.scriptResources.size() << "\n";
         report << "  },\n";
 
@@ -657,6 +703,14 @@ namespace RoboHTMLCompiler
         {
             outputs.push_back(Quote(result.nativeTarget.irDumpPath.generic_string()));
         }
+        if (!result.runtimeTarget.headerPath.empty())
+        {
+            outputs.push_back(Quote(result.runtimeTarget.headerPath.generic_string()));
+        }
+        if (!result.runtimeTarget.sourcePath.empty())
+        {
+            outputs.push_back(Quote(result.runtimeTarget.sourcePath.generic_string()));
+        }
         report << "  \"outputs\": " << JsonArray(outputs) << ",\n";
 
         report << "  \"invariants\": {\n";
@@ -664,7 +718,8 @@ namespace RoboHTMLCompiler
         report << "    \"htmlContainsJavaScriptSource\": " << Quote(false) << ",\n";
         report << "    \"runtimeCssParsingRequired\": " << Quote(false) << ",\n";
         report << "    \"runtimeHtmlParsingRequired\": " << Quote(false) << ",\n";
-        report << "    \"nativeRepresentationStronglyTyped\": " << Quote(true) << "\n";
+        report << "    \"nativeRepresentationStronglyTyped\": " << Quote(true) << ",\n";
+        report << "    \"runtimeRepresentationIsFlatIndexedData\": " << Quote(true) << "\n";
         report << "  }\n";
         report << "}\n";
 

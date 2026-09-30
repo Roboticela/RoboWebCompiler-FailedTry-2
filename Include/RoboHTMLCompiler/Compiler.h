@@ -59,9 +59,18 @@ namespace RoboHTMLCompiler
         /// all the others.
         bool referencedScriptsOnly = false;
 
+        /// The viewport the application targets. CSS media queries are evaluated
+        /// against it during compilation, and viewport units the runtime resolves
+        /// are stored as fractions of it. It is a build input, not a runtime
+        /// setting, because a media query cannot be evaluated twice.
+        float viewportWidth = 1024.0f;
+        float viewportHeight = 768.0f;
+
         ValidationOptions validation;
         bool generateWebTarget = true;
         bool generateNativeTarget = true;
+        /// Emit the flat compiled UI that RoboRenderer consumes.
+        bool generateRuntimeTarget = true;
         bool emitIrDump = true;
         bool emitCompilationReport = true;
         bool emitCoverageSummary = true;
@@ -74,11 +83,20 @@ namespace RoboHTMLCompiler
         std::size_t elementCount = 0;
         std::size_t nativeElementCount = 0;
         std::size_t styleCount = 0;
+        /// Computed styles the CSS compiler interned, the native style entries
+        /// they lowered into, and the elements that carry one.
+        std::size_t computedStyleCount = 0;
+        std::size_t nativeStyleCount = 0;
+        std::size_t styledElementCount = 0;
         std::size_t eventBindingCount = 0;
         WebTargetResult webTarget;
         NativeTargetResult nativeTarget;
+        RuntimeTargetResult runtimeTarget;
+        std::size_t runtimeElementCount = 0;
+        std::size_t runtimeResourceCount = 0;
         std::filesystem::path webTargetDirectory;
         std::filesystem::path nativeTargetDirectory;
+        std::filesystem::path runtimeTargetDirectory;
         std::filesystem::path irDirectory;
         std::filesystem::path reportDirectory;
     };

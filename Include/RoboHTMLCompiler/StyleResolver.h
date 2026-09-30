@@ -29,6 +29,14 @@ namespace RoboHTMLCompiler
         std::string value;
     };
 
+    /// One stylesheet exactly as it was loaded: the CSS compiler parses this
+    /// text itself, and a diagnostic has to name the file it came from.
+    struct LoadedStyleSheet
+    {
+        std::string name;
+        std::string text;
+    };
+
     struct StyleRule
     {
         std::string sheetName;
@@ -74,6 +82,9 @@ namespace RoboHTMLCompiler
         std::string EmitStyleSheet() const;
 
         const std::vector<StyleRule>& GetRules() const { return rules; }
+
+        /// Every stylesheet's source text, in load order.
+        const std::vector<LoadedStyleSheet>& GetSources() const { return sources; }
         const std::vector<std::string>& GetExternalStyleSheets() const { return externalStyleSheets; }
 
         /// Expands a Tailwind utility class. Returns false when the token is not
@@ -86,6 +97,7 @@ namespace RoboHTMLCompiler
 
         DiagnosticSink& diagnostics;
         std::vector<StyleRule> rules;
+        std::vector<LoadedStyleSheet> sources;
         std::vector<std::string> externalStyleSheets;
 
         /// Class name -> declarations authored in a .css file.

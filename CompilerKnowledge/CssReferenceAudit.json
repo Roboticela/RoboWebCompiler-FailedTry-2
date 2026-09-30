@@ -1,0 +1,1412 @@
+{
+  "$schema": "RoboHTMLCompiler.CssReferenceAudit.v1",
+  "generatedBy": "RoboHTMLCompiler CssSpecExtractor",
+  "reference": "D:/Muhammad/RoboHTMLCompiler/Reference/CSS",
+  "policy": "A module is retired once every property it defines is either implemented by the CSS front end or reported by name, and the compiler's coverage report accounts for it. Retiring a module records it here and removes its directory: the extracted vocabulary is what is checked in.",
+  "modules": [
+    {
+      "name": "animation-triggers-1",
+      "properties": 14,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "compositing-1",
+      "properties": 3,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "compositing-2",
+      "properties": 3,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-2015",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-2017",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-2018",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-2020",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-2021",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-2022",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-2023",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-2024",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-2025",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-2026",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-align-3",
+      "properties": 9,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-anchor-position-1",
+      "properties": 36,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-anchor-position-2",
+      "properties": 0,
+      "descriptors": 1,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-animations-1",
+      "properties": 9,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-animations-2",
+      "properties": 6,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-backgrounds-3",
+      "properties": 41,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-backgrounds-4",
+      "properties": 18,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-borders-4",
+      "properties": 100,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-box-3",
+      "properties": 37,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-box-4",
+      "properties": 11,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-break-3",
+      "properties": 6,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-break-4",
+      "properties": 7,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-cascade-3",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-cascade-4",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-cascade-5",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 1,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-cascade-6",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-color-4",
+      "properties": 2,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-color-5",
+      "properties": 0,
+      "descriptors": 3,
+      "atRules": 1,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-color-6",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-color-adjust-1",
+      "properties": 4,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-color-hdr-1",
+      "properties": 4,
+      "descriptors": 1,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-conditional-3",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 2,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-conditional-4",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-conditional-5",
+      "properties": 3,
+      "descriptors": 10,
+      "atRules": 2,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-conditional-values-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-contain-1",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-contain-2",
+      "properties": 2,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-contain-3",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-content-3",
+      "properties": 6,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-counter-styles-3",
+      "properties": 0,
+      "descriptors": 10,
+      "atRules": 1,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-display-3",
+      "properties": 4,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-display-4",
+      "properties": 6,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-easing-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 2,
+      "retired": false
+    },
+    {
+      "name": "css-easing-2",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-egg-1",
+      "properties": 1,
+      "descriptors": 1,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-env-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 1,
+      "retired": false
+    },
+    {
+      "name": "css-exclusions-1",
+      "properties": 2,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-extensions-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-flexbox-1",
+      "properties": 12,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-flexbox-2",
+      "properties": 13,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-font-loading-3",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-fonts-4",
+      "properties": 26,
+      "descriptors": 18,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-fonts-5",
+      "properties": 1,
+      "descriptors": 9,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-forms-1",
+      "properties": 4,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-gaps-1",
+      "properties": 45,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-gcpm-3",
+      "properties": 7,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-gcpm-4",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-grid-1",
+      "properties": 16,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 2,
+      "retired": false
+    },
+    {
+      "name": "css-grid-2",
+      "properties": 16,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 2,
+      "retired": false
+    },
+    {
+      "name": "css-grid-3",
+      "properties": 2,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-highlight-api-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-image-animation-1",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-images-3",
+      "properties": 4,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-images-4",
+      "properties": 2,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 1,
+      "retired": false
+    },
+    {
+      "name": "css-images-5",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-inline-3",
+      "properties": 14,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-line-grid-1",
+      "properties": 3,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-link-params-1",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-lists-3",
+      "properties": 8,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-logical-1",
+      "properties": 57,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-masking-1",
+      "properties": 20,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 1,
+      "retired": false
+    },
+    {
+      "name": "css-mixins-1",
+      "properties": 0,
+      "descriptors": 1,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 1,
+      "retired": false
+    },
+    {
+      "name": "css-mobile",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-module",
+      "properties": 3,
+      "descriptors": 1,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-multicol-1",
+      "properties": 9,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-multicol-2",
+      "properties": 7,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 1,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-namespaces-3",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-navigation-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 2,
+      "selectors": 2,
+      "functions": 3,
+      "retired": false
+    },
+    {
+      "name": "css-nesting-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 1,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-overflow-3",
+      "properties": 9,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-overflow-4",
+      "properties": 19,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-overflow-5",
+      "properties": 4,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 6,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-overscroll-1",
+      "properties": 5,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-page-3",
+      "properties": 1,
+      "descriptors": 5,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-page-4",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-page-floats-3",
+      "properties": 5,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 2,
+      "retired": false
+    },
+    {
+      "name": "css-position-3",
+      "properties": 12,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-position-4",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 1,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-print",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-pseudo-4",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-regions-1",
+      "properties": 3,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-rhythm-1",
+      "properties": 6,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-round-display-1",
+      "properties": 8,
+      "descriptors": 3,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-ruby-1",
+      "properties": 7,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-scroll-anchoring-1",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-scroll-snap-1",
+      "properties": 25,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-scroll-snap-2",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 1,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-scrollbars-1",
+      "properties": 2,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-shadow-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 6,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-shapes-1",
+      "properties": 3,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-shapes-2",
+      "properties": 2,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-size-adjust-1",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-sizing-3",
+      "properties": 14,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-sizing-4",
+      "properties": 12,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 2,
+      "retired": false
+    },
+    {
+      "name": "css-spatial-nav-1",
+      "properties": 3,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-speech-1",
+      "properties": 19,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-syntax-3",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 1,
+      "retired": false
+    },
+    {
+      "name": "css-tables-3",
+      "properties": 5,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-text-3",
+      "properties": 15,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-text-4",
+      "properties": 34,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-text-5",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-text-decor-3",
+      "properties": 10,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-text-decor-4",
+      "properties": 19,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-transforms-1",
+      "properties": 3,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-transforms-2",
+      "properties": 7,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-transitions-1",
+      "properties": 5,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-transitions-2",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 1,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-ui-3",
+      "properties": 10,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-ui-4",
+      "properties": 24,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-values-3",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-values-4",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-values-5",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 4,
+      "retired": false
+    },
+    {
+      "name": "css-variables-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-variables-2",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-view-transitions-1",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-view-transitions-2",
+      "properties": 4,
+      "descriptors": 2,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-viewport-1",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-will-change-1",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-writing-modes-3",
+      "properties": 6,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css-writing-modes-4",
+      "properties": 6,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "css2",
+      "properties": 96,
+      "descriptors": 0,
+      "atRules": 1,
+      "selectors": 1,
+      "functions": 2,
+      "retired": false
+    },
+    {
+      "name": "cssom-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "cssom-view-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "fill-stroke-3",
+      "properties": 28,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "filter-effects-1",
+      "properties": 5,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "filter-effects-2",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "geometry-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "indexes",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "matrix",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "mediaqueries-4",
+      "properties": 0,
+      "descriptors": 21,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "mediaqueries-5",
+      "properties": 0,
+      "descriptors": 38,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "motion-1",
+      "properties": 6,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "pointer-animations-1",
+      "properties": 4,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "resize-observer-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "scroll-animations-1",
+      "properties": 11,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "selectors-4",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 7,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "selectors-5",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 1,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "selectors-nonelement-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 1,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "web-animations-1",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    },
+    {
+      "name": "web-animations-2",
+      "properties": 0,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": false
+    }
+  ],
+  "modulesWithoutSource": [
+    ".github",
+    "bin",
+    "css-2007",
+    "css-2010",
+    "css-block-3",
+    "css-color-3",
+    "css-contain-4",
+    "css-floats-3",
+    "css-fonts-3",
+    "css-page-template-1",
+    "css-preslev-1",
+    "css-scoping-1",
+    "css-shaders-1",
+    "css-shadow-parts-1",
+    "css-style-attr-1",
+    "css-template-1",
+    "css-tv",
+    "css3-tables-algorithms",
+    "mediaqueries-3",
+    "selectors-3",
+    "shared",
+    "web-animations"
+  ],
+  "retiredModules": [],
+  "modulesRemaining": 153,
+  "referenceState": "pending"
+}
