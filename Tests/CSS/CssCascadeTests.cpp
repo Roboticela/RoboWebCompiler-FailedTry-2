@@ -521,6 +521,64 @@ ROBO_TEST(CssCascade, UnsupportedFeaturesAreReportedNotApplied)
     ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Color), std::string("#ff0000"));
 }
 
+ROBO_TEST(CssCascade, AllInitialResetsEveryProperty)
+{
+    Fixture fixture;
+    fixture.Build("html { color: #123456; padding: 7px } body { color: red; padding: 3px; width: 40px } "
+                  "body { all: initial }");
+
+    // Every property the registry carries takes its initial value: the colour is
+    // the initial black rather than the parent's, even though `color` inherits,
+    // and the padding and width are their initial values rather than the ones the
+    // earlier rule set.
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Color), std::string("#000000"));
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::PaddingTop), std::string("0px"));
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Width), std::string("auto"));
+    ROBO_CHECK(!fixture.diagnostics.HasErrors());
+}
+
+ROBO_TEST(CssCascade, AllInheritTakesEvenTheNonInheritedProperties)
+{
+    Fixture fixture;
+    fixture.Build("html { color: #123456; padding: 7px; width: 90px } body { all: inherit }");
+
+    // `padding` and `width` do not inherit, and `all: inherit` copies them
+    // anyway: that is the difference between `all` and an inherited property.
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Color), std::string("#123456"));
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::PaddingTop), std::string("7px"));
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Width), std::string("90px"));
+}
+
+ROBO_TEST(CssCascade, AllUnsetSplitsInheritedFromNonInherited)
+{
+    Fixture fixture;
+    fixture.Build("html { color: #abcdef; padding: 7px } body { all: unset }");
+
+    // An inherited property takes the parent's value, a non-inherited one takes
+    // its initial value: this is `unset` per property, applied to all of them.
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Color), std::string("#abcdef"));
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::PaddingTop), std::string("0px"));
+}
+
+ROBO_TEST(CssCascade, AllWithANonWideValueIsReported)
+{
+    Fixture fixture;
+    fixture.Build("body { all: 3px }");
+
+    // `all` takes only the CSS-wide keywords, so anything else is an invalid
+    // value with a diagnostic - never a declaration that quietly did nothing.
+    ROBO_CHECK(fixture.diagnostics.HasErrors());
+    ROBO_CHECK(HasCode(fixture.diagnostics, CSSDiagnosticCode::InvalidValue));
+}
+
+ROBO_TEST(CssCascade, AllIsImplementedRatherThanReported)
+{
+    const CSSPropertyRegistry& registry = CSSPropertyRegistry::Instance();
+
+    ROBO_CHECK(registry.Find("all") != nullptr);
+    ROBO_CHECK(!registry.IsKnownUnsupportedName("all"));
+}
+
 ROBO_TEST(CssCascade, InvalidValuesFailTheDeclaration)
 {
     Fixture fixture;

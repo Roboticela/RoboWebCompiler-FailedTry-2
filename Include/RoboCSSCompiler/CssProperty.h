@@ -76,6 +76,12 @@ namespace RoboCSSCompiler
         OverflowX,
         OverflowY,
 
+        // --- the cascade's own property -------------------------------------
+        /// `all`: a shorthand over every property, whose only values are the
+        /// CSS-wide keywords. The cascade expands it before any longhand sees a
+        /// declaration, so it is never set on a computed style itself.
+        All,
+
         Count
     };
 
@@ -104,7 +110,9 @@ namespace RoboCSSCompiler
         Table,
         Content,
         Interaction,
-        Logical
+        Logical,
+        /// The cascade's own properties: `all`.
+        Cascade
     };
 
     const char* ToString(CSSPropertyCategory category);

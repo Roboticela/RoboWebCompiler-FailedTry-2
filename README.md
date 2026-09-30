@@ -214,8 +214,10 @@ RoboBench.md                the current benchmark report, produced by RoboBench
 `CompilerKnowledge/` is **not** build output. It is generated once by the
 tooling from the standards reference, and from then on it is source: it is
 compiled into the binary, checked in, and edited only by rerunning the tools.
-There is no `Reference/` directory any more — the standards reference was used
-as an implementation checklist and has been fully consumed (see below).
+`Reference/HTML` has been fully consumed and is gone; `Reference/CSS` is the
+reference still being worked through. A reference is used as an implementation
+checklist, mined into checked-in knowledge by a tool, and then deleted module by
+module as the compiler accounts for it (see below).
 
 ---
 
@@ -388,6 +390,40 @@ no-op that reports the reference as consumed instead of failing, so the full
 tree back at `Reference/HTML/` and rerunning `RoboGenerateRegistries` picks it
 up again; `RoboAuditReferences` will report whatever it defines that the
 compiler does not account for yet.
+
+### The CSS reference
+
+`Reference/CSS` is the CSS Working Group's drafts, and the same loop applies with
+a second extractor, because those drafts are Bikeshed source rather than wattsi
+source:
+
+```sh
+# Mine the reference into the vocabulary, the generated header and the audit
+cmake --build build --target RoboExtractCssReferences
+
+# Retire the modules the compiler now accounts for
+cmake --build build --target RoboRetireCssReferences -DRoboCssRetireModules=css-box-3
+```
+
+| file | what it is |
+| --- | --- |
+| `CompilerKnowledge/Vocabulary/CssVocabulary.json` | the inventory: every property, descriptor, at-rule, selector and function the reference defines, with its module and line |
+| `CompilerKnowledge/Include/RoboCSSCompiler/GeneratedCssVocabulary.h` | the names, compiled in and sorted; this is what makes RCC010 "a real property this compiler does not implement" instead of a hand-written list of 218 names |
+| `CompilerKnowledge/CssReferenceAudit.json` | per-module counts, what is retired, and the modules that carry no Bikeshed source to mine |
+
+**Where it stands.** 170 specification modules (five directories under
+`Reference/CSS` are the drafts repository's own plumbing, its template module or
+an April Fools specification, and are named as such rather than mined), 151 of
+them with Bikeshed source, defining 712 distinct property names in 1,069 propdef
+blocks. The CSS front end compiles 50 of those names; the other 662 are reported
+by name. No module is complete yet: `css-box-4` is one property away, and a dozen
+others are too, which is what the next batches of implementation buy.
+`Tests/CSS/CssReferenceCoverageTests.cpp`
+is the gate on retiring a module: every reference name has to be either
+implemented or reported, every implemented property must not be reported, every
+spec citation must name a real module, and the generated table must be sorted for
+the lookup that searches it. `referenceState` in the audit is `pending` until
+those checks pass for everything and `Reference/CSS` can be removed.
 
 ---
 

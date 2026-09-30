@@ -72,7 +72,10 @@ ROBO_TEST(CssReference, TheGeneratedTableIsSortedForBinarySearch)
         ROBO_CHECK(std::strcmp(previous, current) <= 0);
     }
 
-    ROBO_CHECK(CssReference::ReferencePropertyCount > 0);
+    // The table is the compiler's idea of what CSS is, so an empty one would make
+    // every other test here vacuous.
+    const std::vector<const char*> names = ReferenceNames();
+    ROBO_CHECK(names.size() > 1);
 }
 
 ROBO_TEST(CssReference, EveryReferencePropertyIsImplementedOrReported)
@@ -140,9 +143,10 @@ ROBO_TEST(CssReference, EverySpecCitationNamesAReferenceModule)
     {
         bool found = false;
 
-        // The citation is a module directory, not necessarily a module the
-        // extractor could mine: some drafts ship only the generated Overview.html,
-        // and those are named in the audit rather than dropped.
+        // The citation is a module, not necessarily one the extractor could
+        // mine: some drafts ship only the generated Overview.html, and those are
+        // named in the audit rather than dropped. A retired module is still a
+        // module the reference had, so it resolves too.
         for (std::size_t index = 0; index < CssReference::ReferenceModuleCount && !found; ++index)
         {
             found = std::strcmp(CssReference::ReferenceModules[index].name, definition.spec) == 0;
@@ -182,6 +186,53 @@ ROBO_TEST(CssReference, EverySpecCitationNamesAReferenceModule)
     }
 
     ROBO_CHECK_EQ(unknown.size(), static_cast<std::size_t>(0));
+}
+
+ROBO_TEST(CssReference, RetiredModulesStayImplemented)
+{
+    // Retiring a module deletes its directory and with it the vocabulary that
+    // named what it defined. These names are what that deletion must not cost:
+    // the compiler accounted for each of them before the module went, and this
+    // is the test that keeps it accounted for afterwards.
+    const CSSPropertyRegistry& registry = CSSPropertyRegistry::Instance();
+
+    for (std::size_t index = 0; index < CssReference::RetiredReferencePropertyCount; ++index)
+    {
+        const char* name = CssReference::RetiredReferencePropertyNames[index];
+
+        if (!IsImplemented(registry, name))
+        {
+            Fail(std::string("a retired module's property is no longer implemented: ") + name, __FILE__,
+                 __LINE__);
+        }
+
+        ROBO_CHECK(IsImplemented(registry, name));
+    }
+
+    ++CheckCount;
+}
+
+ROBO_TEST(CssReference, RetiredModulesAreStillNamed)
+{
+    // A property cites the module that defines it. A module whose directory has
+    // been retired is still a module the reference had, so its name stays in the
+    // table the citation check searches.
+    std::size_t retiredCount = 0;
+
+    for (std::size_t index = 0; index < CssReference::ReferenceModuleCount; ++index)
+    {
+        if (CssReference::ReferenceModules[index].retired)
+        {
+            ++retiredCount;
+        }
+    }
+
+    // The two tables describe the same act, so they cannot disagree: a module is
+    // retired exactly when the names it defined were carried over. A retired
+    // module with no names kept, or names kept with no retired module, would mean
+    // half of the extraction ran.
+    const bool anyRetiredNames = CssReference::RetiredReferencePropertyCount > 0;
+    ROBO_CHECK_EQ(retiredCount > 0, anyRetiredNames);
 }
 
 ROBO_TEST(CssReference, UnknownNamesAreStillUnknown)

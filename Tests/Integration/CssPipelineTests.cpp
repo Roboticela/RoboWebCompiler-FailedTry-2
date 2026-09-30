@@ -223,6 +223,86 @@ ROBO_TEST(CssPipeline, PaddingChangesTheBoxGeometry)
     ROBO_CHECK(heightDifference >= 31.5f && heightDifference <= 32.5f);
 }
 
+ROBO_TEST(CssPipeline, AllInheritCarriesTheParentsValuesIntoTheChild)
+{
+    RoboTools::CompiledApplication plain;
+    RoboTools::CompiledApplication inherited;
+    std::string error;
+
+    const std::string document = "<div class=\"outer\"><div class=\"inner\">text</div></div>";
+
+    // The parent is padded and red. Padding does not inherit, so the child only
+    // has it when `all: inherit` copies the parent's computed values onto it.
+    //
+    // `display` is declared here for a reason. `all: inherit` copies *every*
+    // property, `display` included, and it can only copy what the cascade
+    // computed. The cascade's initial `display` is CSS's `inline`; the block
+    // look of a `<div>` comes from the renderer's per-element base style, which
+    // is this compiler's user-agent sheet and is invisible to the cascade. So
+    // the parent states its display, the child copies it, and the box geometry
+    // below is the geometry of a block - which is what a browser would do with
+    // a user-agent sheet that said `div { display: block }`.
+    ROBO_CHECK(CompileBodyWithSources(document, plain,
+                                      Sheet(".outer { padding: 1rem; color: #ff0000; display: block } "
+                                            ".inner { color: #000000 }"),
+                                      error));
+    ROBO_CHECK(error.empty());
+
+    ROBO_CHECK(CompileBodyWithSources(document, inherited,
+                                      Sheet(".outer { padding: 1rem; color: #ff0000; display: block } "
+                                            ".inner { color: #000000; all: inherit }"),
+                                      error));
+    ROBO_CHECK(error.empty());
+
+    // The child is the second styled element: the parent is first in document
+    // order.
+    const ElementIndex plainInner = StyledElement(plain.Document(), 1);
+    const ElementIndex inheritedInner = StyledElement(inherited.Document(), 1);
+
+    ROBO_CHECK(plainInner != NoElement);
+    ROBO_CHECK(inheritedInner != NoElement);
+
+    if (plainInner == NoElement || inheritedInner == NoElement)
+    {
+        return;
+    }
+
+    const CompiledDocument& plainDocument = plain.Document();
+    const CompiledDocument& inheritedDocument = inherited.Document();
+    const CompiledStyle& plainStyle = plainDocument.styles[plainDocument.elements[plainInner].styleIndex];
+    const CompiledStyle& inheritedStyle =
+        inheritedDocument.styles[inheritedDocument.elements[inheritedInner].styleIndex];
+
+    // The padding arrived from the parent, in the field the layout engine reads.
+    ROBO_CHECK_EQ(plainStyle.padding.top, 0.0f);
+    ROBO_CHECK(inheritedStyle.padding.top >= 15.9f && inheritedStyle.padding.top <= 16.1f);
+    ROBO_CHECK(IsSpecified(inheritedStyle.specified, StyleFlagPadding));
+
+    // `all` is written after `color: #000000`, and the last declaration wins, so
+    // the child is the parent's red.
+    ROBO_CHECK(IsSpecified(inheritedStyle.specified, StyleFlagForeground));
+    ROBO_CHECK(SameColor(inheritedStyle.foreground, Color::Rgba(0xff, 0x00, 0x00), 1));
+
+    // And the padding is not merely recorded: it is the geometry the renderer
+    // lays out with.
+    TestRenderer plainRenderer(plain.Document());
+    TestRenderer inheritedRenderer(inherited.Document());
+    ROBO_CHECK(plainRenderer.Draw());
+    ROBO_CHECK(inheritedRenderer.Draw());
+
+    Rect plainRect;
+    Rect inheritedRect;
+    plainRenderer.renderer.Hits().ElementBounds(plainInner, plainRect);
+    inheritedRenderer.renderer.Hits().ElementBounds(inheritedInner, inheritedRect);
+
+    // One rem of padding above and below is 16 logical units each, and the
+    // child is a block, so copying the parent's padding grew it by both.
+    const float heightDifference = inheritedRect.height - plainRect.height;
+
+    ROBO_CHECK(heightDifference >= 31.5f && heightDifference <= 32.5f);
+    ROBO_CHECK(inheritedRect.width > 0.0f);
+}
+
 ROBO_TEST(CssPipeline, PercentageWidthResolvesAgainstTheContainingBlock)
 {
     RoboTools::CompiledApplication application;

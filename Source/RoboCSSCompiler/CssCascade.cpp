@@ -1705,6 +1705,77 @@ namespace RoboCSSCompiler
         applied = true;
     }
 
+    void CSSCascade::ApplyAll(const CSSDeclaration& declaration, const CSSComputedStyle* parent, CSSComputedStyle& out)
+    {
+        // `all` takes only the CSS-wide keywords, and the value grammar has
+        // already rejected anything else, so this reads the one keyword and
+        // gives every property that keyword as if it had been written for that
+        // property alone. It reuses the same initial values and the same
+        // inherited lookup the longhand path uses, which is what makes
+        // `all: inherit` and `all: initial` agree with `color: inherit` and
+        // `color: initial` on every property.
+        //
+        // Custom properties are deliberately untouched: the specification
+        // excludes them. So are `direction` and `unicode-bidi`, which the
+        // registry does not carry - the exemption is recorded here rather than
+        // left implicit if either is ever implemented.
+        //
+        // The value goes through the property's own grammar, which for `all` is
+        // exactly the CSS-wide keywords. That is what keeps `all: 3px` a
+        // reported invalid value instead of a declaration that quietly did
+        // nothing.
+        const CSSPropertyRegistry& registry = CSSPropertyRegistry::Instance();
+        const CSSPropertyDefinition* definition = registry.Find(CSSPropertyId::All);
+        CSSValue parsed;
+
+        if (definition == nullptr ||
+            !ParsePropertyValue(*definition, declaration.value, parsed, declaration.location, diagnostics))
+        {
+            return;
+        }
+
+        if (parsed.kind != CSSValueKind::Keyword)
+        {
+            return;
+        }
+
+        const std::string keyword = parsed.text;
+
+        for (const CSSPropertyDefinition& definition : registry.Properties())
+        {
+            if (definition.id == CSSPropertyId::All)
+            {
+                continue;
+            }
+
+            // `inherit`, and `unset` on an inherited property, take the parent's
+            // computed value when there is one. Nothing is reported when there is
+            // not: `all` is not about one property, and a warning per property
+            // would be noise where a diagnosis belongs.
+            if (keyword == "inherit" || (keyword == "unset" && definition.inherited))
+            {
+                const CSSValue* inherited = parent != nullptr ? parent->Get(definition.id) : nullptr;
+
+                if (inherited != nullptr)
+                {
+                    out.Set(definition.id, *inherited);
+                    continue;
+                }
+            }
+
+            const std::size_t index = static_cast<std::size_t>(definition.id);
+
+            if (index < hasInitialValue.size() && hasInitialValue[index] != 0)
+            {
+                out.Set(definition.id, initialValues[index]);
+            }
+            else
+            {
+                out.Remove(definition.id);
+            }
+        }
+    }
+
     void CSSCascade::ComputeElement(const CSSComputedStyle* parent,
                                     const std::vector<MatchedDeclaration>& matched,
                                     CSSComputedStyle& out)
@@ -1762,6 +1833,15 @@ namespace RoboCSSCompiler
             }
 
             const std::string name = LowerCase(declaration.property);
+
+            // `all` is the one property whose effect is every property, so it is
+            // expanded here rather than resolved to a value of its own.
+            if (const CSSPropertyDefinition* definition = registry.Find(name);
+                definition != nullptr && definition->id == CSSPropertyId::All)
+            {
+                ApplyAll(declaration, parent, out);
+                continue;
+            }
 
             if (const CSSShorthandDefinition* shorthand = registry.FindShorthand(name))
             {

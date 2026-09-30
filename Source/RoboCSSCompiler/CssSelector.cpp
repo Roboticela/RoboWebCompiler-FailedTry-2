@@ -241,14 +241,14 @@ namespace RoboCSSCompiler
 
     bool CSSCompoundSelector::NeedsRuntimeState() const
     {
-        for (const CSSSimpleSelector& simple : simple)
+        for (const CSSSimpleSelector& part : simple)
         {
-            if (simple.IsRuntimeState())
+            if (part.IsRuntimeState())
             {
                 return true;
             }
 
-            for (const std::vector<CSSSimpleSelector>& list : simple.argumentLists)
+            for (const std::vector<CSSSimpleSelector>& list : part.argumentLists)
             {
                 for (const CSSSimpleSelector& inner : list)
                 {
@@ -265,9 +265,9 @@ namespace RoboCSSCompiler
 
     bool CSSCompoundSelector::HasTypeOrUniversal() const
     {
-        for (const CSSSimpleSelector& simple : simple)
+        for (const CSSSimpleSelector& part : simple)
         {
-            if (simple.kind == CSSSimpleSelector::Kind::Type || simple.kind == CSSSimpleSelector::Kind::Universal)
+            if (part.kind == CSSSimpleSelector::Kind::Type || part.kind == CSSSimpleSelector::Kind::Universal)
             {
                 return true;
             }
@@ -278,31 +278,31 @@ namespace RoboCSSCompiler
 
     std::string CSSCompoundSelector::ToString() const
     {
-        std::string text;
+        std::string rendered;
 
-        for (const CSSSimpleSelector& simple : simple)
+        for (const CSSSimpleSelector& part : simple)
         {
-            text += simple.ToString();
+            rendered += part.ToString();
         }
 
-        return text;
+        return rendered;
     }
 
     std::string CSSComplexSelector::ToString() const
     {
-        std::string text;
+        std::string rendered;
 
         for (std::size_t index = 0; index < compounds.size(); ++index)
         {
             if (index > 0 && index - 1 < combinators.size())
             {
-                text += RoboCSSCompiler::ToString(combinators[index - 1]);
+                rendered += RoboCSSCompiler::ToString(combinators[index - 1]);
             }
 
-            text += compounds[index].ToString();
+            rendered += compounds[index].ToString();
         }
 
-        return text;
+        return rendered;
     }
 
     bool CSSSelectorList::AnyUnsupported() const

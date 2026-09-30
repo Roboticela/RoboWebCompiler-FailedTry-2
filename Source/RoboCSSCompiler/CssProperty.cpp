@@ -98,6 +98,7 @@ namespace RoboCSSCompiler
         case CSSPropertyCategory::Content: return "content";
         case CSSPropertyCategory::Interaction: return "interaction";
         case CSSPropertyCategory::Logical: return "logical";
+        case CSSPropertyCategory::Cascade: return "cascade";
         }
 
         return "unknown";
@@ -131,6 +132,12 @@ namespace RoboCSSCompiler
         // (id, name, category, inherited, initial, grammar, keywords,
         //  layout, paint, text, hit, supported, spec)
         const Row PropertyRows[] = {
+            // `all` is a shorthand over every property and takes only the
+            // CSS-wide keywords, which is why its keyword set is exactly those.
+            // The cascade expands it; nothing else has to know about it.
+            { Id::All, "all", Cat::Cascade, false, "initial", Grammar::Keyword,
+              "initial inherit unset revert revert-layer", true, true, true, true, true, "css-cascade-3" },
+
             { Id::Display, "display", Cat::Display, false, "inline", Grammar::Display, nullptr, true, true, false, true, true, "css-display-3" },
 
             { Id::Width, "width", Cat::BoxModel, false, "auto", Grammar::Size, nullptr, true, true, true, true, true, "css-sizing-3" },

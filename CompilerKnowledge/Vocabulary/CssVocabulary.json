@@ -4,13 +4,13 @@
   "reference": "Reference/CSS",
   "policy": "One entry per property the CSS Working Group's drafts define. A name is repeated when more than one module redefines it, and the module is the unit of reference consumption.",
   "summary": {
-    "moduleCount": 175,
-    "modulesWithVocabulary": 153,
-    "moduleCountWithoutSource": 22,
-    "propertyCount": 716,
-    "propertyDefinitionCount": 1079,
-    "descriptorCount": 124,
-    "atRuleCount": 11,
+    "moduleCount": 167,
+    "modulesWithVocabulary": 148,
+    "moduleCountWithoutSource": 19,
+    "propertyCount": 711,
+    "propertyDefinitionCount": 1066,
+    "descriptorCount": 122,
+    "atRuleCount": 10,
     "selectorCount": 28,
     "functionCount": 24
   },
@@ -2165,20 +2165,6 @@
           "logicalPropertyGroup": "",
           "source": "css-backgrounds-4/Overview.bs",
           "line": 1173
-        },
-        {
-          "name": "background-tbd",
-          "declaredAs": "background-tbd",
-          "value": "<<bg-layer>>#",
-          "initial": "see individual properties",
-          "inherited": false,
-          "computedValue": "see individual properties",
-          "animationType": "see individual properties",
-          "appliesTo": "all elements",
-          "percentages": "see individual properties",
-          "logicalPropertyGroup": "",
-          "source": "css-backgrounds-4/Overview.bs",
-          "line": 1680
         },
         {
           "name": "background",
@@ -4516,90 +4502,6 @@
       "functions": []
     },
     {
-      "name": "css-cascade-3",
-      "files": [
-        "Overview.bs"
-      ],
-      "properties": [
-        {
-          "name": "all",
-          "declaredAs": "all",
-          "value": "initial | inherit | unset",
-          "initial": "",
-          "inherited": false,
-          "computedValue": "",
-          "animationType": "",
-          "appliesTo": "",
-          "percentages": "",
-          "logicalPropertyGroup": "",
-          "source": "css-cascade-3/Overview.bs",
-          "line": 298
-        }
-      ],
-      "descriptors": [],
-      "atRules": [],
-      "selectors": [],
-      "functions": []
-    },
-    {
-      "name": "css-cascade-4",
-      "files": [
-        "Overview.bs"
-      ],
-      "properties": [
-        {
-          "name": "all",
-          "declaredAs": "all",
-          "value": "initial | inherit | unset | revert",
-          "initial": "",
-          "inherited": false,
-          "computedValue": "",
-          "animationType": "",
-          "appliesTo": "",
-          "percentages": "",
-          "logicalPropertyGroup": "",
-          "source": "css-cascade-4/Overview.bs",
-          "line": 479
-        }
-      ],
-      "descriptors": [],
-      "atRules": [],
-      "selectors": [],
-      "functions": []
-    },
-    {
-      "name": "css-cascade-5",
-      "files": [
-        "Overview.bs"
-      ],
-      "properties": [
-        {
-          "name": "all",
-          "declaredAs": "all",
-          "value": "initial | inherit | unset | revert | revert-layer | revert-rule",
-          "initial": "",
-          "inherited": false,
-          "computedValue": "",
-          "animationType": "",
-          "appliesTo": "",
-          "percentages": "",
-          "logicalPropertyGroup": "",
-          "source": "css-cascade-5/Overview.bs",
-          "line": 447
-        }
-      ],
-      "descriptors": [],
-      "atRules": [
-        {
-          "name": "layer",
-          "source": "css-cascade-5/Overview.bs",
-          "line": 1619
-        }
-      ],
-      "selectors": [],
-      "functions": []
-    },
-    {
       "name": "css-cascade-6",
       "files": [
         "Overview.bs"
@@ -4793,48 +4695,6 @@
           "logicalPropertyGroup": "",
           "source": "css-color-hdr-1/Overview.bs",
           "line": 430
-        },
-        {
-          "name": "foo",
-          "declaredAs": "foo",
-          "value": "inline-inside | block-inside | table | ruby | icon",
-          "initial": "text",
-          "inherited": false,
-          "computedValue": "specified value",
-          "animationType": "not animatable",
-          "appliesTo": "all elements",
-          "percentages": "n/a",
-          "logicalPropertyGroup": "",
-          "source": "css-color-hdr-1/Overview.bs",
-          "line": 1774
-        },
-        {
-          "name": "shorthand-foo",
-          "declaredAs": "shorthand-foo",
-          "value": "foo | bar | baz",
-          "initial": "",
-          "inherited": false,
-          "computedValue": "",
-          "animationType": "",
-          "appliesTo": "",
-          "percentages": "",
-          "logicalPropertyGroup": "",
-          "source": "css-color-hdr-1/Overview.bs",
-          "line": 1850
-        },
-        {
-          "name": "foo",
-          "declaredAs": "foo",
-          "value": "",
-          "initial": "",
-          "inherited": false,
-          "computedValue": "",
-          "animationType": "",
-          "appliesTo": "",
-          "percentages": "",
-          "logicalPropertyGroup": "",
-          "source": "css-color-hdr-1/Overview.bs",
-          "line": 1857
         }
       ],
       "descriptors": [
@@ -5354,20 +5214,6 @@
           "line": 257
         },
         {
-          "name": "display-or-not",
-          "declaredAs": "display-or-not",
-          "value": "show | discard | hide",
-          "initial": "show",
-          "inherited": false,
-          "computedValue": "as specified",
-          "animationType": "",
-          "appliesTo": "all elements",
-          "percentages": "n/a",
-          "logicalPropertyGroup": "",
-          "source": "css-display-3/Overview.bs",
-          "line": 1246
-        },
-        {
           "name": "order",
           "declaredAs": "order",
           "value": "<<integer>>",
@@ -5420,20 +5266,6 @@
           "logicalPropertyGroup": "",
           "source": "css-display-4/Overview.bs",
           "line": 251
-        },
-        {
-          "name": "display-or-not",
-          "declaredAs": "display-or-not",
-          "value": "show | discard | hide",
-          "initial": "show",
-          "inherited": false,
-          "computedValue": "as specified",
-          "animationType": "",
-          "appliesTo": "all elements",
-          "percentages": "n/a",
-          "logicalPropertyGroup": "",
-          "source": "css-display-4/Overview.bs",
-          "line": 1259
         },
         {
           "name": "order",
@@ -5526,42 +5358,6 @@
       ],
       "properties": [],
       "descriptors": [],
-      "atRules": [],
-      "selectors": [],
-      "functions": []
-    },
-    {
-      "name": "css-egg-1",
-      "files": [
-        "Overview.bs"
-      ],
-      "properties": [
-        {
-          "name": "voice-rate",
-          "declaredAs": "voice-rate",
-          "value": "",
-          "initial": "",
-          "inherited": false,
-          "computedValue": "",
-          "animationType": "",
-          "appliesTo": "",
-          "percentages": "",
-          "logicalPropertyGroup": "",
-          "source": "css-egg-1/Overview.bs",
-          "line": 365
-        }
-      ],
-      "descriptors": [
-        {
-          "name": "performance",
-          "for": "@media",
-          "value": "<<device-performance>>",
-          "type": "range",
-          "initial": "",
-          "source": "css-egg-1/Overview.bs",
-          "line": 400
-        }
-      ],
       "atRules": [],
       "selectors": [],
       "functions": []
@@ -9777,70 +9573,6 @@
       ],
       "properties": [],
       "descriptors": [],
-      "atRules": [],
-      "selectors": [],
-      "functions": []
-    },
-    {
-      "name": "css-module",
-      "files": [
-        "Overview.bs"
-      ],
-      "properties": [
-        {
-          "name": "foo",
-          "declaredAs": "foo",
-          "value": "inline-inside | block-inside | table | ruby | icon",
-          "initial": "text",
-          "inherited": false,
-          "computedValue": "specified value",
-          "animationType": "not animatable",
-          "appliesTo": "all elements",
-          "percentages": "n/a",
-          "logicalPropertyGroup": "",
-          "source": "css-module/Overview.bs",
-          "line": 120
-        },
-        {
-          "name": "shorthand-foo",
-          "declaredAs": "shorthand-foo",
-          "value": "foo | bar | baz",
-          "initial": "",
-          "inherited": false,
-          "computedValue": "",
-          "animationType": "",
-          "appliesTo": "",
-          "percentages": "",
-          "logicalPropertyGroup": "",
-          "source": "css-module/Overview.bs",
-          "line": 196
-        },
-        {
-          "name": "foo",
-          "declaredAs": "foo",
-          "value": "",
-          "initial": "",
-          "inherited": false,
-          "computedValue": "",
-          "animationType": "",
-          "appliesTo": "",
-          "percentages": "",
-          "logicalPropertyGroup": "",
-          "source": "css-module/Overview.bs",
-          "line": 203
-        }
-      ],
-      "descriptors": [
-        {
-          "name": "descriptor-foo",
-          "for": "@some-at-rule",
-          "value": "more | values",
-          "type": "",
-          "initial": "values",
-          "source": "css-module/Overview.bs",
-          "line": 210
-        }
-      ],
       "atRules": [],
       "selectors": [],
       "functions": []
@@ -18388,8 +18120,6 @@
     }
   ],
   "modulesWithoutSource": [
-    ".github",
-    "bin",
     "css-2007",
     "css-2010",
     "css-block-3",
@@ -18408,7 +18138,54 @@
     "css3-tables-algorithms",
     "mediaqueries-3",
     "selectors-3",
-    "shared",
     "web-animations"
+  ],
+  "nonSpecificationModules": [
+    {
+      "name": ".github",
+      "reason": "repository configuration"
+    },
+    {
+      "name": "bin",
+      "reason": "repository tooling"
+    },
+    {
+      "name": "css-egg-1",
+      "reason": "an April Fools specification"
+    },
+    {
+      "name": "css-module",
+      "reason": "the drafts repository's template module"
+    },
+    {
+      "name": "shared",
+      "reason": "shared assets for the drafts, not a specification"
+    }
+  ],
+  "excludedPropertyNames": [
+    {
+      "name": "background-tbd",
+      "reason": "a placeholder in css-backgrounds-4, not a property"
+    },
+    {
+      "name": "foo",
+      "reason": "an example in css-color-hdr-1"
+    },
+    {
+      "name": "shorthand-foo",
+      "reason": "an example in css-color-hdr-1"
+    },
+    {
+      "name": "foo",
+      "reason": "an example in css-color-hdr-1"
+    },
+    {
+      "name": "display-or-not",
+      "reason": "an example in css-display-3 and css-display-4"
+    },
+    {
+      "name": "display-or-not",
+      "reason": "an example in css-display-3 and css-display-4"
+    }
   ]
 }

@@ -1,8 +1,8 @@
 {
   "$schema": "RoboHTMLCompiler.CssReferenceAudit.v1",
   "generatedBy": "RoboHTMLCompiler CssSpecExtractor",
-  "reference": "D:/Muhammad/RoboHTMLCompiler/Reference/CSS",
-  "policy": "A module is retired once every property it defines is either implemented by the CSS front end or reported by name, and the compiler's coverage report accounts for it. Retiring a module records it here and removes its directory: the extracted vocabulary is what is checked in.",
+  "reference": "Reference/CSS",
+  "policy": "A module is retired once every property it defines is implemented by the CSS front end, not merely reported by name, and the compiler's coverage tests account for it. Retiring a module removes its directory, records it here, and carries its module name, its property names and its at-rules into the generated header, where the tests still require every one of those properties to be implemented. The reference is consumed when no module remains: the vocabulary that is checked in is what the compiler is built against from then on.",
   "modules": [
     {
       "name": "animation-triggers-1",
@@ -177,7 +177,7 @@
     },
     {
       "name": "css-backgrounds-4",
-      "properties": 18,
+      "properties": 17,
       "descriptors": 0,
       "atRules": 0,
       "selectors": 0,
@@ -230,33 +230,6 @@
       "retired": false
     },
     {
-      "name": "css-cascade-3",
-      "properties": 1,
-      "descriptors": 0,
-      "atRules": 0,
-      "selectors": 0,
-      "functions": 0,
-      "retired": false
-    },
-    {
-      "name": "css-cascade-4",
-      "properties": 1,
-      "descriptors": 0,
-      "atRules": 0,
-      "selectors": 0,
-      "functions": 0,
-      "retired": false
-    },
-    {
-      "name": "css-cascade-5",
-      "properties": 1,
-      "descriptors": 0,
-      "atRules": 1,
-      "selectors": 0,
-      "functions": 0,
-      "retired": false
-    },
-    {
       "name": "css-cascade-6",
       "properties": 0,
       "descriptors": 0,
@@ -303,7 +276,7 @@
     },
     {
       "name": "css-color-hdr-1",
-      "properties": 4,
+      "properties": 1,
       "descriptors": 1,
       "atRules": 0,
       "selectors": 0,
@@ -393,7 +366,7 @@
     },
     {
       "name": "css-display-3",
-      "properties": 4,
+      "properties": 3,
       "descriptors": 0,
       "atRules": 0,
       "selectors": 0,
@@ -402,7 +375,7 @@
     },
     {
       "name": "css-display-4",
-      "properties": 6,
+      "properties": 5,
       "descriptors": 0,
       "atRules": 0,
       "selectors": 0,
@@ -422,15 +395,6 @@
       "name": "css-easing-2",
       "properties": 0,
       "descriptors": 0,
-      "atRules": 0,
-      "selectors": 0,
-      "functions": 0,
-      "retired": false
-    },
-    {
-      "name": "css-egg-1",
-      "properties": 1,
-      "descriptors": 1,
       "atRules": 0,
       "selectors": 0,
       "functions": 0,
@@ -683,15 +647,6 @@
       "name": "css-mobile",
       "properties": 0,
       "descriptors": 0,
-      "atRules": 0,
-      "selectors": 0,
-      "functions": 0,
-      "retired": false
-    },
-    {
-      "name": "css-module",
-      "properties": 3,
-      "descriptors": 1,
       "atRules": 0,
       "selectors": 0,
       "functions": 0,
@@ -1380,11 +1335,53 @@
       "selectors": 0,
       "functions": 0,
       "retired": false
+    },
+    {
+      "name": "css-cascade-3",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": true,
+      "mined": false,
+      "propertyNames": [
+        "all"
+      ],
+      "atRuleNames": []
+    },
+    {
+      "name": "css-cascade-4",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 0,
+      "selectors": 0,
+      "functions": 0,
+      "retired": true,
+      "mined": false,
+      "propertyNames": [
+        "all"
+      ],
+      "atRuleNames": []
+    },
+    {
+      "name": "css-cascade-5",
+      "properties": 1,
+      "descriptors": 0,
+      "atRules": 1,
+      "selectors": 0,
+      "functions": 0,
+      "retired": true,
+      "mined": false,
+      "propertyNames": [
+        "all"
+      ],
+      "atRuleNames": [
+        "layer"
+      ]
     }
   ],
   "modulesWithoutSource": [
-    ".github",
-    "bin",
     "css-2007",
     "css-2010",
     "css-block-3",
@@ -1403,10 +1400,67 @@
     "css3-tables-algorithms",
     "mediaqueries-3",
     "selectors-3",
-    "shared",
     "web-animations"
   ],
-  "retiredModules": [],
-  "modulesRemaining": 153,
+  "nonSpecificationModules": [
+    {
+      "name": ".github",
+      "reason": "repository configuration"
+    },
+    {
+      "name": "bin",
+      "reason": "repository tooling"
+    },
+    {
+      "name": "css-egg-1",
+      "reason": "an April Fools specification"
+    },
+    {
+      "name": "css-module",
+      "reason": "the drafts repository's template module"
+    },
+    {
+      "name": "shared",
+      "reason": "shared assets for the drafts, not a specification"
+    }
+  ],
+  "excludedPropertyNames": [
+    {
+      "name": "background-tbd",
+      "reason": "a placeholder in css-backgrounds-4, not a property"
+    },
+    {
+      "name": "foo",
+      "reason": "an example in css-color-hdr-1"
+    },
+    {
+      "name": "shorthand-foo",
+      "reason": "an example in css-color-hdr-1"
+    },
+    {
+      "name": "foo",
+      "reason": "an example in css-color-hdr-1"
+    },
+    {
+      "name": "display-or-not",
+      "reason": "an example in css-display-3 and css-display-4"
+    },
+    {
+      "name": "display-or-not",
+      "reason": "an example in css-display-3 and css-display-4"
+    }
+  ],
+  "retiredModules": [
+    "css-cascade-3",
+    "css-cascade-4",
+    "css-cascade-5"
+  ],
+  "modulesRemaining": 167,
+  "remainingBreakdown": {
+    "modulesRemaining": 167,
+    "withSource": 148,
+    "withoutSource": 19,
+    "retired": 3
+  },
   "referenceState": "pending"
 }

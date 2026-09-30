@@ -268,6 +268,10 @@ namespace RoboCSSCompiler
                            CSSComputedStyle& out,
                            bool& applied);
 
+        /// Expands `all: <css-wide-keyword>` over every property the registry
+        /// carries, which is the one declaration whose effect is the whole style.
+        void ApplyAll(const CSSDeclaration& declaration, const CSSComputedStyle* parent, CSSComputedStyle& out);
+
         CSSDiagnosticSink& diagnostics;
         CSSCascadeOptions options;
 

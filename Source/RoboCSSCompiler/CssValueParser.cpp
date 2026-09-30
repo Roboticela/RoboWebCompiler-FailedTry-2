@@ -1961,6 +1961,43 @@ namespace RoboCSSCompiler
         }
     }
 
+    /// True when `name` is one of the space separated keywords the registry
+    /// lists for a keyword-only property. The list is walked in place: there is
+    /// no reason to build a container for a handful of words per declaration.
+    bool KeywordIsInRegistry(const CSSPropertyDefinition& definition, const std::string& name)
+    {
+        if (definition.keywords == nullptr || name.empty())
+        {
+            return false;
+        }
+
+        const char* cursor = definition.keywords;
+
+        while (*cursor != '\0')
+        {
+            while (*cursor == ' ')
+            {
+                ++cursor;
+            }
+
+            const char* begin = cursor;
+
+            while (*cursor != '\0' && *cursor != ' ')
+            {
+                ++cursor;
+            }
+
+            const std::size_t length = static_cast<std::size_t>(cursor - begin);
+
+            if (length == name.size() && std::strncmp(begin, name.c_str(), length) == 0)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     bool ParsePropertyValue(const CSSPropertyDefinition& definition,
                             const std::vector<CSSComponentValue>& components,
                             CSSValue& out,
@@ -2055,6 +2092,44 @@ namespace RoboCSSCompiler
             return ParseFontSizeValue(components, out, location, diagnostics);
 
         case CSSValueGrammar::Keyword:
+        {
+            // The closed keyword set is the registry's, and it is the whole
+            // grammar: a keyword-only property accepts one word from that list.
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.size() == 1 && values[0]->token.type == CSSTokenType::Ident)
+            {
+                const std::string name = LowerCase(values[0]->token.text);
+
+                if (KeywordIsInRegistry(definition, name))
+                {
+                    out = CSSValue::MakeKeyword(name);
+                    return true;
+                }
+            }
+
+            const std::string keywords =
+                definition.keywords != nullptr ? std::string(definition.keywords) : std::string();
+            std::string written;
+
+            for (const CSSComponentValue* value : values)
+            {
+                if (!written.empty())
+                {
+                    written += " ";
+                }
+                written += value->token.raw.empty() ? value->token.text : value->token.raw;
+            }
+
+            diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                              location,
+                              "Invalid value for '" + std::string(definition.name) + "'.",
+                              "the keyword set is " + keywords,
+                              "Write one of: " + keywords + ".",
+                              written);
+            return false;
+        }
+
         case CSSValueGrammar::Unknown:
             break;
         }
