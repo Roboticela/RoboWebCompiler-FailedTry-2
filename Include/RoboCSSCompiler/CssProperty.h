@@ -223,12 +223,26 @@ namespace RoboCSSCompiler
     public:
         static const CSSPropertyRegistry& Instance();
 
-        /// The definition of a property, or nullptr when the name is unknown.
+        /// The definition of a property this compiler compiles, or nullptr when
+        /// the name is unknown or merely registered.
         const CSSPropertyDefinition* Find(const std::string& name) const;
         const CSSPropertyDefinition* Find(CSSPropertyId id) const;
 
         /// The shorthand of that name, or nullptr.
         const CSSShorthandDefinition* FindShorthand(const std::string& name) const;
+
+        /// The definition of a property the reference defines and this compiler
+        /// knows but does not compile: its name, the module that defines it,
+        /// whether it inherits and its initial value. A declaration of it is
+        /// reported by name rather than mistaken for a typo, and the reference's
+        /// coverage tests require every name it defines to be either compiled or
+        /// found here, which is what makes consuming the reference safe.
+        const CSSPropertyDefinition* FindRegistered(const std::string& name) const;
+
+        /// What the reference defines that this compiler does not compile, in
+        /// name order. Registered rather than dropped: the compiler is built
+        /// against this vocabulary once the reference directory itself is gone.
+        const std::vector<CSSPropertyDefinition>& RegisteredProperties() const { return registeredProperties; }
 
         /// True when the name is a CSS property the reference defines but this
         /// compiler does not compile yet. Used to choose between RCC001 and
@@ -255,7 +269,12 @@ namespace RoboCSSCompiler
     private:
         CSSPropertyRegistry();
 
+        /// One registered property, from the generated reference tables.
+        void RegisterReferenceProperty(const char* name, const char* module, bool inherited,
+                                       const char* initialValue);
+
         std::vector<CSSPropertyDefinition> properties;
+        std::vector<CSSPropertyDefinition> registeredProperties;
         std::vector<CSSShorthandDefinition> shorthands;
         std::vector<const char*> unsupportedNames;
         std::vector<CSSPropertyId> inheritedProperties;

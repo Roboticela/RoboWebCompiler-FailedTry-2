@@ -1,0 +1,109 @@
+/* BlogArticle - a long-form reading page on a warm paper background. */
+
+.page {
+  background-color: #ede4d6;
+  color: #1c1917;
+  font-size: 14px;
+  padding: 26px;
+}
+
+.shell {
+  width: 600px;
+}
+
+.masthead {
+  background-color: #1c1917;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 18px;
+}
+
+.masthead-name {
+  font-size: 18px;
+  font-weight: bold;
+  color: #fbbf24;
+}
+
+.masthead-meta {
+  color: #a8a29e;
+}
+
+.article {
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 24px;
+}
+
+.kicker {
+  color: #b45309;
+  font-weight: bold;
+  letter-spacing: 2px;
+  font-size: 11px;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: bold;
+  color: #1c1917;
+  line-height: 40px;
+  margin-top: 8px;
+}
+
+.byline {
+  color: #78716c;
+  font-size: 12px;
+  margin-top: 8px;
+  margin-bottom: 18px;
+}
+
+.lede {
+  color: #292524;
+  font-size: 16px;
+  line-height: 26px;
+  margin-bottom: 16px;
+}
+
+.body-text {
+  color: #57534e;
+  line-height: 24px;
+  margin-bottom: 16px;
+}
+
+.quote {
+  background-color: #fef3c7;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.quote-text {
+  color: #92400e;
+  font-size: 18px;
+  line-height: 26px;
+}
+
+.section-title {
+  font-size: 20px;
+  font-weight: bold;
+  color: #1c1917;
+  margin-bottom: 8px;
+}
+
+.tags {
+  margin-top: 8px;
+}
+
+.tag {
+  background-color: #e7e5e4;
+  color: #44403c;
+  border-radius: 12px;
+  padding: 6px 12px;
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.foot {
+  color: #a8a29e;
+  font-size: 12px;
+  margin-top: 18px;
+}

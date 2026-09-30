@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SettingsForm</title>
+</head>
+<body class="page">
+  <div class="shell">
+    <div class="header">
+      <span class="header-title">Workspace settings</span>
+      <span class="header-sub">Changes apply to every member of this workspace.</span>
+    </div>
+
+    <div class="panel">
+      <span class="panel-title">Profile</span>
+
+      <span class="field-label">Workspace name</span>
+      <input class="input" type="text" value="Nimbus Labs" placeholder="Workspace name">
+
+      <span class="field-label">Contact email</span>
+      <input class="input" type="text" value="ops@nimbus.dev" placeholder="Contact email">
+
+      <span class="field-label">Region</span>
+      <input class="input" type="text" value="eu-west-1" placeholder="Region">
+    </div>
+
+    <div class="panel">
+      <span class="panel-title">Notifications</span>
+
+      <span class="field-label">Digest frequency</span>
+      <input class="input" type="text" value="Daily at 08:00" placeholder="Digest frequency">
+
+      <span class="field-label">Build failures</span>
+      <input class="input" type="text" value="Notify on every failure" placeholder="Build failures">
+    </div>
+
+    <div class="panel">
+      <button class="button">Save changes</button>
+      <button class="button-ghost">Discard</button>
+      <p class="hint">Saved settings are validated before they are written.</p>
+    </div>
+  </div>
+</body>
+</html>

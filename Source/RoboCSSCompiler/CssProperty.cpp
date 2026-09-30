@@ -2,6 +2,7 @@
 
 #include "RoboCSSCompiler/GeneratedCssVocabulary.h"
 
+#include <algorithm>
 #include <cstring>
 
 namespace RoboCSSCompiler
@@ -300,21 +301,116 @@ namespace RoboCSSCompiler
 
         // Everything the reference defines and this compiler does not compile:
         // derived from the generated vocabulary rather than listed, so a module
-        // that adds a property adds it to the report the same day.
+        // that adds a property adds it to the report the same day. Registration
+        // and reporting are two answers to the same question - what does the
+        // compiler know about this name - so they are built in one pass.
         for (std::size_t index = 0; index < Generated::ReferencePropertyCount; ++index)
         {
             const Generated::ReferenceProperty& property = Generated::ReferenceProperties[index];
 
-            if (Find(property.name) == nullptr && FindShorthand(property.name) == nullptr)
-            {
-                unsupportedNames.push_back(property.name);
-            }
+            RegisterReferenceProperty(property.name, property.module, property.inherited,
+                                      property.initialValue);
+        }
+
+        // A retired module's properties are registered for the same reason its
+        // name stays in the module table: the reference had them, and once the
+        // directory that stated them is gone these tables are all the compiler
+        // has left to be built against.
+        for (std::size_t index = 0; index < Generated::RetiredReferencePropertyCount; ++index)
+        {
+            const Generated::ReferenceProperty& property = Generated::RetiredReferenceProperties[index];
+
+            RegisterReferenceProperty(property.name, property.module, property.inherited,
+                                      property.initialValue);
+        }
+
+        // One row per name however many modules define it, sorted so that the
+        // lookup is the same binary search the reference table uses.
+        std::stable_sort(registeredProperties.begin(), registeredProperties.end(),
+                         [](const CSSPropertyDefinition& left, const CSSPropertyDefinition& right) {
+                             return std::strcmp(left.name, right.name) < 0;
+                         });
+        registeredProperties.erase(
+            std::unique(registeredProperties.begin(), registeredProperties.end(),
+                        [](const CSSPropertyDefinition& left, const CSSPropertyDefinition& right) {
+                            return std::strcmp(left.name, right.name) == 0;
+                        }),
+            registeredProperties.end());
+
+        // Everything the reference defines and this compiler does not compile is
+        // reported by name, and the table that says so is the registration: one
+        // answer, built once, so the report cannot drift from it. The names come
+        // from both tables, because a retired module's property is no less real
+        // for its directory being gone.
+        for (const CSSPropertyDefinition& definition : registeredProperties)
+        {
+            unsupportedNames.push_back(definition.name);
         }
 
         for (const char* name : UnsupportedNamesOutsideTheReference)
         {
             unsupportedNames.push_back(name);
         }
+    }
+
+    void CSSPropertyRegistry::RegisterReferenceProperty(const char* name, const char* module, bool inherited,
+                                                        const char* initialValue)
+    {
+        // A name the compiler already compiles is compiled, not registered: the
+        // two tables answer different questions and must not overlap.
+        if (Find(name) != nullptr || FindShorthand(name) != nullptr)
+        {
+            return;
+        }
+
+        CSSPropertyDefinition definition{};
+        // No identifier: an id is what the compiler uses to store a computed
+        // value, and nothing it cannot compile ever reaches a computed style.
+        definition.id = CSSPropertyId::Unknown;
+        definition.name = name;
+        definition.category = CSSPropertyCategory::Unknown;
+        definition.inherited = inherited;
+        definition.initialValue = initialValue;
+        definition.grammar = CSSValueGrammar::Unknown;
+        definition.keywords = nullptr;
+        // Nothing that is never applied can affect anything, so every effect
+        // flag is off rather than guessed at.
+        definition.affectsLayout = false;
+        definition.affectsPaint = false;
+        definition.affectsText = false;
+        definition.affectsHitTesting = false;
+        definition.supported = false;
+        definition.spec = module;
+
+        registeredProperties.push_back(definition);
+    }
+
+    const CSSPropertyDefinition* CSSPropertyRegistry::FindRegistered(const std::string& name) const
+    {
+        std::size_t low = 0;
+        std::size_t high = registeredProperties.size();
+
+        while (low < high)
+        {
+            const std::size_t middle = low + (high - low) / 2;
+            const int order = name.compare(registeredProperties[middle].name);
+
+            if (order == 0)
+            {
+                return &registeredProperties[middle];
+            }
+
+            if (order < 0)
+            {
+                high = middle;
+            }
+            else
+            {
+                low = middle + 1;
+            }
+        }
+
+        return nullptr;
     }
 
     const CSSPropertyRegistry& CSSPropertyRegistry::Instance()
@@ -443,6 +539,14 @@ namespace RoboCSSCompiler
             return false;
         }
 
+        // Registered is known: the reference defined the name, and it stays
+        // known once the directory that defined it is gone, because the
+        // registration is what the compiler is built against from then on.
+        if (FindRegistered(name) != nullptr)
+        {
+            return true;
+        }
+
         return IsReferenceOnlyName(name);
     }
 
@@ -453,8 +557,15 @@ namespace RoboCSSCompiler
             return nullptr;
         }
 
-        // The returned pointer is stable: it is either the generated table's own
-        // spelling or a literal, never the argument.
+        // The returned pointer is stable: it is one of the generated tables' own
+        // spellings or a literal, never the argument. The registration is
+        // consulted first because it is the table that survives the reference
+        // being consumed.
+        if (const CSSPropertyDefinition* registered = FindRegistered(name))
+        {
+            return registered->name;
+        }
+
         if (const Generated::ReferenceProperty* property = FindReferenceProperty(name))
         {
             return property->name;

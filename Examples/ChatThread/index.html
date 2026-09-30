@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>ChatThread</title>
+</head>
+<body class="page">
+  <div class="shell">
+    <div class="header">
+      <span class="header-title">#build-tools</span>
+      <span class="header-sub">4 members &middot; 2 online</span>
+    </div>
+
+    <div class="day-sep">Today</div>
+
+    <div class="msg">
+      <span class="who who-a">Linus</span>
+      <p class="bubble bubble-a">Did the cascade source tracking land yet?</p>
+      <span class="stamp">08:41</span>
+    </div>
+
+    <div class="msg msg-right">
+      <span class="who who-b">Mara</span>
+      <p class="bubble bubble-b">Yes. Computed values now keep a source location instead of a raw pointer.</p>
+      <span class="stamp">08:44</span>
+    </div>
+
+    <div class="msg msg-right">
+      <div class="bubble bubble-b">
+        <p class="bubble-line">That fixes the dangling pointer when a sheet is copied.</p>
+        <p class="bubble-line">All 227 tests still pass.</p>
+      </div>
+      <span class="stamp">08:45</span>
+    </div>
+
+    <div class="msg">
+      <span class="who who-a">Ada</span>
+      <p class="bubble bubble-a">Nice. Does the batch report surface the warnings now?</p>
+      <span class="stamp">08:51</span>
+    </div>
+
+    <div class="msg msg-right">
+      <span class="who who-b">Mara</span>
+      <p class="bubble bubble-b">It does, and a warning no longer fails the build.</p>
+      <span class="stamp">08:53</span>
+    </div>
+
+    <div class="composer">
+      <input class="composer-input" type="text" placeholder="Message #build-tools" value="">
+      <button class="send">Send</button>
+    </div>
+  </div>
+</body>
+</html>

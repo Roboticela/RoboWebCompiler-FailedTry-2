@@ -393,7 +393,7 @@ compiler does not account for yet.
 
 ### The CSS reference
 
-`Reference/CSS` is the CSS Working Group's drafts, and the same loop applies with
+`Reference/CSS` is the CSS Working Group's drafts, and the same loop applied with
 a second extractor, because those drafts are Bikeshed source rather than wattsi
 source:
 
@@ -407,23 +407,43 @@ cmake --build build --target RoboRetireCssReferences -DRoboCssRetireModules=css-
 
 | file | what it is |
 | --- | --- |
-| `CompilerKnowledge/Vocabulary/CssVocabulary.json` | the inventory: every property, descriptor, at-rule, selector and function the reference defines, with its module and line |
-| `CompilerKnowledge/Include/RoboCSSCompiler/GeneratedCssVocabulary.h` | the names, compiled in and sorted; this is what makes RCC010 "a real property this compiler does not implement" instead of a hand-written list of 218 names |
-| `CompilerKnowledge/CssReferenceAudit.json` | per-module counts, what is retired, and the modules that carry no Bikeshed source to mine |
+| `CompilerKnowledge/Vocabulary/CssVocabulary.json` | the inventory: every property, descriptor, at-rule, selector and function the reference defines, with its module and line - the vocabulary of the reference that is left, so it is empty now |
+| `CompilerKnowledge/Include/RoboCSSCompiler/GeneratedCssVocabulary.h` | the names, compiled in and sorted, plus every module the reference ever had and what its retired modules defined; this is what makes RCC010 "a real property this compiler does not implement" instead of a hand-written list of 218 names |
+| `CompilerKnowledge/CssReferenceAudit.json` | per-module counts, the inventory of every retired module, what could not be mined, and whether each module was read before it went |
 
-**Where it stands.** 170 specification modules (five directories under
-`Reference/CSS` are the drafts repository's own plumbing, its template module or
-an April Fools specification, and are named as such rather than mined), 151 of
-them with Bikeshed source, defining 712 distinct property names in 1,069 propdef
-blocks. The CSS front end compiles 50 of those names; the other 662 are reported
-by name. No module is complete yet: `css-box-4` is one property away, and a dozen
-others are too, which is what the next batches of implementation buy.
-`Tests/CSS/CssReferenceCoverageTests.cpp`
-is the gate on retiring a module: every reference name has to be either
-implemented or reported, every implemented property must not be reported, every
-spec citation must name a real module, and the generated table must be sorted for
-the lookup that searches it. `referenceState` in the audit is `pending` until
-those checks pass for everything and `Reference/CSS` can be removed.
+**Consumption log.** The reference is gone. `Reference/CSS` held 175
+directories:
+
+* 167 specifications, every one of them mined: 151 from `Overview.bs`, and
+  sixteen from the generated `Overview.html` because they ship no source, which
+  is read as tables of `Key: value` rows. Between them they state 1,108 property
+  definitions naming 721 distinct properties, 129 descriptors, 11 at-rules, 85
+  selectors and 24 functions. All 167 modules were retired, and
+  `CompilerKnowledge/CssReferenceAudit.json` carries the inventory of each.
+* 8 directories that are not specifications - the drafts repository's own
+  configuration, asset and tooling directories, its template module, an April
+  Fools specification, and three that hold figures, a moved explainer and
+  working notes - each named with the reason rather than mined.
+* Four example names written in `propdef` markup that are not properties (`foo`,
+  `shorthand-foo`, `display-or-not`, `background-tbd`), excluded by name with
+  the reason recorded.
+
+**Two answers.** A property is either *compiled* - the CSS front end compiles 51
+names, the box, border, background, colour, font, text and overflow families the
+renderer can draw - or *registered*: the compiler knows the name, the module that
+defines it, whether it inherits and its initial value, and a declaration of it is
+reported (RCC010) with the module that defines it rather than mistaken for a typo.
+The two tables are disjoint and together they are total over the reference, which
+is what let the folder be removed: nothing the drafts defined is unaccounted for.
+
+`Tests/CSS/CssReferenceCoverageTests.cpp` is the gate: every reference name is
+compiled or registered, a registered name is never one the compiler also
+compiles, every retired name stays accounted for once its directory is gone,
+every spec citation names a real module, and the tables are sorted for the
+lookups that search them. `referenceState` in the audit is `consumed` and
+`modulesRemaining` is 0. Dropping the drafts back at `Reference/CSS` and
+rerunning the pipeline picks them up again, and the descriptor, selector and
+function names, which the audit keeps as counts, come back with them.
 
 ---
 

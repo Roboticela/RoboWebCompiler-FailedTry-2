@@ -1,0 +1,130 @@
+/* Dashboard - a dark operations console: stats, bars, a deploy table. */
+
+.page {
+  background-color: #0b1220;
+  color: #e2e8f0;
+  font-size: 14px;
+  padding: 24px;
+}
+
+.shell {
+  width: 560px;
+}
+
+.topbar {
+  background-color: #111c31;
+  border-radius: 12px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+}
+
+.brand {
+  font-size: 20px;
+  font-weight: bold;
+  color: #22c55e;
+}
+
+.topbar-meta {
+  color: #64748b;
+}
+
+.stat {
+  background-color: #111c31;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.stat-label {
+  color: #94a3b8;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: bold;
+  color: #e2e8f0;
+  margin-top: 4px;
+}
+
+.stat-delta {
+  color: #22c55e;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.panel {
+  background-color: #111c31;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.panel-title {
+  font-weight: bold;
+  color: #f8fafc;
+  margin-bottom: 8px;
+}
+
+.bars {
+  width: 528px;
+}
+
+.bar-lbl {
+  width: 150px;
+  padding: 8px 0;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.bar-cell {
+  width: 300px;
+  padding: 8px 0;
+}
+
+.bar-num {
+  width: 70px;
+  padding: 8px 0;
+  text-align: right;
+  color: #64748b;
+  font-size: 12px;
+}
+
+.bar {
+  background-color: #1e293b;
+  height: 10px;
+  width: 280px;
+  border-radius: 6px;
+}
+
+.bar-fill {
+  height: 10px;
+  border-radius: 6px;
+}
+
+.bar-a {
+  background-color: #22c55e;
+  width: 84%;
+}
+
+.bar-b {
+  background-color: #38bdf8;
+  width: 56%;
+}
+
+.bar-c {
+  background-color: #f59e0b;
+  width: 33%;
+}
+
+.table {
+  width: 528px;
+  background-color: #0b1220;
+}
+
+.cell {
+  padding: 8px;
+  color: #cbd5e1;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #1e293b;
+}

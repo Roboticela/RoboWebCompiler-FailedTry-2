@@ -1,0 +1,86 @@
+/* Inbox - a mail list built from a table so the columns stay cheap. */
+
+.page {
+  background-color: #d7e1ee;
+  color: #0f172a;
+  font-size: 14px;
+  padding: 26px;
+}
+
+.shell {
+  width: 620px;
+}
+
+.topbar {
+  background-color: #1e3a8a;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+
+.topbar-title {
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.topbar-count {
+  color: #93c5fd;
+  margin-left: 10px;
+}
+
+.card {
+  background-color: #ffffff;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #bacadf;
+  border-radius: 12px;
+  padding: 6px 10px;
+  margin-bottom: 14px;
+}
+
+.list {
+  width: 600px;
+}
+
+.td {
+  padding: 14px 8px;
+  border-bottom-width: 1px;
+  border-bottom-style: solid;
+  border-bottom-color: #e3eaf4;
+  color: #475569;
+}
+
+.td-dot { width: 26px; }
+
+.td-from {
+  width: 130px;
+  font-weight: bold;
+  color: #1e293b;
+}
+
+.td-subject { width: 330px; }
+
+.td-time {
+  width: 90px;
+  text-align: right;
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.dot {
+  background-color: #2563eb;
+  border-radius: 5px;
+  width: 10px;
+  height: 10px;
+}
+
+.dot-read {
+  background-color: #cbd5e1;
+}
+
+.foot {
+  color: #94a3b8;
+  font-size: 12px;
+  margin-top: 14px;
+}

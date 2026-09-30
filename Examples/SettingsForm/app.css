@@ -1,0 +1,89 @@
+/* SettingsForm - a dark configuration screen. */
+
+.page {
+  background-color: #0b1220;
+  color: #e2e8f0;
+  font-size: 14px;
+  padding: 26px;
+}
+
+.shell {
+  width: 580px;
+}
+
+.header {
+  background-color: #111c33;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.header-title {
+  font-size: 24px;
+  font-weight: bold;
+  color: #f8fafc;
+}
+
+.header-sub {
+  color: #64748b;
+  margin-top: 6px;
+}
+
+.panel {
+  background-color: #131f38;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #24314c;
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.panel-title {
+  font-size: 16px;
+  font-weight: bold;
+  color: #93c5fd;
+  margin-bottom: 12px;
+}
+
+.field-label {
+  color: #94a3b8;
+  font-size: 12px;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+
+.input {
+  background-color: #0b1220;
+  color: #e2e8f0;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #334155;
+  border-radius: 8px;
+  padding: 10px 12px;
+  width: 480px;
+  margin-bottom: 14px;
+}
+
+.button {
+  background-color: #2563eb;
+  color: #ffffff;
+  border-radius: 9px;
+  padding: 11px 20px;
+  font-weight: bold;
+  margin-right: 10px;
+}
+
+.button-ghost {
+  background-color: #1e293b;
+  color: #cbd5e1;
+  border-radius: 9px;
+  padding: 11px 20px;
+  font-weight: bold;
+}
+
+.hint {
+  color: #64748b;
+  font-size: 12px;
+  margin-top: 12px;
+}

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>BlogArticle</title>
+</head>
+<body class="page">
+  <div class="shell">
+    <div class="masthead">
+      <span class="masthead-name">The Compiler Notes</span>
+      <span class="masthead-meta">Engineering &nbsp; Archive</span>
+    </div>
+
+    <div class="article">
+      <span class="kicker">Deep dive</span>
+      <h1 class="title">Why styles belong at build time</h1>
+      <p class="byline">Mara Reyes &middot; 8 min read &middot; March 2026</p>
+
+      <p class="lede">A stylesheet that is resolved before your app ships cannot surprise it at runtime. This is the whole promise of a compiler-first UI toolkit.</p>
+
+      <p class="body-text">When every declaration is lowered ahead of time, the runtime has nothing left to interpret. It receives a finished tree of boxes and paints them. No selector matching, no cascade, no recalculating style on every frame.</p>
+
+      <div class="quote">
+        <p class="quote-text">The fastest style is the one you never compute again.</p>
+      </div>
+
+      <p class="body-text">That idea is old. What is new is the tooling: a compiler that can read ordinary HTML and CSS, validate them, and emit a native scene graph that a renderer can draw directly.</p>
+
+      <span class="section-title">What changes for authors</span>
+      <p class="body-text">Nothing you would notice. You still write classes, still think in flexbox, still debug with the same eye. The difference is when the work happens.</p>
+
+      <div class="tags">
+        <button class="tag">compilers</button>
+        <button class="tag">css</button>
+        <button class="tag">performance</button>
+      </div>
+    </div>
+
+    <p class="foot">Copyright 2026 The Compiler Notes</p>
+  </div>
+</body>
+</html>

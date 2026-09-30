@@ -1,0 +1,111 @@
+/* UserProfile - a cover, an identity card, a stat and a progress bar. */
+
+.page {
+  background-color: #e2dafa;
+  color: #2e1065;
+  font-size: 14px;
+  padding: 24px;
+}
+
+.shell {
+  width: 540px;
+}
+
+.cover {
+  background-color: #8b5cf6;
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+.cover-label {
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffffff;
+}
+
+.card {
+  background-color: #ffffff;
+  border-radius: 14px;
+  padding: 18px;
+  margin-bottom: 14px;
+}
+
+.avatar {
+  background-color: #7c3aed;
+  color: #ffffff;
+  border-radius: 36px;
+  width: 72px;
+  height: 72px;
+  padding-top: 18px;
+  font-size: 26px;
+  font-weight: bold;
+  text-align: center;
+}
+
+.name {
+  font-size: 22px;
+  font-weight: bold;
+  color: #2e1065;
+  margin-top: 12px;
+}
+
+.role {
+  color: #7c3aed;
+  margin-top: 2px;
+}
+
+.bio {
+  color: #6d28d9;
+  margin-top: 10px;
+}
+
+.stat-row {
+  margin-bottom: 14px;
+}
+
+.stat {
+  background-color: #ede9fe;
+  border-radius: 12px;
+  padding: 14px 18px;
+}
+
+.stat-value {
+  font-size: 26px;
+  font-weight: bold;
+  color: #6d28d9;
+}
+
+.stat-label {
+  color: #7c3aed;
+}
+
+.section-title {
+  font-weight: bold;
+  color: #2e1065;
+}
+
+.section-value {
+  color: #7c3aed;
+  margin-top: 4px;
+}
+
+.bar {
+  background-color: #ede9fe;
+  height: 10px;
+  width: 460px;
+  border-radius: 6px;
+  margin-top: 12px;
+}
+
+.bar-fill {
+  background-color: #8b5cf6;
+  height: 10px;
+  width: 72%;
+  border-radius: 6px;
+}
+
+.card-text {
+  color: #7c3aed;
+  margin-top: 8px;
+}

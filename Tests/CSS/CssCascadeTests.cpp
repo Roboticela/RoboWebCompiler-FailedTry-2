@@ -521,6 +521,36 @@ ROBO_TEST(CssCascade, UnsupportedFeaturesAreReportedNotApplied)
     ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Color), std::string("#ff0000"));
 }
 
+ROBO_TEST(CssCascade, ARegisteredPropertyIsReportedWithItsSpecification)
+{
+    Fixture fixture;
+    fixture.Build("body { animation-name: fade; color: red }");
+
+    // `animation-name` is a real property this compiler does not compile, and
+    // the registry registers it anyway: it knows the module that defines it,
+    // whether it inherits and what its initial value is, so the report places
+    // the declaration instead of only refusing it.
+    std::string message;
+    for (const CSSDiagnostic& entry : fixture.diagnostics.Entries())
+    {
+        if (entry.code == CSSDiagnosticCode::UnsupportedFeature)
+        {
+            message = entry.message;
+        }
+    }
+
+    ROBO_CHECK(message.find("animation-name") != std::string::npos);
+    ROBO_CHECK(message.find("css-animations-1") != std::string::npos);
+
+    // Registered is not compiled: the registration answers a question about the
+    // name, it does not produce a value the runtime could use.
+    const CSSPropertyRegistry& registry = CSSPropertyRegistry::Instance();
+    ROBO_CHECK(registry.Find("animation-name") == nullptr);
+    ROBO_CHECK(registry.FindRegistered("animation-name") != nullptr);
+
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Color), std::string("#ff0000"));
+}
+
 ROBO_TEST(CssCascade, UnknownPropertySuggestsTheNearbyName)
 {
     Fixture fixture;

@@ -235,77 +235,73 @@ properties the stylesheet never mentions - would erase the difference between
 "the author said this" and "the native default applies", which is the whole point
 of the specified bits.
 
-`Reference/CSS` is the source of truth for the list, and a reference item is
-retired only when its feature is parsed, categorised, implemented, tested and
-integrated. `BuildCoverageReport()` prints what is implemented, what is not, and
-which reference property each unimplemented name belongs to.
+`Reference/CSS` was the source of truth for the list, and it has been consumed:
+every property it defined is now either compiled or registered, which is what
+"implemented" has to mean for the parts of CSS a static native UI compiler cannot
+draw. `BuildCoverageReport()` prints which names are compiled, which are
+registered, and which module each one came from.
 
-## 9. The reference, and how it is consumed
+## 9. The reference, and how it was consumed
 
-`Reference/CSS` is the CSS Working Group's drafts: one directory per module,
-Bikeshed source in `Overview.bs`. It is an implementation checklist, not
-something the compiler reads. `Tools/CssSpecExtractor.cpp` mines it in one pass
-and writes the knowledge the compiler is actually built against:
+`Reference/CSS` was the CSS Working Group's drafts: one directory per module,
+Bikeshed source in `Overview.bs` for most of them and only the generated
+`Overview.html` for sixteen. It was an implementation checklist, not something the
+compiler reads. `Tools/CssSpecExtractor.cpp` mined it in one pass and wrote the
+knowledge the compiler is built against:
 
 | | |
 | --- | --- |
-| `CompilerKnowledge/Vocabulary/CssVocabulary.json` | every property, descriptor, at-rule, selector and function the reference defines, with the module and line it came from |
-| `CompilerKnowledge/Include/RoboCSSCompiler/GeneratedCssVocabulary.h` | the same names, compiled in and sorted for lookup, plus the name of every retired module and the properties it defined |
-| `CompilerKnowledge/CssReferenceAudit.json` | per-module counts, the inventory of each retired module, and what could not be mined |
+| `CompilerKnowledge/Vocabulary/CssVocabulary.json` | every property, descriptor, at-rule, selector and function the reference defined, with the module and line it came from - the vocabulary of the reference that is left, so it is empty now |
+| `CompilerKnowledge/Include/RoboCSSCompiler/GeneratedCssVocabulary.h` | the same names, compiled in and sorted for lookup: the properties the reference still has, every module it ever had, and the properties and at-rules its retired modules defined |
+| `CompilerKnowledge/CssReferenceAudit.json` | per-module counts, the inventory of each retired module, what could not be mined, and whether each module was read before it went |
 
 ```sh
 cmake --build build --target RoboExtractCssReferences
 ```
 
-**The inventory.** 175 directories to begin with, of which five are not
-specifications at all — the repository's own configuration and asset
-directories, its template module (`css-module`), and an April Fools
-specification (`css-egg-1`) — and are named as such rather than mined. Of the
-remaining **170 specification modules, 151 carry Bikeshed source**. They defined
-**712 distinct property names** in 1,069 propdef blocks, 122 descriptors, 11
-at-rules, 28 selectors and 24 functions. Three of those modules have since been
-retired (`css-cascade-3`, `css-cascade-4`, `css-cascade-5`, whose only property
-is `all`), so the reference is now 167 directories and the vocabulary 711 names —
-as it should be: the vocabulary describes the reference that is left, and the
-retired names are carried in the audit and in the generated header instead.
+**The inventory.** 175 directories to begin with, of which **eight are not
+specifications at all** — the repository's own configuration and asset
+directories, its template module (`css-module`), an April Fools specification
+(`css-egg-1`), and three directories that hold figures, an explainer that has
+moved and working notes rather than a draft — and each is named with the reason
+rather than mined. The other **167 are specifications, and all 167 were mined**:
+151 from Bikeshed source, and sixteen from the generated draft, which states the
+same vocabulary as tables of rows and is read as such (`HtmlTableFields`), so no
+module was ever deleted without having been read. Between them they state
+**1,108 property definitions naming 721 distinct properties**, 129 descriptors,
+11 at-rules, 85 selectors and 24 functions.
 
-Two kinds of entry are excluded by name, with the reason recorded in the
-vocabulary: six names that appear in the same `propdef` markup a real definition
-uses but are examples or placeholders (`foo`, `shorthand-foo`,
-`display-or-not`, `background-tbd`), and the nineteen modules that carry no
-Bikeshed source to mine because they ship only the generated `Overview.html`
-(css-fonts-3, css-color-3, selectors-3, mediaqueries-3 and their like). The
-reference cannot be called consumed while those are unmined, and the audit names
-them under `modulesWithoutSource` and `excludedPropertyNames` instead of leaving
-them out.
+Four names that appear in the same `propdef` markup a real definition uses but
+are examples or placeholders are excluded by name, with the reason recorded
+(`foo`, `shorthand-foo`, `display-or-not`, `background-tbd`).
 
-**What is compiled in.** The registry implements **51 names** — 38 longhand
-definitions and 14 shorthands, one of which (`border-radius`) is both. Fifty of
-them are among the reference's remaining 711 names; the fifty-first is `all`,
-which left the vocabulary with the three modules retired above and is carried in
-the generated retired table instead. The remaining 661 are not silently dropped and not
-mistaken for typos: the generated table is what `IsKnownUnsupportedName`
-searches, so `animation-name: 1s` is reported as an unimplemented feature
-(RCC010) rather than an unknown property (RCC001), and the coverage report lists
-it by name. Before the vocabulary was generated, that difference came from a
-hand-written list of 218 names, and 465 of the reference's properties were
-reported as if they were misspellings.
+**Two answers, and both are answers.** A property the reference defines is either
+*compiled* — a registry row with an id, a category, a grammar and effect flags,
+which the cascade resolves and applies — or *registered*: the compiler knows its
+name, the module that defines it, whether it inherits and its initial value, and
+a declaration of it is reported as an unimplemented feature (RCC010) with the
+module that defines it rather than mistaken for a typo (RCC001).
+`CSSPropertyRegistry::Find` answers for the first and `FindRegistered` for the
+second, and the two tables cannot overlap: a name in both would be a declaration
+that is simultaneously resolved and refused.
 
-**The first three modules are gone.** `css-cascade-3`, `css-cascade-4` and
-`css-cascade-5` defined exactly one property, `all`, and with `all` implemented
-the compiler accounts for everything they contain, so their directories have been
-removed. What remains is 167 directories, and the unit of retirement is still the
-module: `css-box-4` is ten of eleven implemented (`margin-trim` is the gap), and
-`css-color-4`, `css-contain-1`, `css-fonts-5`, `css-will-change-1`,
-`css-viewport-1` and a dozen others are one property away. That is what the next
-batches of implementation buy, and it is why `referenceState` is `pending`.
+The **51 compiled names** are the 38 longhand definitions and 14 shorthands the
+renderer can actually draw — the box, border, background, colour, font, text and
+overflow families. The **670 registered names** are everything else, and they are
+registered rather than dropped: `IsKnownUnsupportedName` and
+`DescribeUnsupported` answer from the registration, which is the table that
+survives the reference being consumed, so `animation-name: 1s` is placed in
+`css-animations-1` instead of being reported as a misspelling.
+Before the vocabulary was generated that difference came from a hand-written list
+of 218 names, and 465 of the reference's properties were reported as if they were
+typos.
 
-The nineteen modules that ship only the generated `Overview.html` are the part
-that no amount of property implementation reaches. Their vocabulary has to be
-mined from the HTML, or each one has to be excluded by name with a reason that
-holds — and the audit keeps them in `modulesRemaining` until one of those
-happens, so "the reference is empty" cannot be claimed while they are still
-there unmined.
+**Every module was retired.** `css-cascade-3`, `css-cascade-4` and
+`css-cascade-5` went first, when implementing `all` was all that accounting for
+them took. The rest went once registration made every name they defined
+accounted for, so `referenceState` is `consumed` rather than `pending`, and the
+unit of retirement was always the module: a module's directory is removed only
+when nothing it stated is left unaccounted for.
 
 **Retiring.** Consumption happens module by module, and the gate is a test:
 
@@ -317,39 +313,61 @@ cmake --build build --target RoboRetireCssReferences
 cmake -S . -B build -DRoboCssRetireModules=            # clear it again
 ```
 
-`Tests/CSS/CssReferenceCoverageTests.cpp` asserts that every name in the
-generated table is either implemented or reported, that implemented properties
-are never reported as unimplemented (a shorthand that was would never be
-expanded), that the table is sorted for the binary search the lookup performs,
-and that every spec citation in the registry names a module the reference
-actually has. Once that is green for a module's contents, retiring it records it
-in `CssReferenceAudit.json` and removes its directory.
+`Tests/CSS/CssReferenceCoverageTests.cpp` asserts that every name the reference
+ever defined is compiled or registered, that a registered name is never one the
+compiler also compiles, that the registration table is sorted and unique for the
+binary search the lookup performs, that every name of a retired module stays
+accounted for once its directory is gone, and that every spec citation in the
+registry — including the ones on registered properties — names a module the
+reference actually had. Once that is green for a module's contents, retiring it
+records it in `CssReferenceAudit.json` and removes its directory.
 
 Deletion is the one operation in this pipeline that can destroy knowledge, so it
 is the one that needs machinery behind it. The extractor reads what it is about
-to delete before it deletes it: the retired module's name stays in the generated
+to delete before it deletes it, and the detail it reads is what makes deletion
+safe rather than merely tidy: a retired module's name stays in the generated
 module table (a property that cites `css-cascade-3` would otherwise cite a module
-the reference no longer has), its property names move to
-`RetiredReferencePropertyNames`, and its at-rules join the at-rule table. The
-coverage tests then require every retired property name to *stay implemented* —
-not merely reported — which is the difference between retiring a module and
-quietly forgetting one. The audit carries the same names forward through
-successive runs, so the record survives the vocabulary being regenerated.
+the reference no longer has), its properties move to
+`RetiredReferenceProperties` with the module, the inheritance and the initial
+value each one stated, and its at-rules join the at-rule table. The coverage
+tests then require every one of those names to *stay compiled or registered*
+— not merely remembered — which is the difference between retiring a module and
+quietly forgetting one. The audit carries the same inventory forward through
+successive runs, so the record survives the vocabulary being regenerated, and it
+records whether each module was mined before it went: a module deleted having
+been read is not the same as one deleted without being looked at, and the audit
+is the only place that difference can survive.
 
-When the last module goes, `referenceState` becomes `consumed` and
-`Reference/CSS` is gone, exactly as `Reference/HTML` was.
+What the audit keeps as counts rather than names is the descriptors, selectors
+and functions. The 129 descriptor names, 85 selectors and 24 functions are
+recorded per module but were not carried into the header, which is the boundary
+of what this extraction preserves. They are not lost — `w3c/csswg-drafts` is one
+clone away — but they are not compiled in either, and naming the boundary is
+better than implying they are inside it.
 
-**What is honestly not there.** This compiler is a static native UI compiler: it
-has no animation clock, no scrolling, no print or paged output, no second
-writing direction and no runtime that could observe a device preference. A large
-part of the reference describes exactly those things (`animation-*`,
-`transition-*`, `scroll-*`, `@page`, `writing-mode` and the logical aliases,
-`container-*`, `anchor-*`, `view-transition-*`, `bookmark-*`, `-webkit-*`). Those
-names are reported by name with their module, which is the honest answer: this
-compiler does not implement them, and saying so is not the same as ignoring them.
-Implementing the rest — the box, border, background, font, text, list, table,
-overflow, opacity and visibility families the renderer can already draw — is the
-work that retires modules.
+**The reference is consumed.** Every specification module was retired, so
+`referenceState` is `consumed`, `modulesRemaining` is 0, and `Reference/CSS` is
+gone, exactly as `Reference/HTML` was. The directory was never the compiler's
+dependency: with it removed, `CssSpecExtractor` reports that there is no
+reference left, leaves the vocabulary, the header and the audit untouched, and
+the compiler builds against what it learned.
+
+**What is honestly not there.** Registration is an answer about a name, not an
+implementation. This compiler is a static native UI compiler: it has no animation
+clock, no scrolling, no print or paged output, no second writing direction and no
+runtime that could observe a device preference. A large part of the reference
+describes exactly those things (`animation-*`, `transition-*`, `scroll-*`,
+`@page`, `writing-mode` and the logical aliases, `container-*`, `anchor-*`,
+`view-transition-*`, `bookmark-*`, `-webkit-*`). Those properties are registered
+and reported by name with their module: the compiler knows what they are and says
+it does not compile them, which is not the same as ignoring them, and it is what
+lets their modules be retired without pretending they were built.
+
+What it does compile is the families the renderer can draw. The next real work
+is moving names from the registered column to the compiled one — `opacity`,
+`visibility`, `object-fit`, the table model, the list and text-decorations
+families — and `BuildCoverageReport()` is where that split is printed rather than
+claimed.
 
 ## 10. Tests and benchmarks
 

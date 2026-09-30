@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Dashboard</title>
+</head>
+<body class="page">
+  <div class="shell">
+    <div class="topbar">
+      <span class="brand">Ops Console</span>
+      <span class="topbar-meta">Live &nbsp; Region eu-west</span>
+    </div>
+
+    <div class="stat">
+      <span class="stat-label">Requests per second</span>
+      <span class="stat-value">12,480</span>
+      <span class="stat-delta">+8.2% vs yesterday</span>
+    </div>
+
+    <div class="stat">
+      <span class="stat-label">Error rate</span>
+      <span class="stat-value">0.42%</span>
+      <span class="stat-delta">-0.11% vs yesterday</span>
+    </div>
+
+    <div class="panel">
+      <span class="panel-title">Traffic by endpoint</span>
+
+      <table class="bars">
+        <tr>
+          <td class="bar-lbl">/api/search</td>
+          <td class="bar-cell"><div class="bar"><div class="bar-fill bar-a"></div></div></td>
+          <td class="bar-num">84%</td>
+        </tr>
+        <tr>
+          <td class="bar-lbl">/api/render</td>
+          <td class="bar-cell"><div class="bar"><div class="bar-fill bar-b"></div></div></td>
+          <td class="bar-num">56%</td>
+        </tr>
+        <tr>
+          <td class="bar-lbl">/api/auth</td>
+          <td class="bar-cell"><div class="bar"><div class="bar-fill bar-c"></div></div></td>
+          <td class="bar-num">33%</td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="panel">
+      <span class="panel-title">Recent deploys</span>
+      <table class="table">
+        <tr><td class="cell">v1.8.2</td><td class="cell">mara</td><td class="cell">passed</td></tr>
+        <tr><td class="cell">v1.8.1</td><td class="cell">linus</td><td class="cell">passed</td></tr>
+        <tr><td class="cell">v1.8.0</td><td class="cell">ada</td><td class="cell">rolled back</td></tr>
+      </table>
+    </div>
+  </div>
+</body>
+</html>

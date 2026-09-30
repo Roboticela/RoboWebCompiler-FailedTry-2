@@ -1925,9 +1925,20 @@ namespace RoboCSSCompiler
 
             if (registry.IsKnownUnsupportedName(name))
             {
+                // The registry registers a property it does not compile, so the
+                // report can say which specification the declaration is from
+                // rather than only that support is missing. That is what makes
+                // the registration worth having: the name is not merely known,
+                // it is placed.
+                const CSSPropertyDefinition* registered = registry.FindRegistered(name);
+                const std::string origin =
+                    registered != nullptr
+                        ? " The property is defined by " + std::string(registered->spec) + "."
+                        : std::string();
+
                 diagnostics.Warning(CSSDiagnosticCode::UnsupportedFeature,
                                     declaration.location,
-                                    "This compiler does not compile '" + name + "' yet.",
+                                    "This compiler does not compile '" + name + "' yet." + origin,
                                     "The CSS rules define this property and support for it is not built yet, "
                                     "so the declaration is reported and left out of the compiled style.",
                                     "Remove the declaration, or write the effect with a property the compiler "
