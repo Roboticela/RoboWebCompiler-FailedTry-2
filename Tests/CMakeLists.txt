@@ -15,6 +15,7 @@ set(RoboTestSources
     "${CMAKE_CURRENT_SOURCE_DIR}/RoboRenderer/LayoutAndPaintTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/RoboRenderer/RuntimeContractTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/RoboRenderer/StyleAndTextTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/RoboRenderer/TypographyTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/RoboRenderer/VisualTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/HTML/HtmlElementCoverageTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Integration/CompilationTests.cpp"
@@ -93,3 +94,14 @@ add_test(NAME RoboHTMLCompilerExample
             "${CMAKE_SOURCE_DIR}/Examples/BasicApp"
 )
 set_tests_properties(RoboHTMLCompilerExample PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")
+
+# The typography showcase exercises the text stack end to end and must keep
+# compiling: it is the document that says what the renderer can draw.
+add_test(NAME RoboHTMLCompilerTypographyExample
+    COMMAND RoboHTMLCompiler
+            --name TypographyShowcase
+            --output "${CMAKE_BINARY_DIR}/example-typography"
+            --all
+            "${CMAKE_SOURCE_DIR}/Examples/TypographyShowcase"
+)
+set_tests_properties(RoboHTMLCompilerTypographyExample PROPERTIES WORKING_DIRECTORY "${CMAKE_BINARY_DIR}")

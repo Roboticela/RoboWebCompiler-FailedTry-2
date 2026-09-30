@@ -1,0 +1,79 @@
+/* Typography Showcase.
+   The runtime resolves no selectors: the compiler does, and hands the runtime one
+   resolved style per element. This file therefore only needs to state the
+   appearance, not the mechanics. */
+
+.page {
+    padding: 24px 32px;
+    background-color: #ffffff;
+    color: #1a1c21;
+}
+
+.masthead {
+    padding: 0 0 18px 0;
+    border-bottom: 3px solid #2b6cb0;
+}
+
+h1 {
+    font-size: 34px;
+    font-weight: bold;
+    color: #16324f;
+    margin: 0 0 12px 0;
+}
+
+.lede {
+    font-size: 15px;
+    color: #3b4451;
+    margin: 0 0 8px 0;
+}
+
+.meta {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.block {
+    padding: 18px 0 6px 0;
+    border-bottom: 1px solid #e3e7ee;
+}
+
+h2 {
+    font-size: 19px;
+    font-weight: bold;
+    color: #2b6cb0;
+    margin: 0 0 10px 0;
+}
+
+.sample {
+    font-size: 14px;
+    margin: 0 0 7px 0;
+    color: #23272f;
+}
+
+.small {
+    font-size: 11px;
+    color: #4b5563;
+}
+
+.large {
+    font-size: 22px;
+}
+
+.huge {
+    font-size: 32px;
+    font-weight: bold;
+    color: #16324f;
+}
+
+.big {
+    font-size: 22px;
+}
+
+.justified {
+    color: #333a45;
+}
+
+.rtl {
+    background-color: #fbfcfe;
+}

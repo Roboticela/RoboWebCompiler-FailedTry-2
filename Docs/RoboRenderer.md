@@ -219,30 +219,58 @@ The behaviours worth naming, because each one is a decision:
 ## 6. Text
 
 `Include/RoboRenderer/Text.h`, `Source/RoboRenderer/Text.cpp`,
-`Source/RoboRenderer/StrokeFont.cpp`.
+`Source/RoboRenderer/FontFile.{h,cpp}`, `Source/RoboRenderer/FontStack.cpp`,
+`Source/RoboRenderer/Bidi.{h,cpp}`, `Source/RoboRenderer/StrokeFont.cpp`.
 
-There is no font file, no platform text API and no shaping engine. Text is
-rendered through a **built-in stroke face**: a compiled-in vector glyph table that
-maps a code point to strokes at unit em size, so the runtime can measure, break,
-hit test and paint text on any host with no font deployment step and no
-dependence on a system font being present. Bold is the same face drawn with a
-heavier stroke and a wider advance, so a bold run measurably measures wider than
-the same run in regular weight.
+Text is measured, broken, shaped and painted from **real font files**. `SfntFont`
+parses the sfnt container — `head`, `hhea`, `hmtx`, `maxp`, `cmap`, `glyf`/`loca`,
+`OS/2`, `name`, `kern`, and the presence of `COLR`/`CPAL`/`CBDT` — and resolves a
+code point to a glyph and a glyph to filled contours (composite glyphs included).
+`FontRegistry` loads those faces from disk and answers two questions: which face
+is the primary one for a weight, and which face in the fallback chain actually
+covers a code point.
+
+**Inter is the default family.** It is loaded from `Fonts/Inter/`; because the
+vendored file is the variable font's default (Regular) instance, bold is
+synthesized — advances widen and the rasterizer dilates the coverage — so a bold
+run measurably measures wider than the same run in regular weight. Everything
+Inter does not cover falls through to a curated chain of system faces (Segoe UI,
+Nirmala UI, Malgun Gothic, Microsoft YaHei, Yu Gothic, Segoe UI Emoji, …), chosen
+by code-point coverage. A host with no font files at all falls back to the
+built-in **stroke face**: a compiled-in vector glyph table, so a renderer still
+draws text rather than nothing.
+
+**Direction and joining.** A run's direction is decided by its first strong
+character, and a right-to-left run is reversed for display. Arabic letters are
+given their contextual presentation forms (isolated, initial, medial, final) from
+their logical neighbours, so Arabic is not merely reversed but joined. A
+full Unicode bidi algorithm and OpenType Layout are out of scope for this phase:
+a letter whose contextual form a face does not carry keeps its base form.
 
 * `Measure(text, size, weight)` — the width of a UTF-8 string.
 * `MeasurePrefix` — the width of the first *n* bytes, which is what caret
   positioning and hit testing inside a text field need.
-* `LineHeight`, `Advance`, `TabAdvance` — a tab stop is four spaces.
+* `LineHeight`, `Advance`, `TabAdvance` — a tab stop is four spaces. A glyph's
+  advance comes from whichever face in the chain covers its code point, so
+  measurement and painting agree across a mixed-script run.
 * `Wrap(text, size, weight, availableWidth, preserveWhitespace, lines)` — breaks
-  into lines at spaces, hyphens and explicit line breaks. `preserveWhitespace`
-  turns wrapping off, which is what `<pre>` needs. A width of zero means
-  "unbounded": only explicit breaks apply.
+  into lines at spaces, hyphens and explicit line breaks, and never inside a
+  grapheme cluster: a combining mark, variation selector, skin-tone modifier or
+  anything after a zero-width joiner stays with the base character it decorates.
+  `preserveWhitespace` turns wrapping off, which is what `<pre>` needs. A width of
+  zero means "unbounded": only explicit breaks apply.
 * `ByteOffsetForCodepoint` / `CodepointIndexForByte` / `CodepointCount` /
   `DecodeUtf8` — the byte/code-point conversions that keep the runtime's indices
   unambiguous.
 
-`GlyphCache` rasterizes a glyph once per (code point, font size, weight) and
-hands the same coverage bitmap to every backend that asks. It is owned by the
+`Bidi.h` carries the script questions the run reorderer asks: `IsRtlCodepoint`,
+`IsLtrCodepoint`, `IsCjkCodepoint`, `IsClusterExtender`, `IsRegionalIndicator`,
+and `ArabicShapedCodepoint`.
+
+`GlyphCache` rasterizes a glyph once per (face, code point, font size, weight) and
+hands the same coverage bitmap to every backend that asks. A filled outline is
+flattened to polygons and filled with the non-zero winding rule on a 4x4 sampling
+grid; the built-in stroke face is stroked instead. The cache is owned by the
 renderer rather than the backend, because a cache is a correctness question (all
 backends must rasterize identically), not a backend implementation detail. A
 device-scale change makes every cached bitmap wrong rather than merely stale, so
@@ -544,6 +572,7 @@ and a generated-UI suite driven by the compiler:
 | --- | --- |
 | `RuntimeContract` | the compiler→renderer seam: the categories compiled data resolves to, the diagnostics produced when it cannot be trusted |
 | `Style` / `Text` | category defaults, text measurement, wrapping, bold, multi-byte text |
+| `Typography` | font files and the fallback chain, bidi direction, Arabic joining, cluster-aware breaking, every script rendering into its line box |
 | `Layout` / `Paint` | geometry, line boxes, clipping, table layout, the display list, damage tracking |
 | `Backend` / `Images` | the software rasterizer pixel for pixel, the image codecs |
 | `Input` | hit testing, hover, focus, activation, text editing, scrolling |
@@ -599,9 +628,10 @@ RoboRenderer is a normal CMake target in the same project:
 
 ```
 Include/RoboRenderer/     public headers (the contract, and every engine's API)
-Source/RoboRenderer/      layout, text, style, state, input, paint, backend,
+Source/RoboRenderer/      layout, text, fonts, style, state, input, paint, backend,
                           resources, image codecs, validation, diagnostics
 Tests/RoboRenderer/       the suites above
+Fonts/                    the bundled Inter face the runtime defaults to
 Tools/                    RoboViewer, RoboBench, RendererHarness
 Docs/RoboRenderer.md      this document
 ```

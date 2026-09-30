@@ -361,16 +361,4 @@ namespace RoboRenderer
 
         return &glyphs[codepoint - FirstCodepoint];
     }
-
-    FontRegistry::FontRegistry()
-        : regular(FontWeightKind::Normal)
-        , bold(FontWeightKind::Bold)
-    {
-    }
-
-    const FontFace& FontRegistry::Face(FontWeightKind weight) const
-    {
-        return weight == FontWeightKind::Bold ? static_cast<const FontFace&>(bold)
-                                              : static_cast<const FontFace&>(regular);
-    }
 }

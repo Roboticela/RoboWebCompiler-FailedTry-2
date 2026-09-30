@@ -9,9 +9,14 @@
 
 set(RoboRendererSources
     "${CMAKE_CURRENT_SOURCE_DIR}/CompiledUi.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Unicode.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Generated/UnicodeData.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CompiledUiValidation.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Style.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Text.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/FontFile.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/FontStack.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Bidi.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/StrokeFont.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/RuntimeState.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/LayoutEngine.cpp"
@@ -29,6 +34,8 @@ target_include_directories(RoboRenderer
     PUBLIC
         "${CMAKE_SOURCE_DIR}/Include"
         "${CMAKE_SOURCE_DIR}/CompilerKnowledge/Include"
+    PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}"
 )
 
 target_compile_features(RoboRenderer PUBLIC cxx_std_17)

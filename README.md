@@ -206,8 +206,10 @@ Tools/                      SpecExtractor, RegistryCompiler, JSON helper, driver
 Tests/                      component, integration and renderer suites
 Tests/RoboRenderer/         runtime suites (contract, style, text, layout, paint,
                             backend, images, input, resources, visual)
+Fonts/                      the typefaces the runtime loads (Inter by default)
 Examples/BasicApp/          a single-document HTML + CSS + JS application
 Examples/MultiPage/         three documents in one folder, one model each
+Examples/TypographyShowcase/ every writing system, emoji, weights and line breaking
 RoboBench.md                the current benchmark report, produced by RoboBench
 ```
 
@@ -561,10 +563,11 @@ applications). `ctest` also registers `RoboHTMLCompilerExample`, which compiles
 `Examples/BasicApp`.
 
 Runtime suites: `RuntimeContract` (the compiler→renderer seam), `Style`, `Text`,
-`Layout`, `Paint`, `Backend`, `Images`, `Input`, `Resources` and `Visual`
-(rendered frames compared against recorded references). The generated-UI suite
-runs the renderer against compiled data the compiler emitted, not only against
-data a test built in memory.
+`Typography` (font loading, per-code-point fallback, bidi, Arabic joining,
+cluster-aware breaking), `Layout`, `Paint`, `Backend`, `Images`, `Input`,
+`Resources` and `Visual` (rendered frames compared against recorded references).
+The generated-UI suite runs the renderer against compiled data the compiler
+emitted, not only against data a test built in memory.
 
 The first `Visual` run *records* its reference frames under
 `Tests/Reference/RoboRenderer/` and reports that it did; later runs compare.

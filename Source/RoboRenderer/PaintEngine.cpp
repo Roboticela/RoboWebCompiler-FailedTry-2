@@ -1,4 +1,5 @@
 #include "RoboRenderer/Paint.h"
+#include "RoboRenderer/Bidi.h"
 
 #include <algorithm>
 #include <chrono>
@@ -808,10 +809,21 @@ namespace RoboRenderer
 
         const TextLayout& textLayout = layout.Text();
 
+        // Collect the run in logical order first. A right-to-left run is then
+        // reversed for display, and Arabic letters are given their contextual
+        // forms from their logical neighbours before either happens, because a
+        // letter's shape depends on the order the characters were written in,
+        // not on the order they are painted in.
+        struct RunEntry
+        {
+            std::uint32_t codepoint = 0;
+            float advance = 0.0f;
+        };
+
+        std::vector<RunEntry> entries;
         std::uint32_t offset = startByte;
-        float pen = x;
-        const std::uint32_t firstGlyph = static_cast<std::uint32_t>(list.GlyphCount());
-        std::uint32_t glyphCount = 0;
+        bool rightToLeft = false;
+        bool directionResolved = false;
 
         while (text[offset] != '\0' && offset < endByte)
         {
@@ -824,21 +836,82 @@ namespace RoboRenderer
 
             if (codepoint == '\t')
             {
-                pen += textLayout.TabAdvance(fontSize, weight);
+                RunEntry entry;
+                entry.codepoint = '\t';
+                entry.advance = textLayout.TabAdvance(fontSize, weight);
+                entries.push_back(entry);
                 continue;
             }
 
-            if (codepoint != ' ' && codepoint != 0x00A0)
+            // The first strong character decides the run's direction.
+            if (!directionResolved)
+            {
+                if (IsRtlCodepoint(codepoint))
+                {
+                    rightToLeft = true;
+                    directionResolved = true;
+                }
+                else if (IsLtrCodepoint(codepoint))
+                {
+                    rightToLeft = false;
+                    directionResolved = true;
+                }
+            }
+
+            RunEntry entry;
+            entry.codepoint = codepoint;
+            entry.advance = textLayout.Advance(codepoint, fontSize, weight);
+            entries.push_back(entry);
+        }
+
+        for (std::size_t index = 0; index < entries.size(); ++index)
+        {
+            std::uint32_t previous = 0;
+            std::uint32_t next = 0;
+
+            for (std::size_t back = index; back > 0; --back)
+            {
+                if (!IsClusterExtender(entries[back - 1].codepoint))
+                {
+                    previous = entries[back - 1].codepoint;
+                    break;
+                }
+            }
+
+            for (std::size_t forward = index + 1; forward < entries.size(); ++forward)
+            {
+                if (!IsClusterExtender(entries[forward].codepoint))
+                {
+                    next = entries[forward].codepoint;
+                    break;
+                }
+            }
+
+            entries[index].codepoint = ArabicShapedCodepoint(previous, entries[index].codepoint, next);
+        }
+
+        if (rightToLeft)
+        {
+            std::reverse(entries.begin(), entries.end());
+        }
+
+        float pen = x;
+        const std::uint32_t firstGlyph = static_cast<std::uint32_t>(list.GlyphCount());
+        std::uint32_t glyphCount = 0;
+
+        for (const RunEntry& entry : entries)
+        {
+            if (entry.codepoint != ' ' && entry.codepoint != 0x00A0 && entry.codepoint != '\t')
             {
                 PaintGlyph glyph;
                 glyph.x = pen;
                 glyph.y = baseline;
-                glyph.codepoint = codepoint;
+                glyph.codepoint = entry.codepoint;
                 list.AddGlyph(glyph);
                 ++glyphCount;
             }
 
-            pen += textLayout.Advance(codepoint, fontSize, weight);
+            pen += entry.advance;
         }
 
         if (glyphCount == 0)

@@ -249,8 +249,19 @@ ROBO_TEST(Text, GlyphCacheRasterizesOncePerGlyphAndSize)
     ROBO_CHECK(space.bitmap->advance > 0.0f);
     ROBO_CHECK(space.coverage == nullptr);
 
-    // A code point the stroke font does not cover has no coverage.
-    const RasterizedGlyph unmapped = cache.Get(0x1F642, 16.0f, FontWeightKind::Normal, 1.0f);
+    // Emoji resolve through the fallback chain to a face that covers them, so
+    // they rasterize like any other glyph.
+    const RasterizedGlyph emoji = cache.Get(0x1F642, 16.0f, FontWeightKind::Normal, 1.0f);
+
+    if (!fonts.UsesStrokeFallback())
+    {
+        ROBO_CHECK(emoji.bitmap != nullptr);
+        ROBO_CHECK(emoji.bitmap->advance > 0.0f);
+    }
+
+    // A code point no face in the chain maps still has no coverage: the caller
+    // paints nothing rather than an invented glyph.
+    const RasterizedGlyph unmapped = cache.Get(0x10FFFD, 16.0f, FontWeightKind::Normal, 1.0f);
     ROBO_CHECK(unmapped.bitmap == nullptr);
     ROBO_CHECK(unmapped.coverage == nullptr);
 

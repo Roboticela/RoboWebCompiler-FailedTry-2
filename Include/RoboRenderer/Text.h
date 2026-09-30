@@ -6,22 +6,27 @@
 // bounds, the layout measures real strings, and lines break at real break
 // opportunities.
 //
-// The HTML-only phase ships one built-in stroke font. The interfaces below are
-// the ones a real font stack needs:
+// The faces are real: `FontRegistry` loads OpenType/TrueType files from disk
+// (Inter first, then a fallback chain per code point), a face hands back filled
+// glyph contours, and `GlyphCache` rasterizes them into coverage bitmaps.
 //
-//     FontFace        metrics and glyph lookup for one face
-//     FontRegistry    family + weight + fallback selection
+//     FontFace        metrics, outlines and glyph lookup for one face
+//     FontRegistry    family + weight + per-code-point fallback selection
 //     TextLayout      measurement, line breaking, caret mapping
+//     GlyphCache      outline -> coverage, cached per face, size and weight
 //
-// Glyph rasterization happens in the graphics backend, which receives stroke
-// outlines today and would receive coverage bitmaps or outlines from a real font
-// file later; the text layout above it does not care which.
+// A face may instead be the built-in stroke font, which draws strokes rather
+// than filled outlines; the layout and the cache branch on `UsesOutlines()` and
+// nothing above them cares which kind of face answered.
 // ---------------------------------------------------------------------------
 #pragma once
 
 #include "RoboRenderer/CompiledUi.h"
 
 #include <cstdint>
+#include <memory>
+#include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace RoboRenderer
@@ -32,6 +37,16 @@ namespace RoboRenderer
     {
         float x;
         float y;
+    };
+
+    /// A point of a filled outline in font units (y grows upwards from the
+    /// baseline). Quadratic segments are represented the way TrueType stores
+    /// them: an off-curve point between two on-curve points is a control point.
+    struct ContourPoint
+    {
+        float x = 0.0f;
+        float y = 0.0f;
+        bool onCurve = true;
     };
 
     /// One glyph of a face.
@@ -48,6 +63,18 @@ namespace RoboRenderer
         /// Stroke outline of the glyph.
         std::uint32_t firstPoint = 0;
         std::uint32_t pointCount = 0;
+        /// Filled outline of the glyph: a range of closed contours. Contour `k`
+        /// spans the points between the previous contour's end and
+        /// `ContourEnds()[k]`, exactly as a TrueType `glyf` contour is stored.
+        std::uint32_t firstContour = 0;
+        std::uint32_t contourCount = 0;
+        /// True when the glyph is drawn as a filled outline rather than strokes.
+        bool filled = false;
+        /// Synthetic emboldening, in font units. Zero means the face already has
+        /// the weight it was asked for. A rasterizer dilates the coverage by this
+        /// much when it is non-zero, which is what lets one Inter instance stand
+        /// in for every weight.
+        float embolden = 0.0f;
         /// False for space and other blank glyphs.
         bool hasInk = false;
     };
@@ -73,6 +100,38 @@ namespace RoboRenderer
         virtual const Glyph& MissingGlyph() const = 0;
         /// Stroke points of one glyph, in font units.
         virtual const StrokePoint* Points() const = 0;
+
+        // --- filled outlines ---------------------------------------------
+        //
+        // A real OpenType face hands back filled contours; the built-in stroke
+        // face hands back stroke points. The text layout above does not care
+        // which, and the rasterizer branches on `UsesOutlines()`.
+
+        /// True when the face's glyphs are filled outlines.
+        virtual bool UsesOutlines() const { return false; }
+        /// Flat contour point pool for the whole face (indexed by `Glyph`
+        /// contour ranges).
+        virtual const ContourPoint* ContourPoints() const { return nullptr; }
+        /// One past the last point of contour `k`. The pool is shared by every
+        /// glyph, so a glyph's contour range indexes into it.
+        virtual const std::uint32_t* ContourEnds() const { return nullptr; }
+
+        /// True when the face maps the code point at all, blank glyphs included.
+        /// This is what a fallback chain asks before it moves to the next face.
+        virtual bool Covers(std::uint32_t codepoint) const
+        {
+            return FindGlyph(codepoint) != nullptr;
+        }
+
+        /// CSS weight class (100..900) the face actually provides. A face that
+        /// reports less than the weight it was asked for is emboldened
+        /// synthetically rather than silently drawn light.
+        virtual int WeightClass() const { return 400; }
+
+        /// True when the face carries colour glyph tables (COLR/CPAL, CBDT or
+        /// sbix). Reported so a caller can prefer a monochrome sibling when it
+        /// wants outlines and only the colour face has them.
+        virtual bool HasColorGlyphs() const { return false; }
     };
 
     /// The built-in stroke font. Single weight family, ASCII coverage, designed
@@ -103,19 +162,70 @@ namespace RoboRenderer
         Glyph missing;
     };
 
-    /// The faces the runtime can use.
+    /// The faces the runtime can use, and the order in which it looks for one
+    /// that covers a code point.
+    ///
+    /// The registry loads real OpenType/TrueType faces from disk -- Inter first,
+    /// because that is the application's default family, then a curated fallback
+    /// chain so that CJK, Indic, Arabic, Hebrew, Thai and emoji text all find a
+    /// face that can draw them. When no font file is found at all it falls back
+    /// to the built-in stroke face, so a host with no fonts still renders.
     class FontRegistry
     {
     public:
+        /// Loads from the default search path: `Fonts/` beside the working
+        /// directory, `ROBO_FONT_DIRS`, and the platform's font directory.
         FontRegistry();
 
-        /// The face for a weight. The HTML-only phase has one family; a real font
-        /// stack resolves family, weight and fallback chain here.
+        /// Loads from an explicit list of directories. Each is scanned for
+        /// `.ttf`, `.otf` and `.ttc` files.
+        explicit FontRegistry(const std::vector<std::string>& fontDirectories);
+
+        ~FontRegistry();
+
+        FontRegistry(const FontRegistry&) = delete;
+        FontRegistry& operator=(const FontRegistry&) = delete;
+
+        /// The primary face for a weight: the family the application asked for.
         const FontFace& Face(FontWeightKind weight) const;
 
+        /// The face that actually covers a code point, walking the fallback
+        /// chain. Never null: an uncovered code point resolves to the primary
+        /// face, whose missing glyph is the .notdef box.
+        const FontFace& FaceFor(std::uint32_t codepoint, FontWeightKind weight) const;
+
+        /// Position of a face in the chain, used as a cache key. A face that is
+        /// not in the chain reports 0.
+        std::uint32_t IndexOf(const FontFace& face) const;
+
+        /// The family the primary faces resolve to ("Inter" when it is present).
+        const std::string& PrimaryFamily() const { return primaryFamily; }
+
+        /// True when bold had to be synthesized from the regular face.
+        bool HasSyntheticBold() const { return syntheticBold; }
+
+        /// True when no real font file was found and the stroke face is in use.
+        bool UsesStrokeFallback() const { return usesStrokeFallback; }
+
+        /// Number of faces in the fallback chain.
+        std::size_t FaceCount() const { return chain.size(); }
+
     private:
-        StrokeFontFace regular;
-        StrokeFontFace bold;
+        void Load(const std::vector<std::string>& directories);
+        void Build(std::vector<std::shared_ptr<FontFace>> loaded);
+
+        std::vector<std::shared_ptr<FontFace>> owned;
+        std::vector<const FontFace*> chain;
+        mutable std::unordered_map<std::uint64_t, const FontFace*> resolveCache;
+
+        StrokeFontFace strokeRegular;
+        StrokeFontFace strokeBold;
+
+        const FontFace* faceRegular = nullptr;
+        const FontFace* faceBold = nullptr;
+        std::string primaryFamily = "Robo Stroke";
+        bool syntheticBold = false;
+        bool usesStrokeFallback = true;
     };
 
     /// One laid out line of a text run.
@@ -186,17 +296,24 @@ namespace RoboRenderer
         void Clear();
 
     private:
+        /// A rasterization bucket: one face at one device size and weight. Real
+        /// faces cover thousands of code points, so the glyphs are a hash map
+        /// rather than an array -- the array was only ever right for the
+        /// 95-glyph stroke font.
         struct SizeBucket
         {
             std::uint32_t sizeKey = 0;
             FontWeightKind weight = FontWeightKind::Normal;
-            std::vector<GlyphBitmap> glyphs;
-            std::vector<std::uint8_t> glyphState;
+            std::uint32_t faceId = 0;
             std::vector<std::uint8_t> coverage;
+            std::unordered_map<std::uint32_t, GlyphBitmap> glyphs;
         };
 
-        SizeBucket& BucketFor(float fontSize, FontWeightKind weight, float deviceScale);
-        void Rasterize(SizeBucket& bucket, std::uint32_t codepoint);
+        SizeBucket& BucketFor(std::uint32_t faceId,
+                              float fontSize,
+                              FontWeightKind weight,
+                              float deviceScale);
+        void Rasterize(SizeBucket& bucket, const FontFace& face, std::uint32_t codepoint);
 
         const FontRegistry& fonts;
         std::vector<SizeBucket> buckets;
