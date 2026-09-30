@@ -80,7 +80,7 @@ may carry its own non-standard attributes. Everything else is an error.
 | `RHC1009` / `RHC1010`    | malformed markup / unexpected end tag               |
 | `RHC1011` / `RHC1012`    | missing required attribute / invalid attribute value|
 | `RHC1013` / `RHC1014`    | unknown `<input type>` / missing document element   |
-| `MCSS001` / `MCSS002`    | unresolved style reference / malformed stylesheet   |
+| `MCSS001` / `MCSS002`    | unresolved style reference (warning) / malformed stylesheet |
 | `MJS001` / `MJS002`      | unresolved script resource / malformed behaviour    |
 | `MSVG001` / `MSVG002`    | invalid SVG attribute / unknown SVG element         |
 | `MMATH001` / `MMATH002`  | invalid MathML attribute / unknown MathML element   |
@@ -276,11 +276,11 @@ previews `Examples/Watch/index.html`. The boxes compile when they are asked to:
 first. Typing never starts a build and a build never runs on the window thread,
 so a large document or a large paste cannot stall the window; a build in flight
 shows a `building...` badge over the last frame and keeps taking keystrokes.
-A build that fails leaves the last frame on screen and puts the first line of the
-diagnostic in the status strip, so a half-written rule never blanks the preview.
-Because that frame is then older than the boxes, the panel marks it with a red
-`build failed - showing the last good preview` badge, and a first build that
-fails writes its diagnostic into the empty panel instead of leaving it blank.
+A build that fails puts the first line of the diagnostic in the status strip and
+lays the whole thing, the text the console prints, over the panel in a read-only
+view that scrolls and copies, so the reason is never squeezed into one line: the
+status strip only ever has room for a summary. The last good frame stays behind
+it, so a half-written rule never blanks the preview.
 
 ```bat
 Tools\Watch.bat Examples\Watch\index.html --auto

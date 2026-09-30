@@ -129,7 +129,10 @@ ROBO_TEST(Style, AuthoredRulesWinOverUtilities)
     ROBO_CHECK_EQ(ValueOf(resolved, "padding-left"), std::string("1rem"));
 }
 
-ROBO_TEST(Style, UnresolvedClassIsReported)
+// A class nothing styles is allowed: HTML may name a hook that no rule answers,
+// exactly as a browser accepts it. The reference is worth saying out loud, but it
+// is not a reason to fail a build.
+ROBO_TEST(Style, UnresolvedClassIsAWarningNotAnError)
 {
     DiagnosticSink sink;
     StyleSheetCompiler compiler(sink);
@@ -144,8 +147,9 @@ ROBO_TEST(Style, UnresolvedClassIsReported)
         return;
     }
 
-    ROBO_CHECK(!compiler.ValidateStyleReferences(*parsed));
-    ROBO_CHECK(HasError(sink, DiagnosticCode::UnresolvedStyleReference));
+    ROBO_CHECK(compiler.ValidateStyleReferences(*parsed));
+    ROBO_CHECK(!sink.HasErrors());
+    ROBO_CHECK(HasWarning(sink, DiagnosticCode::UnresolvedStyleReference));
 }
 
 ROBO_TEST(Style, MalformedStyleSheetIsReported)

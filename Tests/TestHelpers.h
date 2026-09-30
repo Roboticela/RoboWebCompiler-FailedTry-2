@@ -78,6 +78,26 @@ namespace RoboTest
         return FindDiagnostic(sink, code) != nullptr;
     }
 
+    /// The first warning with the given code, so a test can assert on a report
+    /// that must not stop a build.
+    inline const Diagnostic* FindWarning(const DiagnosticSink& sink, DiagnosticCode code)
+    {
+        for (const Diagnostic& diagnostic : sink.GetDiagnostics())
+        {
+            if (diagnostic.severity == Severity::Warning && diagnostic.code == code)
+            {
+                return &diagnostic;
+            }
+        }
+        return nullptr;
+    }
+
+    /// True when the sink contains a warning with the given code.
+    inline bool HasWarning(const DiagnosticSink& sink, DiagnosticCode code)
+    {
+        return FindWarning(sink, code) != nullptr;
+    }
+
     inline std::string FormatDiagnostics(const DiagnosticSink& sink)
     {
         return sink.FormatAll();

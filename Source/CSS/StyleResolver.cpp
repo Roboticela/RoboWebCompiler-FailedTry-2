@@ -329,14 +329,23 @@ namespace RoboHTMLCompiler
                     usedClasses.push_back(className);
                 }
 
+                // A class name is a hook, not a promise: HTML is free to name a
+                // class that no rule defines, exactly as a browser allows it, and
+                // the element simply carries no styling. That is a warning, so the
+                // document still compiles and still renders; only markup or a
+                // stylesheet that cannot be read at all stops a build.
                 if (!IsKnownClass(className))
                 {
-                    diagnostics.Error(DiagnosticCode::UnresolvedStyleReference,
-                                      classAttribute->location,
-                                      "Unresolved class '" + className + "'.",
-                                      std::string(),
-                                      "Define the class in a stylesheet or correct the name.",
-                                      className);
+                    diagnostics.Warning(
+                        DiagnosticCode::UnresolvedStyleReference,
+                        classAttribute->location,
+                        "Class '" + className + "' is not defined in any stylesheet.",
+                        "A class name is optional: HTML may name a hook that no rule answers, and "
+                        "an element with a class like that simply carries no styling. The page "
+                        "still compiles and still renders, so this does not stop a build.",
+                        "Add a rule for " + className +
+                            " in a .css file, or leave it - a class is often a hook for scripts "
+                            "or for markup added later.");
                 }
             }
         });

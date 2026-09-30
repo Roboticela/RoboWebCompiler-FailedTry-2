@@ -74,7 +74,9 @@ namespace RoboHTMLCompiler
         bool IsKnownClass(const std::string& className) const;
 
         /// Reports every class referenced by the document that no stylesheet or
-        /// Tailwind utility defines.
+        /// Tailwind utility defines. A class name is a hook, not a promise -
+        /// HTML may name a class nothing styles - so this warns and never fails
+        /// the build. Returns true when no errors were added.
         bool ValidateStyleReferences(const MarkupDocument& document);
 
         /// Renders the compiled stylesheet, containing only the rules required

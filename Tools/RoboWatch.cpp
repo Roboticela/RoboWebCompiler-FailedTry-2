@@ -539,6 +539,10 @@ namespace
         HWND cssBox = nullptr;
         HWND frameView = nullptr;
         HWND status = nullptr;
+
+        /// A read-only view laid over the frame when a build fails, so the whole
+        /// diagnostic can be read and scrolled the way the console prints it.
+        HWND errorView = nullptr;
         HWND autoBox = nullptr;
         HWND rebuildButton = nullptr;
         HWND saveButton = nullptr;
@@ -563,6 +567,10 @@ namespace
         /// frame: the pixels on screen are then the previous build's, and the
         /// panel says so rather than pretending the picture is current.
         bool frameIsStale = false;
+
+        /// The full text of the last failed build, shown in `errorView` while it
+        /// is up. Empty as soon as a build draws a frame.
+        std::string errorDetails;
 
         /// True while a build runs on its own thread. The window keeps taking
         /// keystrokes while it does, and a request made during a build is
@@ -652,7 +660,12 @@ namespace
     {
         Image frame;
         bool hasFrame = false;
+
+        /// One line for the status strip; `details` is the whole thing, the
+        /// same text the console prints, for the panel to show in full.
         std::string status;
+        std::string details;
+
         bool isError = false;
         long long elapsedMs = 0;
     };
@@ -686,6 +699,7 @@ namespace
         if (!application.Build(html, harness, error))
         {
             outcome.status = "error: " + FirstLine(error);
+            outcome.details = error;
             outcome.isError = true;
             return outcome;
         }
@@ -700,7 +714,9 @@ namespace
 
         if (!renderer.Initialize(backend, rendererOptions) || !renderer.RenderFrame())
         {
-            outcome.status = "error: " + FirstLine(renderer.DiagnosticLog().Format());
+            const std::string failure = renderer.DiagnosticLog().Format();
+            outcome.status = "error: " + FirstLine(failure);
+            outcome.details = failure;
             outcome.isError = true;
             return outcome;
         }
@@ -726,11 +742,54 @@ namespace
         if (!wrote)
         {
             status << "  |  cannot write " << options.output;
+            outcome.details = "the frame was drawn but could not be written\r\n\r\n  " +
+                              options.output +
+                              "\r\n\r\nthe folder may be read only, or the file is open for writing\r\n"
+                              "somewhere else.";
         }
 
         outcome.status = status.str();
         outcome.isError = !wrote;
         return outcome;
+    }
+
+    /// Writes the status line into the strip. The strip is a static control,
+    /// so setting the string and invalidating it is not enough: without writing
+    /// it back, the first word put there, "ready", stays on screen for the life
+    /// of the window and every later status is silently dropped.
+    void RefreshStatus()
+    {
+        WatchWindow& state = State();
+        SetWindowTextW(state.status, Widen(state.statusText).c_str());
+        InvalidateRect(state.status, nullptr, TRUE);
+    }
+
+    /// Shows or hides the read-only error view over the frame. A failed build
+    /// replaces the picture with the whole diagnostic — the text the console
+    /// prints — so the reason is never reduced to one ellipsised line.
+    void ShowBuildError(bool visible, const std::string& details)
+    {
+        WatchWindow& state = State();
+
+        if (visible)
+        {
+            // An edit wraps on CRLF, which is what `SetBoxText` expands to. The
+            // change notification it sends is swallowed so it is not read as an
+            // edit to the document.
+            state.loading = true;
+            SetBoxText(state.errorView, details);
+            state.loading = false;
+            // A diagnostic is read from its first line down, so the view opens
+            // at the top however far the last one was scrolled.
+            SendMessageW(state.errorView, EM_SETSEL, 0, 0);
+            SendMessageW(state.errorView, EM_SCROLLCARET, 0, 0);
+            SetWindowPos(state.errorView, HWND_TOP, 0, 0, 0, 0,
+                         SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+        }
+        else
+        {
+            ShowWindow(state.errorView, SW_HIDE);
+        }
     }
 
     /// Starts a build on a thread of its own, or remembers that one is wanted
@@ -758,8 +817,12 @@ namespace
         state.statusText = "building";
         state.statusIsError = false;
 
+        // The frame (or the loader badge) is watched while the next build runs,
+        // so a diagnostic from the build before is put away first.
+        ShowBuildError(false, std::string());
+
         SetTimer(state.window, TimerLoader, LoaderIntervalMs, nullptr);
-        InvalidateRect(state.status, nullptr, TRUE);
+        RefreshStatus();
         InvalidateRect(state.frameView, nullptr, TRUE);
 
         const WatchOptions options = state.options;
@@ -806,6 +869,11 @@ namespace
         // does not look like the edit had no effect at all.
         state.frameIsStale = outcome->isError && state.hasFrame;
 
+        // A failure is spelled out in full over the panel, exactly as the
+        // console prints it; a build that drew a frame takes the view down.
+        state.errorDetails = outcome->isError ? outcome->details : std::string();
+        ShowBuildError(state.statusIsError, state.errorDetails);
+
         // Typing while this build ran means the frame is already behind the
         // boxes again, and the strip is the only place that can say so.
         if (state.dirty)
@@ -813,7 +881,7 @@ namespace
             state.statusText += "  |  edited since this build";
         }
 
-        InvalidateRect(state.status, nullptr, TRUE);
+        RefreshStatus();
         InvalidateRect(state.frameView, nullptr, TRUE);
 
         // A request made while this build ran is honoured now, so a keystroke
@@ -852,7 +920,7 @@ namespace
         state.statusText = wrote ? "saved " + state.options.input + " and " + state.options.styleSheet
                                  : "cannot save the two files";
         state.statusIsError = !wrote;
-        InvalidateRect(state.status, nullptr, TRUE);
+        RefreshStatus();
     }
 
     /// Reloads a box whose file changed on disk, unless the box is what wrote it.
@@ -1058,6 +1126,9 @@ namespace
         MoveWindow(state.cssBox, Margin * 2 + boxWidth, boxesTop, width - boxWidth - 3 * Margin, boxesHeight,
                    TRUE);
         MoveWindow(state.frameView, 0, frameTop, width, frameHeight, TRUE);
+        // The error view sits exactly over the frame, so a failure replaces the
+        // picture with its reason rather than only annotating the corner.
+        MoveWindow(state.errorView, 0, frameTop, width, frameHeight, TRUE);
         MoveWindow(state.status, 0, height - StatusHeight, width, StatusHeight, TRUE);
     }
 
@@ -1096,6 +1167,17 @@ namespace
             return reinterpret_cast<LRESULT>(brush);
         }
 
+        // A read-only edit is coloured as a static control, so the diagnostic
+        // view is a light red page rather than another white editor: it reads
+        // as an error at a glance, the way the console's lines do.
+        if (control == state.errorView)
+        {
+            SetTextColor(device, RGB(140, 24, 24));
+            SetBkColor(device, RGB(255, 240, 240));
+            static HBRUSH errorBrush = CreateSolidBrush(RGB(255, 240, 240));
+            return reinterpret_cast<LRESULT>(errorBrush);
+        }
+
         static HBRUSH editorBrush = CreateSolidBrush(RGB(255, 255, 255));
         SetBkColor(device, RGB(255, 255, 255));
         return reinterpret_cast<LRESULT>(editorBrush);
@@ -1130,7 +1212,7 @@ namespace
                 state.loaderPhase = (state.loaderPhase + 1) % 4;
                 state.statusText =
                     "building" + std::string(static_cast<std::size_t>(state.loaderPhase), '.');
-                InvalidateRect(state.status, nullptr, TRUE);
+                RefreshStatus();
                 InvalidateRect(state.frameView, nullptr, TRUE);
                 return 0;
             }
@@ -1163,7 +1245,7 @@ namespace
                                            ? "auto rebuild on: a change in a box or either file builds"
                                            : "auto rebuild off: F5 or Rebuild builds";
                     state.statusIsError = false;
-                    InvalidateRect(state.status, nullptr, TRUE);
+                    RefreshStatus();
 
                     if (state.autoRebuild)
                     {
@@ -1193,7 +1275,7 @@ namespace
                 {
                     state.statusText = "edited: F5, Ctrl+S or Rebuild builds it";
                     state.statusIsError = false;
-                    InvalidateRect(state.status, nullptr, TRUE);
+                    RefreshStatus();
                 }
             }
 
@@ -1674,17 +1756,31 @@ namespace
                                  OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY,
                                  FIXED_PITCH | FF_MODERN, L"Consolas");
 
-        const DWORD boxStyle = WS_CHILD | WS_VISIBLE | WS_BORDER | WS_VSCROLL | WS_HSCROLL |
-                               ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_WANTRETURN;
+        const DWORD boxStyle = WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_BORDER | WS_VSCROLL |
+                               WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL |
+                               ES_WANTRETURN;
 
         state.htmlBox = CreateWindowExW(0, L"EDIT", L"", boxStyle, 0, 0, 10, 10, state.window,
                                         nullptr, instance, nullptr);
         state.cssBox = CreateWindowExW(0, L"EDIT", L"", boxStyle, 0, 0, 10, 10, state.window,
                                        nullptr, instance, nullptr);
-        state.frameView = CreateWindowExW(0, FrameClassName, L"", WS_CHILD | WS_VISIBLE, 0, 0, 10, 10,
+        // WS_CLIPSIBLINGS matters here: the error view is laid over this view,
+        // and without it a repaint of the frame would draw straight over the
+        // diagnostic, leaving the old picture visible and the error nowhere.
+        state.frameView = CreateWindowExW(0, FrameClassName, L"",
+                                          WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS, 0, 0, 10, 10,
                                           state.window, nullptr, instance, nullptr);
         state.status = CreateWindowExW(0, L"STATIC", L"ready", WS_CHILD | WS_VISIBLE | SS_LEFT,
                                        0, 0, 10, 10, state.window, nullptr, instance, nullptr);
+
+        // The error view is created hidden and shown only over a failed build:
+        // a read-only edit, so a diagnostic can be read, scrolled and copied
+        // exactly as the console prints it rather than squeezed into one line.
+        state.errorView = CreateWindowExW(
+            0, L"EDIT", L"",
+            WS_CHILD | WS_CLIPSIBLINGS | WS_BORDER | WS_VSCROLL | ES_MULTILINE | ES_READONLY |
+                ES_AUTOVSCROLL | ES_WANTRETURN,
+            0, 0, 10, 10, state.window, nullptr, instance, nullptr);
 
         // The toolbar: the two ways to compile and the switch that lets the
         // window keep up on its own. A button is the discoverable version of the
@@ -1705,8 +1801,8 @@ namespace
                                         reinterpret_cast<HMENU>(static_cast<INT_PTR>(CommandAuto)),
                                         instance, nullptr);
 
-        for (HWND control : { state.htmlBox, state.cssBox, state.status, state.rebuildButton,
-                              state.saveButton, state.autoBox })
+        for (HWND control : { state.htmlBox, state.cssBox, state.status, state.errorView,
+                              state.rebuildButton, state.saveButton, state.autoBox })
         {
             SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(state.font), TRUE);
         }
