@@ -34,22 +34,33 @@ namespace CssReference = RoboCSSCompiler::Generated;
 
 namespace
 {
-    /// True when the registry compiles the name as a property or expands it as a
-    /// shorthand.
-    bool IsImplemented(const CSSPropertyRegistry& registry, const char* name)
+    /// True when the registry compiles the name: it has a compiled id and the
+    /// runtime draws it, or it is a shorthand the compiler expands.
+    bool IsCompiled(const CSSPropertyRegistry& registry, const char* name)
     {
-        return registry.Find(name) != nullptr || registry.FindShorthand(name) != nullptr;
+        if (registry.FindShorthand(name) != nullptr)
+        {
+            return true;
+        }
+
+        const CSSPropertyDefinition* definition = registry.Find(name);
+        return definition != nullptr && !definition->dynamic;
+    }
+
+    /// True when the registry carries the name: the reference defines it, the
+    /// cascade parses and stores its value, and nothing lowers it into the
+    /// native style.
+    bool IsCarried(const CSSPropertyRegistry& registry, const char* name)
+    {
+        return registry.FindRegistered(name) != nullptr;
     }
 
     /// True when the registry accounts for the name at all: either it compiles it
-    /// or it registers it. A registered property is known by name, module,
-    /// inheritance and initial value, and a declaration of it is reported as an
-    /// unimplemented feature rather than mistaken for a typo. Both answers count
-    /// as accounting for the reference; silently dropping a name is what does
-    /// not.
+    /// or it carries it. Both answers count as accounting for the reference;
+    /// silently dropping a name is what does not.
     bool IsAccountedFor(const CSSPropertyRegistry& registry, const char* name)
     {
-        return IsImplemented(registry, name) || registry.FindRegistered(name) != nullptr;
+        return IsCompiled(registry, name) || IsCarried(registry, name);
     }
 
     /// The names the reference still has, deduplicated and in table order.
@@ -117,19 +128,19 @@ ROBO_TEST(CssReference, EveryKnownReferencePropertyIsCompiledOrRegistered)
 
     for (const char* name : names)
     {
-        if (IsImplemented(registry, name))
+        if (IsCompiled(registry, name))
         {
             ++compiled;
             continue;
         }
 
         // A name the reference defines that this compiler does not compile is
-        // still registered: the compiler knows the module that defines it,
-        // whether it inherits and what its initial value is, and a declaration
-        // of it is reported by name rather than mistaken for a typo. That is the
-        // difference between RCC010 and RCC001, and it is the whole of what
-        // accounting for the reference means.
-        if (registry.FindRegistered(name) == nullptr || !registry.IsKnownUnsupportedName(name))
+        // carried: the compiler knows the module that defines it, whether it
+        // inherits and what its initial value is, and a declaration of it keeps
+        // the value the author wrote instead of being refused. Nothing the
+        // reference ever defined is left unaccounted for, which is what makes
+        // consuming the reference safe.
+        if (!IsCarried(registry, name) || registry.IsKnownUnsupportedName(name))
         {
             unaccounted.emplace_back(name);
             continue;
@@ -143,7 +154,7 @@ ROBO_TEST(CssReference, EveryKnownReferencePropertyIsCompiledOrRegistered)
     if (!unaccounted.empty())
     {
         std::string message =
-            "the reference defines these properties and the compiler neither compiles nor registers them:";
+            "the reference defines these properties and the compiler neither compiles nor carries them:";
         for (const std::string& name : unaccounted)
         {
             message += " " + name;
@@ -289,7 +300,7 @@ ROBO_TEST(CssReference, RetiredModulesStayCompiledOrRegistered)
         // A registered entry carries the detail the module stated, and the
         // module it names has to be one that actually defined the name, or the
         // citation would point at a specification that never mentioned it.
-        if (!IsImplemented(registry, property.name))
+        if (!IsCompiled(registry, property.name))
         {
             const CSSPropertyDefinition* definition = registry.FindRegistered(property.name);
             ROBO_CHECK(definition != nullptr);
@@ -310,11 +321,21 @@ ROBO_TEST(CssReference, RegistrationNeverClaimsAPropertyTheCompilerCompiles)
     // mean a declaration that is simultaneously resolved and refused.
     const CSSPropertyRegistry& registry = CSSPropertyRegistry::Instance();
 
-    for (const CSSPropertyDefinition& definition : registry.RegisteredProperties())
+    for (std::size_t index = 0; index < registry.RegisteredProperties().size(); ++index)
     {
+        const CSSPropertyDefinition& definition = registry.RegisteredProperties()[index];
+
         ROBO_CHECK(!definition.supported);
-        ROBO_CHECK(definition.id == CSSPropertyId::Unknown);
-        ROBO_CHECK(registry.Find(definition.name) == nullptr);
+        ROBO_CHECK(definition.dynamic);
+        // A carried property has an identifier of its own, in the carried range,
+        // so that a declared value has somewhere to live on a computed style.
+        ROBO_CHECK_EQ(static_cast<std::uint16_t>(definition.id),
+                      static_cast<std::uint16_t>(CSSPropertyId::DynamicBase) + index);
+        ROBO_CHECK(definition.grammar == CSSValueGrammar::Dynamic);
+        // The public lookup resolves a carried name to the same row the
+        // registration holds, and never to a compiled one: one name, one id.
+        ROBO_CHECK(registry.Find(definition.name) == &definition);
+        ROBO_CHECK(registry.Find(definition.id) == &definition);
         ROBO_CHECK(registry.FindShorthand(definition.name) == nullptr);
         ROBO_CHECK(registry.FindRegistered(definition.name) == &definition);
         ROBO_CHECK(definition.name != nullptr && definition.name[0] != '\0');
@@ -363,16 +384,26 @@ ROBO_TEST(CssReference, RetiredModulesAreStillNamed)
     ROBO_CHECK_EQ(retiredCount > 0, anyRetiredNames);
 }
 
-ROBO_TEST(CssReference, UnknownNamesAreStillUnknown)
+ROBO_TEST(CssReference, KnownNamesAreNeverReportedAsUnknown)
 {
     const CSSPropertyRegistry& registry = CSSPropertyRegistry::Instance();
 
-    // A real property the compiler does not implement, and a name that is not a
-    // property at all. The reference is what separates them.
-    ROBO_CHECK(registry.IsKnownUnsupportedName("animation-name"));
-    ROBO_CHECK(registry.IsKnownUnsupportedName("grid-template-columns"));
-    ROBO_CHECK(registry.DescribeUnsupported("grid-template-columns") != nullptr);
+    // Every name the reference defines is compiled or carried, and neither is an
+    // error: a declaration of one is applied (and drawn, when compiled) rather
+    // than reported. Consuming the reference is only safe because this holds for
+    // all 700-odd of them.
+    for (const char* name : KnownReferenceNames())
+    {
+        ROBO_CHECK(!registry.IsKnownUnsupportedName(name));
+        ROBO_CHECK(registry.DescribeUnsupported(name) == nullptr);
+    }
 
+    // A real property whose specification is outside the reference is still
+    // reported as unimplemented rather than mistaken for a typo (RCC010).
+    ROBO_CHECK(registry.IsKnownUnsupportedName("touch-action"));
+    ROBO_CHECK(registry.DescribeUnsupported("touch-action") != nullptr);
+
+    // And a name that is not a property at all (RCC001).
     ROBO_CHECK(!registry.IsKnownUnsupportedName("whats-it"));
     ROBO_CHECK(!registry.IsKnownUnsupportedName("colour"));
     ROBO_CHECK(registry.DescribeUnsupported("whats-it") == nullptr);
@@ -386,14 +417,14 @@ ROBO_TEST(CssReference, TheReferenceCoversTheCompilerWithVeryFewExceptions)
     std::size_t implemented = 0;
     for (const char* name : names)
     {
-        if (IsImplemented(registry, name))
+        if (IsCompiled(registry, name))
         {
             ++implemented;
         }
     }
 
     // The counts are the point of the extraction: almost everything the CSS
-    // Working Group defines is a name this compiler reports rather than
+    // Working Group defines is a name this compiler carries rather than
     // compiles, and stating it as a number keeps that from being forgotten.
     ROBO_CHECK(implemented > 0);
     ROBO_CHECK(implemented < names.size());

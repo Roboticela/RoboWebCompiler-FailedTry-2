@@ -2136,6 +2136,17 @@ namespace RoboCSSCompiler
             report.shorthands.push_back(shorthand.name);
         }
 
+        // Carried properties: applied and kept, never lowered. They are counted
+        // apart from the compiled ones because they are a different promise: a
+        // carried declaration is preserved, not drawn.
+        for (const CSSPropertyDefinition& definition : registry.RegisteredProperties())
+        {
+            ++report.dynamicPropertyCount;
+            report.dynamic.push_back(definition.name);
+        }
+
+        // The only names still reported as unimplemented: real CSS properties
+        // whose specification is outside the consumed reference.
         for (const char* name : registry.UnsupportedNames())
         {
             ++report.unsupportedPropertyCount;
@@ -2174,15 +2185,23 @@ namespace RoboCSSCompiler
 
         output << "## CSS coverage\n\n";
         output << "| | Count |\n| --- | --- |\n";
-        output << "| Properties implemented | " << implementedPropertyCount << " |\n";
+        output << "| Properties compiled | " << implementedPropertyCount << " |\n";
+        output << "| Properties carried | " << dynamicPropertyCount << " |\n";
         output << "| Shorthands implemented | " << shorthandCount << " |\n";
         output << "| Units typed | " << unitCount << " |\n";
         output << "| Pseudo-classes recognised | " << pseudoClassCount << " |\n";
-        output << "| Reference properties still unsupported | " << unsupportedPropertyCount << " |\n\n";
+        output << "| Properties reported as unimplemented | " << unsupportedPropertyCount << " |\n\n";
 
-        output << "Implemented properties:\n\n";
+        output << "Compiled properties (drawn by the runtime):\n\n";
 
         for (const std::string& name : implemented)
+        {
+            output << "- `" << name << "`\n";
+        }
+
+        output << "\nCarried properties (kept, not drawn):\n\n";
+
+        for (const std::string& name : dynamic)
         {
             output << "- `" << name << "`\n";
         }
@@ -2194,7 +2213,7 @@ namespace RoboCSSCompiler
             output << "- `" << name << "`\n";
         }
 
-        output << "\nReference properties this compiler reports as unsupported (RCC010):\n\n";
+        output << "\nReal CSS properties outside the reference, reported as unimplemented (RCC010):\n\n";
 
         for (const std::string& name : unsupported)
         {

@@ -337,16 +337,31 @@ namespace RoboCSSCompiler
                         }),
             registeredProperties.end());
 
-        // Everything the reference defines and this compiler does not compile is
-        // reported by name, and the table that says so is the registration: one
-        // answer, built once, so the report cannot drift from it. The names come
-        // from both tables, because a retired module's property is no less real
-        // for its directory being gone.
-        for (const CSSPropertyDefinition& definition : registeredProperties)
+        // Identifiers come last, after the table is sorted and deduplicated,
+        // because an identifier is the row's position: `DynamicBase` plus the
+        // row's index, so that a carried id resolves to its definition with one
+        // subtraction and the assignment cannot depend on the order the modules
+        // happened to be read in.
+        //
+        // The inherited ones join the cascade's inheritance list: a carried
+        // property inherits because the specification says it does, and the
+        // cascade copies it from the parent exactly as it copies a compiled one.
+        for (std::size_t index = 0; index < registeredProperties.size(); ++index)
         {
-            unsupportedNames.push_back(definition.name);
+            CSSPropertyDefinition& definition = registeredProperties[index];
+            definition.id = static_cast<CSSPropertyId>(
+                static_cast<std::uint16_t>(CSSPropertyId::DynamicBase) + static_cast<std::uint16_t>(index));
+
+            if (definition.inherited)
+            {
+                inheritedProperties.push_back(definition.id);
+            }
         }
 
+        // What the reference does not define at all, and this compiler cannot
+        // compile: five names whose specifications live outside the checkout.
+        // They are the only names left that are reported as unimplemented, now
+        // that a name the reference defines is either compiled or carried.
         for (const char* name : UnsupportedNamesOutsideTheReference)
         {
             unsupportedNames.push_back(name);
@@ -358,28 +373,33 @@ namespace RoboCSSCompiler
     {
         // A name the compiler already compiles is compiled, not registered: the
         // two tables answer different questions and must not overlap.
-        if (Find(name) != nullptr || FindShorthand(name) != nullptr)
+        if (FindCompiled(name) != nullptr || FindShorthand(name) != nullptr)
         {
             return;
         }
 
         CSSPropertyDefinition definition{};
-        // No identifier: an id is what the compiler uses to store a computed
-        // value, and nothing it cannot compile ever reaches a computed style.
+        // The identifier is assigned once the table is sorted, because it is the
+        // row's position: see the constructor.
         definition.id = CSSPropertyId::Unknown;
         definition.name = name;
         definition.category = CSSPropertyCategory::Unknown;
         definition.inherited = inherited;
         definition.initialValue = initialValue;
-        definition.grammar = CSSValueGrammar::Unknown;
+        // Carried, not interpreted: the value parser keeps the written tokens
+        // rather than judging them against a grammar this compiler does not
+        // model.
+        definition.grammar = CSSValueGrammar::Dynamic;
         definition.keywords = nullptr;
-        // Nothing that is never applied can affect anything, so every effect
-        // flag is off rather than guessed at.
+        // Nothing carried is lowered into the native style, so it cannot affect
+        // layout, paint, text or hit testing; a later stage that does lower one
+        // is the stage that will set these.
         definition.affectsLayout = false;
         definition.affectsPaint = false;
         definition.affectsText = false;
         definition.affectsHitTesting = false;
         definition.supported = false;
+        definition.dynamic = true;
         definition.spec = module;
 
         registeredProperties.push_back(definition);
@@ -419,7 +439,7 @@ namespace RoboCSSCompiler
         return registry;
     }
 
-    const CSSPropertyDefinition* CSSPropertyRegistry::Find(const std::string& name) const
+    const CSSPropertyDefinition* CSSPropertyRegistry::FindCompiled(const std::string& name) const
     {
         for (const CSSPropertyDefinition& definition : properties)
         {
@@ -432,6 +452,20 @@ namespace RoboCSSCompiler
         return nullptr;
     }
 
+    const CSSPropertyDefinition* CSSPropertyRegistry::Find(const std::string& name) const
+    {
+        // Compiled first: it is the smaller table and the one a declaration of
+        // anything the compiler can actually draw resolves to. A name it does
+        // not compile is not unknown - the reference defines it, so it is
+        // carried, and the caller gets the definition it can store a value for.
+        if (const CSSPropertyDefinition* compiled = FindCompiled(name))
+        {
+            return compiled;
+        }
+
+        return FindRegistered(name);
+    }
+
     const CSSPropertyDefinition* CSSPropertyRegistry::Find(CSSPropertyId id) const
     {
         for (const CSSPropertyDefinition& definition : properties)
@@ -439,6 +473,20 @@ namespace RoboCSSCompiler
             if (definition.id == id)
             {
                 return &definition;
+            }
+        }
+
+        // A carried id is the row's position in the registration, so this is a
+        // subtraction and one comparison rather than another search.
+        if (static_cast<std::uint16_t>(id) >= static_cast<std::uint16_t>(CSSPropertyId::DynamicBase))
+        {
+            const std::size_t index =
+                static_cast<std::size_t>(static_cast<std::uint16_t>(id) -
+                                         static_cast<std::uint16_t>(CSSPropertyId::DynamicBase));
+
+            if (index < registeredProperties.size() && registeredProperties[index].id == id)
+            {
+                return &registeredProperties[index];
             }
         }
 
@@ -534,38 +582,40 @@ namespace RoboCSSCompiler
     {
         // A property this compiler compiles is never reported as unimplemented,
         // and neither is a shorthand it expands.
-        if (Find(name) != nullptr || FindShorthand(name) != nullptr)
+        if (FindCompiled(name) != nullptr || FindShorthand(name) != nullptr)
         {
             return false;
         }
 
-        // Registered is known: the reference defined the name, and it stays
-        // known once the directory that defined it is gone, because the
-        // registration is what the compiler is built against from then on.
+        // Nor is one it carries. The reference defined the name, so the compiler
+        // keeps the declaration instead of refusing it; calling that
+        // "unimplemented" would report valid CSS as a defect.
         if (FindRegistered(name) != nullptr)
         {
-            return true;
+            return false;
         }
 
+        // What is left is a real property from a specification outside the
+        // reference, which the compiler knows by name and cannot compile.
         return IsReferenceOnlyName(name);
     }
 
     const char* CSSPropertyRegistry::DescribeUnsupported(const std::string& name) const
     {
-        if (Find(name) != nullptr || FindShorthand(name) != nullptr)
+        if (FindCompiled(name) != nullptr || FindShorthand(name) != nullptr)
+        {
+            return nullptr;
+        }
+
+        // Carried rather than unsupported: the compiler can act on the name, so
+        // there is nothing to describe as a missing feature.
+        if (FindRegistered(name) != nullptr)
         {
             return nullptr;
         }
 
         // The returned pointer is stable: it is one of the generated tables' own
-        // spellings or a literal, never the argument. The registration is
-        // consulted first because it is the table that survives the reference
-        // being consumed.
-        if (const CSSPropertyDefinition* registered = FindRegistered(name))
-        {
-            return registered->name;
-        }
-
+        // spellings or a literal, never the argument.
         if (const Generated::ReferenceProperty* property = FindReferenceProperty(name))
         {
             return property->name;

@@ -307,12 +307,16 @@ namespace RoboCSSCompiler
     struct CSSCoverageReport
     {
         std::size_t implementedPropertyCount = 0;
+        /// Properties the compiler carries: applied and kept, not lowered.
+        std::size_t dynamicPropertyCount = 0;
         std::size_t unsupportedPropertyCount = 0;
         std::size_t shorthandCount = 0;
         std::size_t selectorCount = 0;
         std::size_t unitCount = 0;
         std::size_t pseudoClassCount = 0;
         std::vector<std::string> implemented;
+        std::vector<std::string> dynamic;
+        /// Real CSS properties whose specification is outside the reference.
         std::vector<std::string> unsupported;
         std::vector<std::string> shorthands;
 

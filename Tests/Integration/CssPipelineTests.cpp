@@ -482,16 +482,17 @@ ROBO_TEST(CssPipeline, UnimplementedCssIsReportedNotPretended)
     RoboTools::CompiledApplication application;
     std::string error;
 
+    // `touch-action` is a real CSS property whose specification is outside the
+    // reference: the compiler knows the name and cannot compile it, so the
+    // declaration is reported by name instead of being dropped in silence.
     ROBO_CHECK(CompileBodyWithSources("<div class=\"box\">x</div>", application,
-                                      Sheet(".box { position: absolute; grid-template-columns: 1fr 1fr; "
-                                            "background-color: #123456 }"),
+                                      Sheet(".box { touch-action: none; background-color: #123456 }"),
                                       error));
 
     const std::string diagnostics = application.Diagnostics();
 
     ROBO_CHECK(diagnostics.find("RCC010") != std::string::npos);
-    ROBO_CHECK(diagnostics.find("position") != std::string::npos);
-    ROBO_CHECK(diagnostics.find("grid-template-columns") != std::string::npos);
+    ROBO_CHECK(diagnostics.find("touch-action") != std::string::npos);
 
     // What was implemented still applied.
     TestRenderer renderer(application.Document(), 400.0f, 300.0f);
@@ -507,6 +508,45 @@ ROBO_TEST(CssPipeline, UnimplementedCssIsReportedNotPretended)
 
     const CompiledStyle& style = renderer.renderer.Layout().StyleOf(index);
     ROBO_CHECK(SameColor(style.background, Color::Rgba(0x12, 0x34, 0x56), 1));
+}
+
+ROBO_TEST(CssPipeline, CarriedCssIsKeptWithoutFailingTheBuild)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    // Every one of these is defined by the reference and carried by the
+    // compiler. None is an error, none is reported, and the compiled declaration
+    // beside them still applies: a page is not broken by CSS this compiler does
+    // not draw.
+    ROBO_CHECK(CompileBodyWithSources("<div class=\"box\">x</div>", application,
+                                      Sheet(".box { position: absolute; grid-template-columns: 1fr 1fr; "
+                                            "animation-name: fade; opacity: 0.5; background-color: #123456 }"),
+                                      error));
+
+    const std::string diagnostics = application.Diagnostics();
+
+    ROBO_CHECK(diagnostics.find("RCC010") == std::string::npos);
+    ROBO_CHECK(diagnostics.find("RCC001") == std::string::npos);
+
+    TestRenderer renderer(application.Document(), 400.0f, 300.0f);
+    ROBO_CHECK(renderer.Draw());
+
+    const ElementIndex index = StyledElement(application.Document());
+    ROBO_CHECK(index != NoElement);
+
+    if (index == NoElement)
+    {
+        return;
+    }
+
+    const CompiledStyle& style = renderer.renderer.Layout().StyleOf(index);
+    ROBO_CHECK(SameColor(style.background, Color::Rgba(0x12, 0x34, 0x56), 1));
+
+    // Carried is not compiled: nothing lowered those declarations, so no layout
+    // field was set for them and the box keeps its automatic sizing.
+    ROBO_CHECK(style.width.type == LayoutValueType::Auto);
+    ROBO_CHECK(style.height.type == LayoutValueType::Auto);
 }
 
 ROBO_TEST(CssPipeline, RuntimeStateSelectorsAreReported)

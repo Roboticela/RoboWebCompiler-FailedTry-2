@@ -1998,6 +1998,75 @@ namespace RoboCSSCompiler
         return false;
     }
 
+    namespace
+    {
+        /// The value of a property this compiler *carries* rather than
+        /// interprets.
+        ///
+        /// The specification states a grammar for every one of the properties
+        /// this compiler carries, and the compiler models none of those
+        /// grammars. Judging the value against a grammar it does not have would
+        /// mean refusing declarations that are valid CSS, so it keeps what was
+        /// written: one token per item, in source order.
+        ///
+        /// That is all a carried value needs to be: it is stored against the
+        /// property, inherited when the property inherits, compared and interned
+        /// as the author's own text, and printed back by the coverage report and
+        /// the diagnostics. No stage reads meaning into it, and nothing is
+        /// lowered from it.
+        ///
+        /// The one thing refused is an empty value, and that is not a judgement
+        /// about the property's grammar: `opacity: ;` is not a value of any
+        /// property in any specification.
+        bool ParseDynamicValue(const CSSPropertyDefinition& definition,
+                               const std::vector<CSSComponentValue>& components,
+                               CSSValue& out,
+                               const CSSSourceLocation& location,
+                               CSSDiagnosticSink& diagnostics)
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.empty())
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                                  location,
+                                  "Invalid value for '" + std::string(definition.name) + "'.",
+                                  "the declaration has no value",
+                                  "Write a value, or delete the declaration.",
+                                  definition.name);
+                return false;
+            }
+
+            // As written: `50%` stays a percentage, `#FFF` its own spelling, and
+            // a function call its own text. Normalising would mean interpreting,
+            // which is the one thing a carried value is not for.
+            const auto written = [](const CSSComponentValue* value) {
+                return value->token.raw.empty() ? value->token.text : value->token.raw;
+            };
+
+            // One token is the whole value, and staying a single `Ident` keeps it
+            // readable in a report without a list wrapper around it.
+            if (values.size() == 1)
+            {
+                out = CSSValue::MakeIdent(written(values[0]));
+                out.location = location;
+                return true;
+            }
+
+            out = CSSValue();
+            out.kind = CSSValueKind::List;
+            out.location = location;
+            out.items.reserve(values.size());
+
+            for (const CSSComponentValue* value : values)
+            {
+                out.items.push_back(CSSValue::MakeIdent(written(value)));
+            }
+
+            return true;
+        }
+    }
+
     bool ParsePropertyValue(const CSSPropertyDefinition& definition,
                             const std::vector<CSSComponentValue>& components,
                             CSSValue& out,
@@ -2090,6 +2159,9 @@ namespace RoboCSSCompiler
 
         case CSSValueGrammar::FontSize:
             return ParseFontSizeValue(components, out, location, diagnostics);
+
+        case CSSValueGrammar::Dynamic:
+            return ParseDynamicValue(definition, components, out, location, diagnostics);
 
         case CSSValueGrammar::Keyword:
         {

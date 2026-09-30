@@ -145,7 +145,7 @@ stylesheet's own line and column).
 | RCC007 | Invalid or unknown at-rule |
 | RCC008 | The value does not fit the property's grammar shape |
 | RCC009 | A shorthand's values are contradictory |
-| RCC010 | A feature the reference defines and this compiler does not implement yet |
+| RCC010 | A real CSS feature this compiler does not implement: an at-rule, or one of the five properties whose specification is outside the reference |
 | RCC011 | Malformed stylesheet syntax |
 | RCC012 | Text between tokens that means nothing (an empty rule) |
 
@@ -236,10 +236,10 @@ properties the stylesheet never mentions - would erase the difference between
 of the specified bits.
 
 `Reference/CSS` was the source of truth for the list, and it has been consumed:
-every property it defined is now either compiled or registered, which is what
+every property it defined is now either compiled or carried, which is what
 "implemented" has to mean for the parts of CSS a static native UI compiler cannot
-draw. `BuildCoverageReport()` prints which names are compiled, which are
-registered, and which module each one came from.
+draw. `BuildCoverageReport()` prints which names are compiled, which are carried,
+and which module each one came from.
 
 ## 9. The reference, and how it was consumed
 
@@ -277,24 +277,44 @@ are examples or placeholders are excluded by name, with the reason recorded
 
 **Two answers, and both are answers.** A property the reference defines is either
 *compiled* — a registry row with an id, a category, a grammar and effect flags,
-which the cascade resolves and applies — or *registered*: the compiler knows its
-name, the module that defines it, whether it inherits and its initial value, and
-a declaration of it is reported as an unimplemented feature (RCC010) with the
-module that defines it rather than mistaken for a typo (RCC001).
-`CSSPropertyRegistry::Find` answers for the first and `FindRegistered` for the
-second, and the two tables cannot overlap: a name in both would be a declaration
-that is simultaneously resolved and refused.
+which the cascade resolves, applies and the style builder lowers into the native
+style — or *carried*: the compiler knows its name, the module that defines it,
+whether it inherits and its initial value, the cascade parses a declaration of it
+and keeps the value on the computed style, and nothing is reported as a defect
+and nothing is lowered.
+
+`CSSPropertyRegistry::Find` answers for both, `FindRegistered` for the carried
+table alone, and the two cannot overlap: a name in both would be one property with
+two identifiers. A carried property is given an id at or above
+`CSSPropertyId::DynamicBase`, which is what lets a value be stored against it
+without a compiled slot to index; its value grammar is `Dynamic`, the one grammar
+that judges nothing.
 
 The **51 compiled names** are the 38 longhand definitions and 14 shorthands the
 renderer can actually draw — the box, border, background, colour, font, text and
-overflow families. The **670 registered names** are everything else, and they are
-registered rather than dropped: `IsKnownUnsupportedName` and
-`DescribeUnsupported` answer from the registration, which is the table that
-survives the reference being consumed, so `animation-name: 1s` is placed in
-`css-animations-1` instead of being reported as a misspelling.
-Before the vocabulary was generated that difference came from a hand-written list
-of 218 names, and 465 of the reference's properties were reported as if they were
-typos.
+overflow families. The **669 carried names** are everything else, and carrying is
+not dropping: `opacity: 0.5` and `animation-name: fade` are valid CSS, so they are
+accepted, kept, inherited where the specification says they inherit, and printed
+back by the coverage report, instead of being refused. A compiler that models a
+dozen of the 700 grammars in CSS has no business telling an author their CSS is
+wrong.
+
+**What refusal is left for.** A name that is not a property at all is still an
+error (RCC001), and so is one of the five real properties whose specification
+lives outside the consumed reference (`touch-action`, `font-stretch`, the
+`math-*` trio), which is reported with the reason support is missing (RCC010).
+That difference used to come from a hand-written list of 218 names, and 465 of the
+reference's properties were reported as if they were typos.
+
+**Carried values are kept as written.** `transition: opacity 1s ease-in 0.5s`
+becomes a list of the four tokens in order, because the order is part of the
+value and a later stage that learns the shorthand has to be able to read it. The
+parser refuses exactly one thing: an empty value, which is not a value of any
+property. `all: initial` resets the compiled properties and does not materialise
+an initial value for each of the 669 carried ones — nothing lowers them, and
+putting them on every element would bloat every interned style for no effect, so a
+carried property is present on a computed style when a declaration put it there
+and absent otherwise.
 
 **Every module was retired.** `css-cascade-3`, `css-cascade-4` and
 `css-cascade-5` went first, when implementing `all` was all that accounting for
@@ -314,13 +334,14 @@ cmake -S . -B build -DRoboCssRetireModules=            # clear it again
 ```
 
 `Tests/CSS/CssReferenceCoverageTests.cpp` asserts that every name the reference
-ever defined is compiled or registered, that a registered name is never one the
-compiler also compiles, that the registration table is sorted and unique for the
-binary search the lookup performs, that every name of a retired module stays
-accounted for once its directory is gone, and that every spec citation in the
-registry — including the ones on registered properties — names a module the
-reference actually had. Once that is green for a module's contents, retiring it
-records it in `CssReferenceAudit.json` and removes its directory.
+ever defined is compiled or carried, that a carried name is never one the
+compiler also compiles, that a carried id is its row's position in the carried
+range, that the table is sorted and unique for the binary search the lookup
+performs, that every name of a retired module stays accounted for once its
+directory is gone, and that every spec citation in the registry — including the
+ones on carried properties — names a module the reference actually had. Once that
+is green for a module's contents, retiring it records it in
+`CssReferenceAudit.json` and removes its directory.
 
 Deletion is the one operation in this pipeline that can destroy knowledge, so it
 is the one that needs machinery behind it. The extractor reads what it is about
@@ -330,7 +351,7 @@ module table (a property that cites `css-cascade-3` would otherwise cite a modul
 the reference no longer has), its properties move to
 `RetiredReferenceProperties` with the module, the inheritance and the initial
 value each one stated, and its at-rules join the at-rule table. The coverage
-tests then require every one of those names to *stay compiled or registered*
+tests then require every one of those names to *stay compiled or carried*
 — not merely remembered — which is the difference between retiring a module and
 quietly forgetting one. The audit carries the same inventory forward through
 successive runs, so the record survives the vocabulary being regenerated, and it
@@ -352,19 +373,18 @@ dependency: with it removed, `CssSpecExtractor` reports that there is no
 reference left, leaves the vocabulary, the header and the audit untouched, and
 the compiler builds against what it learned.
 
-**What is honestly not there.** Registration is an answer about a name, not an
+**What is honestly not there.** Carrying is an answer about a value, not an
 implementation. This compiler is a static native UI compiler: it has no animation
 clock, no scrolling, no print or paged output, no second writing direction and no
 runtime that could observe a device preference. A large part of the reference
 describes exactly those things (`animation-*`, `transition-*`, `scroll-*`,
 `@page`, `writing-mode` and the logical aliases, `container-*`, `anchor-*`,
-`view-transition-*`, `bookmark-*`, `-webkit-*`). Those properties are registered
-and reported by name with their module: the compiler knows what they are and says
-it does not compile them, which is not the same as ignoring them, and it is what
-lets their modules be retired without pretending they were built.
+`view-transition-*`, `bookmark-*`, `-webkit-*`). A declaration of one is compiled
+into the computed style and draws nothing: the author's CSS is preserved and the
+runtime's limits are not reported as the author's mistakes.
 
 What it does compile is the families the renderer can draw. The next real work
-is moving names from the registered column to the compiled one — `opacity`,
+is moving names from the carried column to the compiled one — `opacity`,
 `visibility`, `object-fit`, the table model, the list and text-decorations
 families — and `BuildCoverageReport()` is where that split is printed rather than
 claimed.
@@ -374,8 +394,8 @@ claimed.
 - `Tests/CSS/CssCascadeTests.cpp` - the tokenizer, the parser, typed values,
   colour conversion, `calc()` folding, and the cascade: specificity, source
   order, `!important`, inheritance, the CSS-wide keywords, shorthand expansion,
-  custom properties, structural pseudo-classes, `@media`, `@supports`,
-  unsupported-property reporting, interning.
+  custom properties, structural pseudo-classes, `@media`, `@supports`, carried
+  properties (accepted, kept, inherited, never lowered), interning.
 - `Tests/Integration/CssPipelineTests.cpp` - the whole pipeline, asserted on
   what a user can see: the compiled table's contents, box geometry, a percentage
   and a viewport unit resolving at runtime, a minimum width, a background colour

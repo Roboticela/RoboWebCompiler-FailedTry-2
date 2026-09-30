@@ -15,7 +15,9 @@
 #include "RoboCSSCompiler/CssValue.h"
 #include "RoboCSSCompiler/CssValueParser.h"
 
+#include <algorithm>
 #include <cmath>
+#include <cstring>
 #include <memory>
 #include <string>
 #include <vector>
@@ -268,6 +270,66 @@ ROBO_TEST(CssValue, CalcThatMixesDimensionsIsReported)
     ROBO_CHECK(HasCode(diagnostics, CSSDiagnosticCode::UnsupportedFeature));
 }
 
+ROBO_TEST(CssValue, ACarriedValueIsKeptAsWritten)
+{
+    // `transition` is defined by the reference and this compiler carries it: it
+    // has no grammar to judge the value against, so it keeps the tokens the
+    // author wrote rather than refusing a declaration that is valid CSS.
+    const CSSPropertyDefinition* definition = CSSPropertyRegistry::Instance().Find("transition");
+    ROBO_CHECK(definition != nullptr);
+    ROBO_CHECK(definition->dynamic);
+    ROBO_CHECK(definition->grammar == CSSValueGrammar::Dynamic);
+
+    CSSDiagnosticSink diagnostics;
+    CSSValue value;
+    std::vector<CSSDeclaration> declarations =
+        CSSParser(diagnostics).ParseDeclarationList("t.css", "transition: opacity 1s ease-in 0.5s");
+
+    ROBO_CHECK(!declarations.empty());
+    ROBO_CHECK(ParsePropertyValue(*definition, declarations[0].value, value, declarations[0].location,
+                                 diagnostics));
+    ROBO_CHECK(!diagnostics.HasErrors());
+    ROBO_CHECK(value.kind == CSSValueKind::List);
+    ROBO_CHECK_EQ(value.items.size(), static_cast<std::size_t>(4));
+    ROBO_CHECK_EQ(value.ToString(), std::string("opacity 1s ease-in 0.5s"));
+
+    // The order is part of the value: a different order is a different style, so
+    // the interning key has to see the difference.
+    CSSValue reordered;
+    std::vector<CSSDeclaration> other =
+        CSSParser(diagnostics).ParseDeclarationList("t.css", "transition: 1s opacity ease-in 0.5s");
+
+    ROBO_CHECK(!other.empty());
+    ROBO_CHECK(ParsePropertyValue(*definition, other[0].value, reordered, other[0].location, diagnostics));
+    ROBO_CHECK(reordered != value);
+
+    // What no value of any property can be is nothing at all.
+    CSSDiagnosticSink emptySink;
+    CSSValue empty = CSSValue();
+    ROBO_CHECK(!ParsePropertyValue(*definition, std::vector<CSSComponentValue>(), empty,
+                                   CSSSourceLocation{}, emptySink));
+    ROBO_CHECK(emptySink.HasErrors());
+}
+
+ROBO_TEST(CssValue, ACompiledPropertyStillRefusesAnInvalidValue)
+{
+    // Carried properties keep what they are given; the compiled ones stay
+    // strict, because a value the runtime cannot draw is a real defect.
+    const CSSPropertyDefinition* width = CSSPropertyRegistry::Instance().Find("width");
+    ROBO_CHECK(width != nullptr);
+    ROBO_CHECK(!width->dynamic);
+
+    CSSDiagnosticSink diagnostics;
+    CSSValue value;
+    std::vector<CSSDeclaration> declarations =
+        CSSParser(diagnostics).ParseDeclarationList("t.css", "width: 50%");
+
+    ROBO_CHECK(!declarations.empty());
+    ROBO_CHECK(ParsePropertyValue(*width, declarations[0].value, value, declarations[0].location, diagnostics));
+    ROBO_CHECK(value.kind == CSSValueKind::Percentage);
+    ROBO_CHECK(value.IsRuntimeDependent());
+}
+
 ROBO_TEST(CssValue, InvalidValuesAreErrors)
 {
     CSSDiagnosticSink diagnostics;
@@ -511,7 +573,11 @@ ROBO_TEST(CssCascade, SupportsIsAnsweredByTheValueParser)
 ROBO_TEST(CssCascade, UnsupportedFeaturesAreReportedNotApplied)
 {
     Fixture fixture;
-    fixture.Build("body { position: fixed; color: red; whats-it: 3 }");
+    // `touch-action` is a real CSS property whose specification is outside the
+    // reference, so it is reported as unimplemented rather than mistaken for a
+    // typo. A property the reference defines is carried instead - see
+    // ACarriedPropertyIsAppliedAndKept.
+    fixture.Build("body { touch-action: none; color: red; whats-it: 3 }");
 
     // A real property the compiler does not compile: RCC010.
     ROBO_CHECK(HasCode(fixture.diagnostics, CSSDiagnosticCode::UnsupportedFeature));
@@ -521,34 +587,96 @@ ROBO_TEST(CssCascade, UnsupportedFeaturesAreReportedNotApplied)
     ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Color), std::string("#ff0000"));
 }
 
-ROBO_TEST(CssCascade, ARegisteredPropertyIsReportedWithItsSpecification)
+ROBO_TEST(CssCascade, ACarriedPropertyIsAppliedAndKept)
 {
     Fixture fixture;
     fixture.Build("body { animation-name: fade; color: red }");
 
-    // `animation-name` is a real property this compiler does not compile, and
-    // the registry registers it anyway: it knows the module that defines it,
-    // whether it inherits and what its initial value is, so the report places
-    // the declaration instead of only refusing it.
-    std::string message;
-    for (const CSSDiagnostic& entry : fixture.diagnostics.Entries())
-    {
-        if (entry.code == CSSDiagnosticCode::UnsupportedFeature)
-        {
-            message = entry.message;
-        }
-    }
+    // `animation-name` is defined by the reference and this compiler carries it:
+    // the declaration is valid CSS, so nothing is reported, and the value is
+    // kept on the computed style for the runtime to use.
+    ROBO_CHECK(!fixture.diagnostics.HasErrors());
+    ROBO_CHECK(!HasCode(fixture.diagnostics, CSSDiagnosticCode::UnsupportedFeature));
+    ROBO_CHECK(!HasCode(fixture.diagnostics, CSSDiagnosticCode::UnknownProperty));
 
-    ROBO_CHECK(message.find("animation-name") != std::string::npos);
-    ROBO_CHECK(message.find("css-animations-1") != std::string::npos);
-
-    // Registered is not compiled: the registration answers a question about the
-    // name, it does not produce a value the runtime could use.
     const CSSPropertyRegistry& registry = CSSPropertyRegistry::Instance();
-    ROBO_CHECK(registry.Find("animation-name") == nullptr);
-    ROBO_CHECK(registry.FindRegistered("animation-name") != nullptr);
+    const CSSPropertyDefinition* definition = registry.Find("animation-name");
 
+    ROBO_CHECK(definition != nullptr);
+    ROBO_CHECK(definition->dynamic);
+    ROBO_CHECK(registry.FindRegistered("animation-name") == definition);
+
+    // The registration is what places the name: the module that defines it, and
+    // the initial value and inheritance it stated.
+    ROBO_CHECK(std::strcmp(definition->spec, "css-animations-1") == 0);
+    ROBO_CHECK_EQ(std::string(definition->initialValue), std::string("none"));
+    ROBO_CHECK(!definition->inherited);
+
+    // Carried and compiled are different promises: the value is stored, but no
+    // effect flag claims the runtime can draw it.
+    ROBO_CHECK(!definition->supported);
+    ROBO_CHECK(!definition->affectsLayout);
+    ROBO_CHECK(!definition->affectsPaint);
+    ROBO_CHECK(!definition->affectsText);
+    ROBO_CHECK(!definition->affectsHitTesting);
+
+    const CSSValue* value = fixture.Body()->Get(definition->id);
+    ROBO_CHECK(value != nullptr);
+    ROBO_CHECK(value->IsIdent("fade"));
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), definition->id), std::string("fade"));
+
+    // What did compile still compiled.
     ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Color), std::string("#ff0000"));
+}
+
+ROBO_TEST(CssCascade, ACarriedPropertyInheritsWhenTheReferenceSaysSo)
+{
+    const CSSPropertyRegistry& registry = CSSPropertyRegistry::Instance();
+    const CSSPropertyDefinition* visibility = registry.Find("visibility");
+
+    ROBO_CHECK(visibility != nullptr);
+    ROBO_CHECK(visibility->dynamic);
+    ROBO_CHECK(visibility->inherited);
+
+    Fixture fixture;
+    fixture.Build("html { visibility: hidden }");
+
+    ROBO_CHECK_EQ(ComputedText(fixture.Html(), visibility->id), std::string("hidden"));
+
+    // The cascade copies it down: a carried property inherits because the
+    // specification says it does, not because the compiler draws it.
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), visibility->id), std::string("hidden"));
+    ROBO_CHECK(!fixture.diagnostics.HasErrors());
+}
+
+ROBO_TEST(CssCascade, AllDoesNotInventValuesForCarriedProperties)
+{
+    const CSSPropertyDefinition* animation = CSSPropertyRegistry::Instance().Find("animation-name");
+    ROBO_CHECK(animation != nullptr);
+
+    Fixture fixture;
+    fixture.Build("body { all: initial }");
+
+    // `all` resets the properties the compiler compiles. It does not materialise
+    // an initial value for each of the hundreds it carries: nothing lowers them,
+    // and putting them on every element would bloat every interned style for no
+    // effect.
+    ROBO_CHECK(!fixture.Body()->Has(animation->id));
+    ROBO_CHECK(fixture.Body()->Values().size() < 100);
+    ROBO_CHECK(!fixture.diagnostics.HasErrors());
+}
+
+ROBO_TEST(CssCascade, ACarriedDeclarationDoesNotDisturbTheCompiledOnes)
+{
+    Fixture fixture;
+    fixture.Build("body { animation-name: fade; display: block; width: 50%; color: red }");
+
+    // A carried declaration sits beside the compiled ones without changing them,
+    // and a percentage width stays a percentage: it is resolved by the runtime.
+    ROBO_CHECK(!fixture.diagnostics.HasErrors());
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Color), std::string("#ff0000"));
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Display), std::string("block"));
+    ROBO_CHECK_EQ(ComputedText(fixture.Body(), CSSPropertyId::Width), std::string("50%"));
 }
 
 ROBO_TEST(CssCascade, UnknownPropertySuggestsTheNearbyName)
@@ -742,12 +870,24 @@ ROBO_TEST(CssCoverage, ReportNamesWhatIsImplemented)
     ROBO_CHECK(report.implementedPropertyCount > 20);
     ROBO_CHECK(report.shorthandCount > 8);
     ROBO_CHECK(report.unitCount > 40);
-    ROBO_CHECK(report.unsupportedPropertyCount > 100);
+
+    // Carried properties outnumber the compiled ones by an order of magnitude:
+    // the report has to say so, or the compiled column reads as the whole of the
+    // compiler's knowledge.
+    ROBO_CHECK(report.dynamicPropertyCount > 500);
+    ROBO_CHECK_EQ(report.dynamic.size(), report.dynamicPropertyCount);
+
+    // Everything left unsupported comes from outside the reference.
+    ROBO_CHECK(report.unsupportedPropertyCount > 0);
+    ROBO_CHECK(report.unsupportedPropertyCount < 20);
+    ROBO_CHECK(std::find(report.unsupported.begin(), report.unsupported.end(), std::string("touch-action")) !=
+               report.unsupported.end());
 
     const std::string markdown = report.ToMarkdown();
     ROBO_CHECK(markdown.find("CSS coverage") != std::string::npos);
     ROBO_CHECK(markdown.find("`background-color`") != std::string::npos);
     ROBO_CHECK(markdown.find("`grid-template-columns`") != std::string::npos);
+    ROBO_CHECK(markdown.find("Carried properties") != std::string::npos);
 }
 
 ROBO_TEST(CssCoverage, EveryInitialValueParses)

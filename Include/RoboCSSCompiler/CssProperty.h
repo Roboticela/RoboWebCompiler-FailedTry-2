@@ -82,7 +82,21 @@ namespace RoboCSSCompiler
         /// declaration, so it is never set on a computed style itself.
         All,
 
-        Count
+        /// The compiled identifiers end here: every id below this one names a
+        /// property the compiler compiles, and every id at or above
+        /// `DynamicBase` names one it carries.
+        Count,
+
+        /// The first identifier a *carried* property may use.
+        ///
+        /// A carried property is one the reference defines and this compiler
+        /// keeps without interpreting: it needs an identifier so that a
+        /// declared value has somewhere to live on a computed style, but it
+        /// needs no compiled slot, because nothing lowers it into the native
+        /// style. The gap between `Count` and this keeps the two ranges
+        /// disjoint, so a single comparison tells a compiled id from a carried
+        /// one and only a compiled id may index a per-property array.
+        DynamicBase = 0x100
     };
 
     const char* ToString(CSSPropertyId id);
@@ -151,7 +165,16 @@ namespace RoboCSSCompiler
         /// `normal | bold | bolder | lighter | 1..1000`
         FontWeight,
         /// `xx-small ... xxx-large | smaller | larger | <length-percentage>`
-        FontSize
+        FontSize,
+        /// Anything at all, for a property the compiler carries rather than
+        /// interprets. The specification defines 669 properties beyond the 51
+        /// this compiler compiles or expands, each with a grammar of its own; a
+        /// compiler that models none of those grammars cannot honestly judge
+        /// their values, so it keeps what was written instead of refusing a
+        /// declaration that is valid CSS. A carried value is preserved as the
+        /// tokens the author wrote, which is enough for it to be stored,
+        /// inherited, compared and printed back.
+        Dynamic
     };
 
     /// Where a property's four longhands live, for shorthand expansion.
@@ -190,14 +213,24 @@ namespace RoboCSSCompiler
         bool affectsText;
         bool affectsHitTesting;
 
-        /// False for a property the registry knows but the compiler cannot
-        /// compile yet: it is reported as an unsupported feature rather than as
-        /// an unknown property, and its value is never applied.
+        /// True for a property the compiler compiles: it has a compiled id, the
+        /// cascade applies it and the style builder lowers it into the native
+        /// style.
         bool supported;
 
-        /// The reference specification the property is defined by, as a
-        /// directory name under Reference/CSS. The coverage report checks these
-        /// against what is actually on disk.
+        /// True for a property the compiler *carries*: the reference defines it,
+        /// the cascade parses and stores its value so that nothing the author
+        /// wrote is discarded, and its effect is left to the runtime rather than
+        /// lowered into the native style. A carried property is not a missing
+        /// feature and is never reported as one - it is the second way a
+        /// definition can be usable. Its id is at or above
+        /// `CSSPropertyId::DynamicBase` and its grammar is `Dynamic`; `supported`
+        /// and `dynamic` are never both true.
+        bool dynamic;
+
+        /// The specification the property is defined by, as the module directory
+        /// name the reference used. The coverage report names it so a carried or
+        /// unimplemented declaration is placed rather than only refused.
         const char* spec;
 
         bool IsCustomPropertyTarget() const { return false; }
@@ -223,8 +256,9 @@ namespace RoboCSSCompiler
     public:
         static const CSSPropertyRegistry& Instance();
 
-        /// The definition of a property this compiler compiles, or nullptr when
-        /// the name is unknown or merely registered.
+        /// The definition of a property, whether the compiler compiles it or
+        /// carries it, or nullptr when the name is not a property the
+        /// compiler knows at all.
         const CSSPropertyDefinition* Find(const std::string& name) const;
         const CSSPropertyDefinition* Find(CSSPropertyId id) const;
 
@@ -232,21 +266,23 @@ namespace RoboCSSCompiler
         const CSSShorthandDefinition* FindShorthand(const std::string& name) const;
 
         /// The definition of a property the reference defines and this compiler
-        /// knows but does not compile: its name, the module that defines it,
-        /// whether it inherits and its initial value. A declaration of it is
-        /// reported by name rather than mistaken for a typo, and the reference's
-        /// coverage tests require every name it defines to be either compiled or
-        /// found here, which is what makes consuming the reference safe.
+        /// carries: its name, the module that defines it, whether it inherits
+        /// and its initial value. A declaration of it is accepted and kept, and
+        /// the reference's coverage tests require every name it defines to be
+        /// either compiled or found here, which is what makes consuming the
+        /// reference safe.
         const CSSPropertyDefinition* FindRegistered(const std::string& name) const;
 
-        /// What the reference defines that this compiler does not compile, in
-        /// name order. Registered rather than dropped: the compiler is built
-        /// against this vocabulary once the reference directory itself is gone.
+        /// What the reference defines and this compiler carries, in name order.
+        /// The compiler is built against this vocabulary now that the reference
+        /// directory itself is gone.
         const std::vector<CSSPropertyDefinition>& RegisteredProperties() const { return registeredProperties; }
 
-        /// True when the name is a CSS property the reference defines but this
-        /// compiler does not compile yet. Used to choose between RCC001 and
-        /// RCC010.
+        /// True when the name is a real CSS property the compiler does not
+        /// even carry, because its specification is outside the reference. Such
+        /// a name is not a typo, so the declaration is reported as an
+        /// unimplemented feature rather than as an unknown property. Every name
+        /// the reference defines answers false: it is compiled or carried.
         bool IsKnownUnsupportedName(const std::string& name) const;
 
         /// The name and category of an unknown-but-real CSS property, for the
@@ -269,11 +305,19 @@ namespace RoboCSSCompiler
     private:
         CSSPropertyRegistry();
 
+        /// The compiled definition of a name, or nullptr. The public lookup
+        /// answers for the carried properties too; this one is what registration
+        /// consults, because it runs while the carried table is still being
+        /// built and cannot be searched.
+        const CSSPropertyDefinition* FindCompiled(const std::string& name) const;
+
         /// One registered property, from the generated reference tables.
         void RegisterReferenceProperty(const char* name, const char* module, bool inherited,
                                        const char* initialValue);
 
         std::vector<CSSPropertyDefinition> properties;
+        /// Registered rather than dropped: the compiler is built against this
+        /// vocabulary once the reference directory itself is gone.
         std::vector<CSSPropertyDefinition> registeredProperties;
         std::vector<CSSShorthandDefinition> shorthands;
         std::vector<const char*> unsupportedNames;

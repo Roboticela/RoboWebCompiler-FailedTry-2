@@ -202,7 +202,7 @@ CompilerKnowledge/          the compiler's knowledge, checked in as real code
   ImplementationCoverage.json   machine-readable coverage report
   ReferenceAudit.json       the audit trail of the consumed reference
 Tools/                      SpecExtractor, RegistryCompiler, JSON helper, drivers,
-                            RoboViewer, RoboBench, RendererHarness
+                            RoboViewer, RoboWatch, RoboBench, RendererHarness
 Tests/                      component, integration and renderer suites
 Tests/RoboRenderer/         runtime suites (contract, style, text, layout, paint,
                             backend, images, input, resources, visual)
@@ -214,8 +214,8 @@ RoboBench.md                the current benchmark report, produced by RoboBench
 `CompilerKnowledge/` is **not** build output. It is generated once by the
 tooling from the standards reference, and from then on it is source: it is
 compiled into the binary, checked in, and edited only by rerunning the tools.
-`Reference/HTML` has been fully consumed and is gone; `Reference/CSS` is the
-reference still being worked through. A reference is used as an implementation
+`Reference/HTML` and `Reference/CSS` have both been fully consumed and are gone. A
+reference is used as an implementation
 checklist, mined into checked-in knowledge by a tool, and then deleted module by
 module as the compiler accounts for it (see below).
 
@@ -251,8 +251,54 @@ ctest --preset release
 The build produces `build/bin/RoboHTMLCompiler.exe`, `build/bin/RoboHTMLCompilerTests.exe`
 and, when the tools are enabled, `build/bin/SpecExtractor.exe`,
 `build/bin/RegistryCompiler.exe`, `build/bin/RoboViewer.exe` (render one document
-to an image) and `build/bin/RoboBench.exe` (measure the runtime and write a
-report).
+to an image), `build/bin/RoboWatch.exe` (the live preview, Windows only) and
+`build/bin/RoboBench.exe` (measure the runtime and write a report).
+
+---
+
+## 4a. Live previewing a document
+
+`Tools/Watch.bat` opens the code editor on the left half of the screen and the
+live preview on the right. The preview holds the HTML in one box and the
+stylesheet in the other, compiles them with the same pipeline `RoboViewer` drives,
+draws the frame, and writes it as `preview.png` beside the document on every
+successful build.
+
+```bat
+Tools\Watch.bat
+Tools\Watch.bat Examples\Watch\index.html
+Tools\Watch.bat Examples\LandingPage\index.html Examples\LandingPage\app.css
+```
+
+It builds the preview first if it has not been built, and with no arguments it
+previews `Examples/Watch/index.html`. The boxes compile when they are asked to:
+`F5`, the Rebuild button, or `Ctrl+S`, which writes them back to the two files
+first. Typing never starts a build and a build never runs on the window thread,
+so a large document or a large paste cannot stall the window; a build in flight
+shows a `building...` badge over the last frame and keeps taking keystrokes.
+A build that fails leaves the last frame on screen and puts the first line of the
+diagnostic in the status strip, so a half-written rule never blanks the preview.
+Because that frame is then older than the boxes, the panel marks it with a red
+`build failed - showing the last good preview` badge, and a first build that
+fails writes its diagnostic into the empty panel instead of leaving it blank.
+
+```bat
+Tools\Watch.bat Examples\Watch\index.html --auto
+```
+
+With `--auto` (or the Auto rebuild box) the window keeps up on its own: a change
+in a box, or a file saved on disk by the editor, is reloaded and rebuilt after a
+short pause. That is the loop for `Examples/Watch/index.html` and for small
+documents; the explicit build is the default because a build per keystroke is the
+wrong trade for a document large enough to notice.
+
+`RoboWatch --once` is the same compile and render without a window: it writes the
+PNG, prints the result and exits, which is how the preview can be used from a
+script.
+
+```sh
+build-clang/bin/RoboWatch.exe Examples/Watch/index.html --once
+```
 
 ---
 
@@ -408,7 +454,7 @@ cmake --build build --target RoboRetireCssReferences -DRoboCssRetireModules=css-
 | file | what it is |
 | --- | --- |
 | `CompilerKnowledge/Vocabulary/CssVocabulary.json` | the inventory: every property, descriptor, at-rule, selector and function the reference defines, with its module and line - the vocabulary of the reference that is left, so it is empty now |
-| `CompilerKnowledge/Include/RoboCSSCompiler/GeneratedCssVocabulary.h` | the names, compiled in and sorted, plus every module the reference ever had and what its retired modules defined; this is what makes RCC010 "a real property this compiler does not implement" instead of a hand-written list of 218 names |
+| `CompilerKnowledge/Include/RoboCSSCompiler/GeneratedCssVocabulary.h` | the names, compiled in and sorted, plus every module the reference ever had and what its retired modules defined; this is what makes a carried property a property the compiler knows instead of a hand-written list of 218 names |
 | `CompilerKnowledge/CssReferenceAudit.json` | per-module counts, the inventory of every retired module, what could not be mined, and whether each module was read before it went |
 
 **Consumption log.** The reference is gone. `Reference/CSS` held 175
@@ -430,15 +476,19 @@ directories:
 
 **Two answers.** A property is either *compiled* - the CSS front end compiles 51
 names, the box, border, background, colour, font, text and overflow families the
-renderer can draw - or *registered*: the compiler knows the name, the module that
-defines it, whether it inherits and its initial value, and a declaration of it is
-reported (RCC010) with the module that defines it rather than mistaken for a typo.
-The two tables are disjoint and together they are total over the reference, which
-is what let the folder be removed: nothing the drafts defined is unaccounted for.
+renderer can draw - or *carried*: the compiler knows the name, the module that
+defines it, whether it inherits and its initial value, and the cascade parses a
+declaration of it and keeps the value on the computed style. Carrying is what a
+static native UI compiler can honestly do with `animation-*`, `scroll-*` or
+`writing-mode`: the author's CSS is preserved, nothing is drawn for it, and a
+valid declaration is not reported as a defect. The two tables are disjoint and
+together they are total over the reference, which is what let the folder be
+removed: nothing the drafts defined is unaccounted for, and nothing valid is any
+longer refused.
 
 `Tests/CSS/CssReferenceCoverageTests.cpp` is the gate: every reference name is
-compiled or registered, a registered name is never one the compiler also
-compiles, every retired name stays accounted for once its directory is gone,
+compiled or carried, a carried name is never one the compiler also compiles,
+every retired name stays accounted for once its directory is gone,
 every spec citation names a real module, and the tables are sorted for the
 lookups that search them. `referenceState` in the audit is `consumed` and
 `modulesRemaining` is 0. Dropping the drafts back at `Reference/CSS` and

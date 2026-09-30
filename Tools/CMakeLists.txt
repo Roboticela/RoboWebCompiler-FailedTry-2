@@ -90,6 +90,30 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------
+# RoboWatch - the live preview
+#
+#     RoboWatch          the two sources in a window, the frame beside them,
+#                        rebuilt as they are typed in
+#
+# It is the same in process compile and software frame RoboViewer produces, so
+# what it previews is what the compiler draws. The window itself is Win32, which
+# keeps the tool as dependency free as the runtime it shows; the target is
+# therefore Windows only, and the rest of the build does not notice it.
+# ---------------------------------------------------------------------------
+
+if(WIN32)
+    add_executable(RoboWatch "${CMAKE_CURRENT_SOURCE_DIR}/RoboWatch.cpp")
+    target_link_libraries(RoboWatch PRIVATE RoboRendererHarness user32 gdi32)
+    set_target_properties(RoboWatch PROPERTIES FOLDER "RoboRendererTools")
+
+    if(MSVC)
+        target_compile_options(RoboWatch PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(RoboWatch PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endif()
+
+# ---------------------------------------------------------------------------
 # Regeneration pipeline
 # ---------------------------------------------------------------------------
 
