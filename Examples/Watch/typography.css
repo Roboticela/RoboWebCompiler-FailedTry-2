@@ -1,0 +1,80 @@
+/* ---------------------------------------------------------------------------
+   The font and text properties, in one page.
+   ---------------------------------------------------------------------------
+   RoboWatch previews this beside its stylesheet, so every declaration here is a
+   live demonstration of what the runtime's text engine actually does: a face is
+   selected, a run is shaped, and the painted glyphs are the proof.
+
+     Tools\Watch.bat Examples\Watch\typography.html
+   --------------------------------------------------------------------------- */
+
+.page {
+  background-color: #f7f8fa;
+  color: #1f2430;
+  padding: 28px;
+}
+
+.column {
+  width: 560px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.title {
+  font-size: 34px;
+  font-weight: bold;
+  line-height: 1.2;
+  font-family: 'Inter', sans-serif;
+  font-kerning: normal;
+}
+
+.lede {
+  font-size: 16px;
+  line-height: 1.6;
+  word-spacing: 2px;
+  color: #3b4252;
+}
+
+.word {
+  font-size: 30px;
+  font-family: 'Inter', sans-serif;
+  font-feature-settings: "liga" 1, "kern" 1;
+}
+
+/* The same words with the discretionary composition switched off: no ligature
+   replaces `ff` or `fl`, and no pair is kerned. */
+.unkerned {
+  font-kerning: none;
+  font-feature-settings: "liga" 0, "kern" 0;
+}
+
+.note {
+  font-size: 13px;
+  text-indent: 18px;
+  color: #6b7280;
+}
+
+.decorated {
+  font-size: 20px;
+  text-decoration: underline;
+  text-decoration-color: #c2410c;
+}
+
+.struck {
+  font-size: 20px;
+  text-decoration: line-through;
+  color: #7c3aed;
+}
+
+/* `direction` overrides the first-strong-character rule, so the paragraph is
+   painted from its right edge. */
+.ordered {
+  font-size: 18px;
+  direction: rtl;
+  text-align: right;
+}

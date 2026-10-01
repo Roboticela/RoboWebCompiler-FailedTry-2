@@ -17,6 +17,7 @@ set(RoboRendererSources
     "${CMAKE_CURRENT_SOURCE_DIR}/FontFile.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/CffOutline.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/FontTables.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/SvgGlyph.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/FontVariations.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/OpenTypeLayout.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/FontStack.cpp"

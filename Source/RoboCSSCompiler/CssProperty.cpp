@@ -197,6 +197,15 @@ namespace RoboCSSCompiler
             { Id::TextTransform, "text-transform", Cat::Text, true, "none", Grammar::Keyword, "none uppercase lowercase capitalize", false, true, true, false, true, "css-text-3" },
             { Id::WhiteSpace, "white-space", Cat::Text, true, "normal", Grammar::Keyword, "normal nowrap pre pre-wrap pre-line", true, true, true, true, true, "css-text-3" },
             { Id::Direction, "direction", Cat::Text, true, "ltr", Grammar::Keyword, "ltr rtl", false, true, true, true, true, "css-writing-modes-3" },
+            { Id::FontKerning, "font-kerning", Cat::Font, true, "auto", Grammar::Keyword, "auto normal none", false, true, true, false, true, "css-fonts-3" },
+            { Id::FontFeatureSettings, "font-feature-settings", Cat::Font, true, "normal", Grammar::FontFeatureSettings, nullptr, false, true, true, false, true, "css-fonts-3" },
+            // `text-decoration-line` is not inherited by the specification, but
+            // a decoration propagates to the descendants it covers. The runtime
+            // has one style per element and no propagation channel, so the two
+            // longhands inherit here, which is what a decorated paragraph with
+            // children inside it needs to look right.
+            { Id::TextDecorationLine, "text-decoration-line", Cat::Text, true, "none", Grammar::TextDecorationLine, "none underline overline line-through", false, true, true, false, true, "css-text-decor-3" },
+            { Id::TextDecorationColor, "text-decoration-color", Cat::Text, true, "currentcolor", Grammar::Color, nullptr, false, true, false, false, true, "css-text-decor-3" },
 
             { Id::OverflowX, "overflow-x", Cat::Overflow, false, "visible", Grammar::Overflow, nullptr, true, true, false, true, true, "css-overflow-3" },
             { Id::OverflowY, "overflow-y", Cat::Overflow, false, "visible", Grammar::Overflow, nullptr, true, true, false, true, true, "css-overflow-3" }
@@ -303,8 +312,17 @@ namespace RoboCSSCompiler
         shorthands.push_back({ "overflow", Cat::Overflow, pair(Id::OverflowX, Id::OverflowY), "pair", true,
                                "css-overflow-3" });
         shorthands.push_back({ "background", Cat::Background, single(Id::BackgroundColor), "background", true,
-                               "css-backgrounds-3" });
-        shorthands.push_back({ "font", Cat::Font, single(Id::FontSize), "font", true, "css-fonts-3" });
+                               "css-backgrounds-3" });        shorthands.push_back({"font", Cat::Font, single(Id::FontSize), "font", true, "css-fonts-3"});
+        // `text-decoration`: the line keywords, the colour, and the style and
+        // thickness the runtime does not model. The line keywords and the
+        // colour are lowered; anything else is reported by the expansion.
+        CSSShorthandTargets decorationTargets;
+        decorationTargets.top = Id::TextDecorationLine;
+        decorationTargets.right = Id::TextDecorationColor;
+        decorationTargets.count = 2;
+
+        shorthands.push_back({"text-decoration", Cat::Text, decorationTargets, "text-decoration", true,
+                              "css-text-decor-3"});
 
         // Everything the reference defines and this compiler does not compile:
         // derived from the generated vocabulary rather than listed, so a module

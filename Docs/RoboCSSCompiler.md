@@ -182,11 +182,13 @@ Implemented end to end (compiled, lowered, applied, tested): `display`, `width`,
 `height`, `min-width`, `min-height`, the four margins and paddings, the four
 border widths, `border-style`, the four border colours, `border-radius`,
 `background-color`, `color`, `font-size`, `font-weight`, `font-family`,
-`font-style`, `line-height`, `letter-spacing`, `word-spacing`, `text-align`,
-`text-indent`, `text-transform`, `white-space`, `direction`, `overflow-x`/
-`overflow-y`, `all`, and the `margin`, `padding`, `border-width`, `border-style`,
-`border-color`, `border`, `border-<side>`, `border-radius`, `overflow`,
-`background` and `font` shorthands.
+`font-style`, `font-kerning`, `font-feature-settings`, `line-height`,
+`letter-spacing`, `word-spacing`, `text-align`, `text-indent`,
+`text-decoration-line`, `text-decoration-color`, `text-transform`,
+`white-space`, `direction`, `overflow-x`/`overflow-y`, `all`, and the `margin`,
+`padding`, `border-width`, `border-style`, `border-color`, `border`,
+`border-<side>`, `border-radius`, `overflow`, `background`, `font` and
+`text-decoration` shorthands.
 
 The text and font properties are the ones that reach the runtime's own text
 engine rather than only the style table. `font-family` and `font-style` select a
@@ -194,6 +196,11 @@ face (a real italic when the host has one, a synthesized oblique otherwise);
 `line-height`, `letter-spacing`, `word-spacing`, `text-indent`, `white-space`,
 `text-transform` and `direction` are laid out and painted by the engine, so the
 text a document marks up wraps, spaces, leans and orders exactly as stated.
+`font-kerning` and `font-feature-settings` are handed to the OpenType shaper, so
+a document can ask for a discretionary feature (`"dlig" 1`) or turn a default one
+off (`font-kerning: none`, `"liga" 0`), and `text-decoration-line` and
+`text-decoration-color` are drawn by the painter as an underline, an overline, a
+strikethrough, or any combination of the three.
 
 `all` is the one property that is about the other properties rather than about
 the element: it takes a CSS-wide keyword and hands it to every property at once.
@@ -296,9 +303,9 @@ two identifiers. A carried property is given an id at or above
 without a compiled slot to index; its value grammar is `Dynamic`, the one grammar
 that judges nothing.
 
-The **51 compiled names** are the 38 longhand definitions and 14 shorthands the
+The **63 compiled names** are the 48 longhand definitions and 15 shorthands the
 renderer can actually draw — the box, border, background, colour, font, text and
-overflow families. The **669 carried names** are everything else, and carrying is
+overflow families. The **658 carried names** are everything else, and carrying is
 not dropping: `opacity: 0.5` and `animation-name: fade` are valid CSS, so they are
 accepted, kept, inherited where the specification says they inherit, and printed
 back by the coverage report, instead of being refused. A compiler that models a
@@ -317,7 +324,7 @@ becomes a list of the four tokens in order, because the order is part of the
 value and a later stage that learns the shorthand has to be able to read it. The
 parser refuses exactly one thing: an empty value, which is not a value of any
 property. `all: initial` resets the compiled properties and does not materialise
-an initial value for each of the 669 carried ones — nothing lowers them, and
+an initial value for each of the 658 carried ones — nothing lowers them, and
 putting them on every element would bloat every interned style for no effect, so a
 carried property is present on a computed style when a declaration put it there
 and absent otherwise.

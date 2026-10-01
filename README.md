@@ -269,11 +269,21 @@ successful build.
 ```bat
 Tools\Watch.bat
 Tools\Watch.bat Examples\Watch\index.html
+Tools\Watch.bat Examples\Watch\typography.html
 Tools\Watch.bat Examples\LandingPage\index.html Examples\LandingPage\app.css
 ```
 
 It builds the preview first if it has not been built, and with no arguments it
-previews `Examples/Watch/index.html`. The boxes compile when they are asked to:
+previews `Examples/Watch/index.html`. When the checkout holds both `build` and
+`build-clang`, the newer of the two `RoboWatch` executables is the one used: a
+rebuild leaves the other one a revision behind, and previewing yesterday's text
+engine is worse than not previewing at all. If the document was not given a
+stylesheet, the one it links is used, and failing that `app.css` beside it.
+
+`Examples/Watch/typography.html` links `typography.css`, which puts the font and
+text properties on one page: a kerned and ligated line beside the same words with
+both switched off, an underline in its own colour, a strikethrough, and an RTL
+paragraph. It is the quickest way to watch the text engine work. The boxes compile when they are asked to:
 `F5`, the Rebuild button, or `Ctrl+S`, which writes them back to the two files
 first. Typing never starts a build and a build never runs on the window thread,
 so a large document or a large paste cannot stall the window; a build in flight

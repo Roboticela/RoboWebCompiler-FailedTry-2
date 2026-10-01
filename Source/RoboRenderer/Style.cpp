@@ -757,6 +757,22 @@ namespace RoboRenderer
         {
             target.fontFamily = authored.fontFamily;
         }
+        if (IsSpecified(specified, StyleFlagFontKerning))
+        {
+            target.fontKerning = authored.fontKerning;
+        }
+        if (IsSpecified(specified, StyleFlagFontFeatures))
+        {
+            target.fontFeatures = authored.fontFeatures;
+        }
+        if (IsSpecified(specified, StyleFlagTextDecoration))
+        {
+            target.textDecoration = authored.textDecoration;
+        }
+        if (IsSpecified(specified, StyleFlagTextDecorationColor))
+        {
+            target.textDecorationColor = authored.textDecorationColor;
+        }
         if (IsSpecified(specified, StyleFlagTextAlign))
         {
             target.textAlign = authored.textAlign;

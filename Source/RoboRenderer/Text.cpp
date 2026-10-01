@@ -1,6 +1,7 @@
 #include "RoboRenderer/Text.h"
 #include "RoboRenderer/Bidi.h"
 #include "RoboRenderer/Image.h"
+#include "RoboRenderer/SvgGlyph.h"
 
 #include <algorithm>
 #include <cmath>
@@ -158,7 +159,8 @@ namespace RoboRenderer
                           float scale,
                           float originX,
                           float originY,
-                          std::vector<std::vector<Vec2>>& polygons)
+                          std::vector<std::vector<Vec2>>& polygons,
+                          const float* affine = nullptr)
         {
             const ContourPoint* points = face.ContourPoints();
             const std::uint32_t* ends = face.ContourEnds();
@@ -192,11 +194,24 @@ namespace RoboRenderer
 
                 for (const Vec2& point : raw)
                 {
+                    // A `COLR` layer carries the paint graph's affine transform,
+                    // applied before the device placement; a synthetic oblique
+                    // then shears x with height, which is what an italic design
+                    // does: the top of a stem leans right.
+                    float x = point.x;
+                    float y = point.y;
+
+                    if (affine != nullptr)
+                    {
+                        const float transformedX = affine[0] * point.x + affine[1] * point.y + affine[4];
+                        const float transformedY = affine[2] * point.x + affine[3] * point.y + affine[5];
+                        x = transformedX;
+                        y = transformedY;
+                    }
+
                     Vec2 device;
-                    // A synthetic oblique shears x with height, which is what an
-                    // italic design does: the top of a stem leans right.
-                    device.x = (point.x + glyph.slant * point.y) * scale - originX;
-                    device.y = -point.y * scale - originY;
+                    device.x = (x + glyph.slant * y) * scale - originX;
+                    device.y = -y * scale - originY;
                     transformed.push_back(device);
                 }
 
@@ -617,6 +632,161 @@ namespace RoboRenderer
     {
     }
 
+    std::size_t TextLayout::ParseFontFeatures(const char* text,
+                                              FontFeatureSetting* out,
+                                              std::size_t capacity)
+    {
+        if (text == nullptr || capacity == 0)
+        {
+            return 0;
+        }
+
+        std::size_t written = 0;
+        std::size_t index = 0;
+
+        while (text[index] != '\0' && written < capacity)
+        {
+            while (text[index] == ' ' || text[index] == '\t' || text[index] == ',')
+            {
+                ++index;
+            }
+
+            if (text[index] == '\0')
+            {
+                break;
+            }
+
+            // A tag is `"liga"` or the four letters of a CSS 2.1 keyword. An
+            // unquoted word is taken as written, which is how `kern` and
+            // `normal` arrive from `font-feature-settings: normal`.
+            std::uint32_t tag = 0;
+            std::size_t letters = 0;
+            std::string word;
+            bool quoted = false;
+
+            if (text[index] == '"')
+            {
+                quoted = true;
+                ++index;
+
+                while (text[index] != '\0' && text[index] != '"') 
+                {
+                    if (letters < 4)
+                    {
+                        tag = (tag << 8) | static_cast<std::uint8_t>(text[index]);
+                    }
+                    ++letters;
+                    ++index;
+                }
+
+                if (text[index] == '"')
+                {
+                    ++index;
+                }
+            }
+            else
+            {
+                while (text[index] != '\0' && text[index] != ' ' && text[index] != '\t' &&
+                       text[index] != ',' && text[index] != '"')
+                {
+                    if (letters < 4)
+                    {
+                        tag = (tag << 8) | static_cast<std::uint8_t>(text[index]);
+                    }
+
+                    if (word.size() < 16)
+                    {
+                        word += text[index];
+                    }
+
+                    ++letters;
+                    ++index;
+                }
+            }
+
+            if (letters == 0)
+            {
+                continue;
+            }
+
+            // A tag is four bytes, padded on the right with spaces, exactly as
+            // the font table spells it.
+            for (std::size_t pad = letters; pad < 4; ++pad)
+            {
+                tag = (tag << 8) | static_cast<std::uint8_t>(' ');
+            }
+
+            // `normal` is the initial value, and it means "no settings".
+            if (!quoted && word == "normal")
+            {
+                while (text[index] != '\0' && text[index] != ',')
+                {
+                    ++index;
+                }
+                continue;
+            }
+
+            std::uint16_t value = 1;
+
+            while (text[index] == ' ' || text[index] == '\t')
+            {
+                ++index;
+            }
+
+            if (text[index] >= '0' && text[index] <= '9')
+            {
+                unsigned parsed = 0;
+
+                while (text[index] >= '0' && text[index] <= '9')
+                {
+                    parsed = parsed * 10u + static_cast<unsigned>(text[index] - '0');
+                    ++index;
+                }
+
+                value = static_cast<std::uint16_t>(std::min<unsigned>(parsed, 0xffffu));
+            }
+
+            out[written].tag = tag;
+            out[written].value = value;
+            ++written;
+
+            while (text[index] != '\0' && text[index] != ',')
+            {
+                ++index;
+            }
+        }
+
+        return written;
+    }
+
+    ShapeSettings TextLayout::SettingsFor(const TextRunStyle* runStyle,
+                                          std::vector<FontFeatureSetting>& storage)
+    {
+        ShapeSettings settings;
+
+        if (runStyle == nullptr)
+        {
+            return settings;
+        }
+
+        settings.kerning = runStyle->kerning;
+
+        if (runStyle->fontFeatures != nullptr && runStyle->fontFeatures[0] != '\0')
+        {
+            FontFeatureSetting parsed[32];
+            const std::size_t count = ParseFontFeatures(runStyle->fontFeatures, parsed, 32);
+
+            if (count > 0)
+            {
+                storage.assign(parsed, parsed + count);
+                settings.features = storage.data();
+                settings.featureCount = storage.size();
+            }
+        }
+
+        return settings;
+    }
+
     void TextLayout::ShapeRun(const char* text,
                               std::uint32_t startByte,
                               std::uint32_t endByte,
@@ -636,6 +806,12 @@ namespace RoboRenderer
         const float wordSpacing = runStyle != nullptr ? runStyle->wordSpacing : 0.0f;
         const char* family = runStyle != nullptr ? runStyle->fontFamily : nullptr;
         const FontSlantKind slant = runStyle != nullptr ? runStyle->slant : FontSlantKind::Upright;
+
+        // `font-kerning` and `font-feature-settings` are the document's say in
+        // how the run shapes. They are parsed once here and handed to every face
+        // the run is shaped in, so a mixed-script string is shaped by one rule.
+        std::vector<FontFeatureSetting> featureStorage;
+        const ShapeSettings shapeSettings = SettingsFor(runStyle, featureStorage);
 
         // Decode the run once, remembering each code point's byte offset and
         // which face in the fallback chain covers it. Runs are grouped by face
@@ -693,7 +869,8 @@ namespace RoboRenderer
             const float scale = fontSize / (face->UnitsPerEm() > 0.0f ? face->UnitsPerEm() : 1000.0f);
 
             std::vector<ShapedGlyph> shaped;
-            if (face->ShapeRun(codepoints.data() + index, runEnd - index, shaped) && !shaped.empty())
+            if (face->ShapeRun(codepoints.data() + index, runEnd - index, shaped, &shapeSettings) &&
+                !shaped.empty())
             {
                 for (const ShapedGlyph& glyph : shaped)
                 {
@@ -1119,20 +1296,48 @@ namespace RoboRenderer
                     continue;
                 }
 
+                // The layer's box is the transformed one: a scaled, rotated or
+                // translated layer lands outside its upright bounds.
+                float lx0 = layerGlyph->x0;
+                float ly0 = layerGlyph->y0;
+                float lx1 = layerGlyph->x1;
+                float ly1 = layerGlyph->y1;
+
+                if (layer.xx != 1.0f || layer.xy != 0.0f || layer.yx != 0.0f || layer.yy != 1.0f ||
+                    layer.dx != 0.0f || layer.dy != 0.0f)
+                {
+                    const float corners[4][2] = { { layerGlyph->x0, layerGlyph->y0 },
+                                                  { layerGlyph->x1, layerGlyph->y0 },
+                                                  { layerGlyph->x0, layerGlyph->y1 },
+                                                  { layerGlyph->x1, layerGlyph->y1 } };
+                    lx0 = ly0 = 1.0e30f;
+                    lx1 = ly1 = -1.0e30f;
+
+                    for (const auto& corner : corners)
+                    {
+                        const float cx = layer.xx * corner[0] + layer.xy * corner[1] + layer.dx;
+                        const float cy = layer.yx * corner[0] + layer.yy * corner[1] + layer.dy;
+                        lx0 = std::min(lx0, cx);
+                        ly0 = std::min(ly0, cy);
+                        lx1 = std::max(lx1, cx);
+                        ly1 = std::max(ly1, cy);
+                    }
+                }
+
                 if (!anyInk)
                 {
-                    x0 = layerGlyph->x0;
-                    y0 = layerGlyph->y0;
-                    x1 = layerGlyph->x1;
-                    y1 = layerGlyph->y1;
+                    x0 = lx0;
+                    y0 = ly0;
+                    x1 = lx1;
+                    y1 = ly1;
                     anyInk = true;
                 }
                 else
                 {
-                    x0 = std::min(x0, layerGlyph->x0);
-                    y0 = std::min(y0, layerGlyph->y0);
-                    x1 = std::max(x1, layerGlyph->x1);
-                    y1 = std::max(y1, layerGlyph->y1);
+                    x0 = std::min(x0, lx0);
+                    y0 = std::min(y0, ly0);
+                    x1 = std::max(x1, lx1);
+                    y1 = std::max(y1, ly1);
                 }
             }
 
@@ -1159,33 +1364,180 @@ namespace RoboRenderer
 
             std::vector<std::uint8_t> layerCoverage(pixels, 0);
 
+            const auto paletteEntry = [&](std::uint16_t index, float& red, float& green, float& blue,
+                                         float& alpha) -> bool {
+                std::uint8_t r = 0;
+                std::uint8_t g = 0;
+                std::uint8_t b = 0;
+                std::uint8_t a = 0;
+                if (!face.PaletteEntry(index, r, g, b, a))
+                {
+                    return false;
+                }
+                red = static_cast<float>(r);
+                green = static_cast<float>(g);
+                blue = static_cast<float>(b);
+                alpha = static_cast<float>(a) / 255.0f;
+                return true;
+            };
+
+            // A point along a gradient maps through its stops to a colour; the
+            // stops interpolate, so a gradient is shaded exactly, not flattened
+            // to its first colour.
+            const auto stopsColor = [&](const FontFace::ColorShade& shade, float t, float& red,
+                                        float& green, float& blue, float& alpha) -> bool {
+                if (shade.stops.empty())
+                {
+                    return false;
+                }
+
+                const auto mix = [&](const FontFace::ColorShade::Stop& stop) -> bool {
+                    if (!paletteEntry(stop.paletteIndex, red, green, blue, alpha))
+                    {
+                        return false;
+                    }
+                    alpha *= stop.alpha;
+                    return true;
+                };
+
+                if (t <= shade.stops.front().offset)
+                {
+                    return mix(shade.stops.front());
+                }
+                if (t >= shade.stops.back().offset)
+                {
+                    return mix(shade.stops.back());
+                }
+
+                for (std::size_t index = 1; index < shade.stops.size(); ++index)
+                {
+                    const FontFace::ColorShade::Stop& upper = shade.stops[index];
+                    if (t > upper.offset)
+                    {
+                        continue;
+                    }
+
+                    const FontFace::ColorShade::Stop& lower = shade.stops[index - 1];
+                    const float span = upper.offset - lower.offset;
+                    const float local = span > 0.0f ? (t - lower.offset) / span : 0.0f;
+
+                    float lowerRed = 0.0f;
+                    float lowerGreen = 0.0f;
+                    float lowerBlue = 0.0f;
+                    float lowerAlpha = 0.0f;
+                    float upperRed = 0.0f;
+                    float upperGreen = 0.0f;
+                    float upperBlue = 0.0f;
+                    float upperAlpha = 0.0f;
+
+                    if (!paletteEntry(lower.paletteIndex, lowerRed, lowerGreen, lowerBlue, lowerAlpha) ||
+                        !paletteEntry(upper.paletteIndex, upperRed, upperGreen, upperBlue, upperAlpha))
+                    {
+                        return false;
+                    }
+
+                    lowerAlpha *= lower.alpha;
+                    upperAlpha *= upper.alpha;
+                    red = lowerRed + (upperRed - lowerRed) * local;
+                    green = lowerGreen + (upperGreen - lowerGreen) * local;
+                    blue = lowerBlue + (upperBlue - lowerBlue) * local;
+                    alpha = lowerAlpha + (upperAlpha - lowerAlpha) * local;
+                    return true;
+                }
+
+                return mix(shade.stops.back());
+            };
+
+            // A layer's colour at one point of its transformed font space. A
+            // gradient is defined before the layer transform, so the point is
+            // mapped back through the inverse affine before it is sampled.
+            const auto shadeColor = [&](const FontFace::ColorLayer& layer, float px, float py,
+                                        float& red, float& green, float& blue, float& alpha) -> bool {
+                if (layer.shade.kind == FontFace::ColorShade::Kind::Solid)
+                {
+                    return paletteEntry(layer.paletteIndex, red, green, blue, alpha);
+                }
+
+                const float determinant = layer.xx * layer.yy - layer.xy * layer.yx;
+                if (std::abs(determinant) < 1.0e-9f)
+                {
+                    return false;
+                }
+
+                const float localX =
+                    (layer.yy * (px - layer.dx) - layer.xy * (py - layer.dy)) / determinant;
+                const float localY =
+                    (-layer.yx * (px - layer.dx) + layer.xx * (py - layer.dy)) / determinant;
+
+                const FontFace::ColorShade& shade = layer.shade;
+                float t = 0.0f;
+
+                if (shade.kind == FontFace::ColorShade::Kind::Linear)
+                {
+                    const float vx = shade.x1 - shade.x0;
+                    const float vy = shade.y1 - shade.y0;
+                    const float lengthSquared = vx * vx + vy * vy;
+                    if (lengthSquared <= 0.0f)
+                    {
+                        return false;
+                    }
+                    t = ((localX - shade.x0) * vx + (localY - shade.y0) * vy) / lengthSquared;
+                }
+                else if (shade.kind == FontFace::ColorShade::Kind::Radial)
+                {
+                    const float d0 = std::sqrt((localX - shade.x0) * (localX - shade.x0) +
+                                               (localY - shade.y0) * (localY - shade.y0)) - shade.r0;
+                    const float d1 = std::sqrt((localX - shade.x1) * (localX - shade.x1) +
+                                               (localY - shade.y1) * (localY - shade.y1)) - shade.r1;
+                    const float span = d1 - d0;
+                    if (std::abs(span) < 1.0e-6f)
+                    {
+                        return false;
+                    }
+                    t = d0 / span;
+                }
+                else // sweep
+                {
+                    const float degrees =
+                        std::atan2(localY - shade.y0, localX - shade.x0) * 57.29577951308232f;
+                    float span = shade.y1 - shade.x1;
+                    while (span <= 0.0f)
+                    {
+                        span += 360.0f;
+                    }
+                    float relative = degrees - shade.x1;
+                    while (relative < 0.0f)
+                    {
+                        relative += 360.0f;
+                    }
+                    while (relative >= 360.0f)
+                    {
+                        relative -= 360.0f;
+                    }
+                    t = relative / span;
+                }
+
+                t = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+                return stopsColor(shade, t, red, green, blue, alpha);
+            };
+
             for (std::size_t index = 0; index < layers.size(); ++index)
             {
+                const FontFace::ColorLayer& layer = layers[index];
                 const Glyph* layerGlyph = layerGlyphs[index];
                 if (layerGlyph == nullptr || !layerGlyph->hasInk)
                 {
                     continue;
                 }
 
-                std::fill(layerCoverage.begin(), layerCoverage.end(), 0);
+                std::fill(layerCoverage.begin(), layerCoverage.end(), std::uint8_t(0));
+
+                const float affine[6] = { layer.xx, layer.xy, layer.yx, layer.yy, layer.dx, layer.dy };
 
                 std::vector<std::vector<Vec2>> polygons;
                 FlattenGlyph(face, *layerGlyph, scale, static_cast<float>(originX),
-                             static_cast<float>(originY), polygons);
+                             static_cast<float>(originY), polygons, affine);
                 FillPolygons(polygons, layerCoverage.data(), width, height);
-
-                std::uint8_t red = 0;
-                std::uint8_t green = 0;
-                std::uint8_t blue = 0;
-                std::uint8_t alpha = 0;
-
-                // A palette index the face does not have paints nothing, rather
-                // than an invented black.
-                if (!face.PaletteEntry(layers[index].paletteIndex, red, green, blue, alpha) ||
-                    alpha == 0)
-                {
-                    continue;
-                }
 
                 for (std::size_t pixel = 0; pixel < pixels; ++pixel)
                 {
@@ -1195,14 +1547,37 @@ namespace RoboRenderer
                         continue;
                     }
 
-                    const std::uint32_t sourceAlpha = (coverage * alpha) / 255u;
+                    const std::size_t pixelX = pixel % static_cast<std::size_t>(width);
+                    const std::size_t pixelY = pixel / static_cast<std::size_t>(width);
+
+                    const float fontX = (static_cast<float>(pixelX) + static_cast<float>(originX)) / scale;
+                    const float fontY = -(static_cast<float>(pixelY) + static_cast<float>(originY)) / scale;
+
+                    float red = 0.0f;
+                    float green = 0.0f;
+                    float blue = 0.0f;
+                    float alpha = 0.0f;
+
+                    // A palette index the face does not have paints nothing,
+                    // rather than an invented black.
+                    if (!shadeColor(layer, fontX, fontY, red, green, blue, alpha) || alpha <= 0.0f)
+                    {
+                        continue;
+                    }
+
+                    const std::uint32_t sourceAlpha =
+                        static_cast<std::uint32_t>(static_cast<float>(coverage) * alpha + 0.5f);
                     const std::uint32_t inverse = 255u - sourceAlpha;
                     std::uint8_t* destination = target + pixel * 4;
 
-                    destination[0] = static_cast<std::uint8_t>((red * sourceAlpha + destination[0] * inverse) / 255u);
-                    destination[1] = static_cast<std::uint8_t>((green * sourceAlpha + destination[1] * inverse) / 255u);
-                    destination[2] = static_cast<std::uint8_t>((blue * sourceAlpha + destination[2] * inverse) / 255u);
-                    destination[3] = static_cast<std::uint8_t>(sourceAlpha + (destination[3] * inverse) / 255u);
+                    destination[0] = static_cast<std::uint8_t>(
+                        (static_cast<std::uint32_t>(red) * sourceAlpha + destination[0] * inverse) / 255u);
+                    destination[1] = static_cast<std::uint8_t>(
+                        (static_cast<std::uint32_t>(green) * sourceAlpha + destination[1] * inverse) / 255u);
+                    destination[2] = static_cast<std::uint8_t>(
+                        (static_cast<std::uint32_t>(blue) * sourceAlpha + destination[2] * inverse) / 255u);
+                    destination[3] = static_cast<std::uint8_t>(
+                        sourceAlpha + (destination[3] * inverse) / 255u);
                 }
             }
 
@@ -1217,6 +1592,203 @@ namespace RoboRenderer
             bitmap.firstColor = static_cast<std::uint32_t>(colorStart);
             bucket.glyphs[key] = bitmap;
             return true;
+        }
+
+        // An `SVG ` glyph: the face ships a small SVG document that draws the
+        // artwork. Rendering it here keeps the geometry and its paint together.
+        {
+            std::vector<std::uint8_t> document;
+            std::vector<SvgShape> shapes;
+
+            if (face.SvgGlyph(glyph.glyphId, document) &&
+                RenderSvgGlyph(document.data(), document.size(), shapes) && !shapes.empty())
+            {
+                // A gradient is sampled in the shape's own font-unit space, so
+                // these helpers work on the point, not the pixel index.
+                const auto stopColor = [](const SvgPaint& paint, float t, float& red, float& green,
+                                          float& blue, float& alpha) {
+                    const SvgPaint::Stop& first = paint.stops.front();
+                    const SvgPaint::Stop& last = paint.stops.back();
+
+                    const auto mix = [&](const SvgPaint::Stop& stop) {
+                        red = stop.red * 255.0f;
+                        green = stop.green * 255.0f;
+                        blue = stop.blue * 255.0f;
+                        alpha = stop.alpha * paint.alpha;
+                    };
+
+                    if (t <= first.offset)
+                    {
+                        mix(first);
+                        return;
+                    }
+                    if (t >= last.offset)
+                    {
+                        mix(last);
+                        return;
+                    }
+
+                    for (std::size_t index = 1; index < paint.stops.size(); ++index)
+                    {
+                        const SvgPaint::Stop& upper = paint.stops[index];
+                        if (t > upper.offset)
+                        {
+                            continue;
+                        }
+                        const SvgPaint::Stop& lower = paint.stops[index - 1];
+                        const float span = upper.offset - lower.offset;
+                        const float local = span > 0.0f ? (t - lower.offset) / span : 0.0f;
+                        red = (lower.red + (upper.red - lower.red) * local) * 255.0f;
+                        green = (lower.green + (upper.green - lower.green) * local) * 255.0f;
+                        blue = (lower.blue + (upper.blue - lower.blue) * local) * 255.0f;
+                        alpha = (lower.alpha + (upper.alpha - lower.alpha) * local) * paint.alpha;
+                        return;
+                    }
+
+                    mix(last);
+                };
+
+                const auto shade = [&](const SvgPaint& paint, float px, float py, float& red,
+                                       float& green, float& blue, float& alpha) {
+                    if (paint.kind == SvgPaint::Kind::Solid || paint.stops.empty())
+                    {
+                        red = paint.red * 255.0f;
+                        green = paint.green * 255.0f;
+                        blue = paint.blue * 255.0f;
+                        alpha = paint.alpha;
+                        return;
+                    }
+
+                    float t = 0.0f;
+                    if (paint.kind == SvgPaint::Kind::Linear)
+                    {
+                        const float vx = paint.x1 - paint.x0;
+                        const float vy = paint.y1 - paint.y0;
+                        const float lengthSquared = vx * vx + vy * vy;
+                        t = lengthSquared > 0.0f
+                                ? ((px - paint.x0) * vx + (py - paint.y0) * vy) / lengthSquared
+                                : 0.0f;
+                    }
+                    else
+                    {
+                        const float d0 = std::sqrt((px - paint.x0) * (px - paint.x0) +
+                                                   (py - paint.y0) * (py - paint.y0)) - paint.r0;
+                        const float d1 = std::sqrt((px - paint.x1) * (px - paint.x1) +
+                                                   (py - paint.y1) * (py - paint.y1)) - paint.r1;
+                        t = std::abs(d1 - d0) > 1.0e-6f ? d0 / (d1 - d0) : 0.0f;
+                    }
+
+                    t = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+                    stopColor(paint, t, red, green, blue, alpha);
+                };
+
+                float x0 = 1.0e30f;
+                float y0 = 1.0e30f;
+                float x1 = -1.0e30f;
+                float y1 = -1.0e30f;
+                for (const SvgShape& shape : shapes)
+                {
+                    for (const std::vector<SvgPoint>& contour : shape.contours)
+                    {
+                        for (const SvgPoint& point : contour)
+                        {
+                            x0 = std::min(x0, point.x);
+                            y0 = std::min(y0, point.y);
+                            x1 = std::max(x1, point.x);
+                            y1 = std::max(y1, point.y);
+                        }
+                    }
+                }
+
+                const float pad = 1.0f;
+                const int originX = static_cast<int>(std::floor(x0 * scale - pad));
+                const int originY = static_cast<int>(std::floor(-(y1 * scale + pad)));
+                const int width = static_cast<int>(std::ceil(x1 * scale + pad)) - originX;
+                const int height = static_cast<int>(std::ceil(-(y0 * scale - pad))) - originY;
+
+                if (x1 >= x0 && width > 0 && height > 0 && width < 4096 && height < 4096)
+                {
+                    const std::size_t pixels =
+                        static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
+                    const std::size_t colorStart = bucket.colors.size();
+                    bucket.colors.resize(colorStart + pixels * 4, 0);
+                    std::uint8_t* target = bucket.colors.data() + colorStart;
+                    std::vector<std::uint8_t> coverage(pixels, 0);
+
+                    for (const SvgShape& shape : shapes)
+                    {
+                        std::fill(coverage.begin(), coverage.end(), std::uint8_t(0));
+
+                        std::vector<std::vector<Vec2>> polygons;
+                        polygons.reserve(shape.contours.size());
+                        for (const std::vector<SvgPoint>& contour : shape.contours)
+                        {
+                            std::vector<Vec2> device;
+                            device.reserve(contour.size());
+                            for (const SvgPoint& point : contour)
+                            {
+                                device.push_back(
+                                    Vec2{ point.x * scale - originX, -point.y * scale - originY });
+                            }
+                            polygons.push_back(std::move(device));
+                        }
+                        FillPolygons(polygons, coverage.data(), width, height);
+
+                        for (std::size_t pixel = 0; pixel < pixels; ++pixel)
+                        {
+                            const std::uint32_t amount = coverage[pixel];
+                            if (amount == 0)
+                            {
+                                continue;
+                            }
+
+                            const float fontX =
+                                (static_cast<float>(pixel % static_cast<std::size_t>(width)) +
+                                 static_cast<float>(originX)) /
+                                scale;
+                            const float fontY =
+                                -(static_cast<float>(pixel / static_cast<std::size_t>(width)) +
+                                  static_cast<float>(originY)) /
+                                scale;
+
+                            float red = 0.0f;
+                            float green = 0.0f;
+                            float blue = 0.0f;
+                            float alpha = 0.0f;
+                            shade(shape.paint, fontX, fontY, red, green, blue, alpha);
+                            if (alpha <= 0.0f)
+                            {
+                                continue;
+                            }
+
+                            const std::uint32_t sourceAlpha =
+                                static_cast<std::uint32_t>(static_cast<float>(amount) * alpha + 0.5f);
+                            const std::uint32_t inverse = 255u - sourceAlpha;
+                            std::uint8_t* destination = target + pixel * 4;
+                            destination[0] = static_cast<std::uint8_t>(
+                                (static_cast<std::uint32_t>(red) * sourceAlpha + destination[0] * inverse) / 255u);
+                            destination[1] = static_cast<std::uint8_t>(
+                                (static_cast<std::uint32_t>(green) * sourceAlpha + destination[1] * inverse) / 255u);
+                            destination[2] = static_cast<std::uint8_t>(
+                                (static_cast<std::uint32_t>(blue) * sourceAlpha + destination[2] * inverse) / 255u);
+                            destination[3] = static_cast<std::uint8_t>(
+                                sourceAlpha + (destination[3] * inverse) / 255u);
+                        }
+                    }
+
+                    GlyphBitmap bitmap;
+                    bitmap.advance = glyph.advance * scale;
+                    bitmap.width = static_cast<std::uint32_t>(width);
+                    bitmap.height = static_cast<std::uint32_t>(height);
+                    bitmap.bearingX = static_cast<float>(originX);
+                    bitmap.bearingY = static_cast<float>(originY);
+                    bitmap.blank = false;
+                    bitmap.color = true;
+                    bitmap.firstColor = static_cast<std::uint32_t>(colorStart);
+                    bucket.glyphs[key] = bitmap;
+                    return true;
+                }
+            }
         }
 
         // An embedded bitmap (`CBDT`): the face ships the pixels, usually PNG.

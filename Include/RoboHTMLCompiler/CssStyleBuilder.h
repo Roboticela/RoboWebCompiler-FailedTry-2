@@ -71,6 +71,13 @@ namespace RoboHTMLCompiler
         /// asked for, the builder decides *where* it is stored.
         std::vector<std::string> fontFamilies;
 
+        /// The `font-feature-settings` declaration of each style, in the same
+        /// order as `styles`. Interning belongs to the later stage that owns the
+        /// string table for the same reason `fontFamilies` lives here: this table
+        /// decides *what* was asked for, the builder decides where it is stored.
+        /// A style with no settings leaves its entry empty.
+        std::vector<std::string> featureSettings;
+
         /// Where an element was written -> index into `styles`.
         ///
         /// The key is the source position, not an element identity, because it is

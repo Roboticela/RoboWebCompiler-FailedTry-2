@@ -278,8 +278,11 @@ namespace
 
                 // The tag is lower cased but the path is not: a file name is
                 // case sensitive on disk, so the name comes from the document as
-                // written.
-                const std::string name = documentText.substr(quote + 1, close - quote - 1);
+                // written. `quote` and `close` are offsets into `tag`, which
+                // starts at `link` inside the document, so the two are rebased
+                // before they are used to cut the path out of the text.
+                const std::string name =
+                    documentText.substr(link + quote + 1, close - quote - 1);
 
                 if (name.size() > 4 && name.compare(name.size() - 4, 4, ".css") == 0 &&
                     FileExists(Join(directory, name)))

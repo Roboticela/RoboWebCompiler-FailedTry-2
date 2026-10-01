@@ -962,6 +962,8 @@ namespace RoboRenderer
             runStyle.fontFamily = line.fontFamily;
             runStyle.slant = line.fontStyle;
             runStyle.direction = line.direction;
+            runStyle.kerning = line.kerning;
+            runStyle.fontFeatures = line.fontFeatures;
 
             // A selection paints under the glyphs; a caret paints over them.
             if (field != nullptr && focused && field->HasSelection() && line.controlValue)
@@ -988,13 +990,45 @@ namespace RoboRenderer
             EmitTextRun(index, lineX, baseline, text, line.startByte, line.endByte, line.fontSize, line.weight,
                         color, &runStyle);
 
+            // The decoration colour is the element's own colour unless the
+            // document named one: that is what `currentColor` means, and the
+            // link underline rides the same bits.
+            std::uint8_t decoration = line.decoration;
+
             if (line.underline)
             {
-                const float underlineY = baseline + std::max(1.0f, line.fontSize * 0.12f);
-                list.Add(PaintCommandType::FillRect,
-                         Rect{ lineX, underlineY, std::max(line.width, 1.0f), std::max(1.0f, line.fontSize * 0.07f) },
-                         index)
-                    .color = color;
+                decoration |= TextDecorationUnderline;
+            }
+
+            if (decoration != 0u)
+            {
+                const Color decorationColor = line.hasDecorationColor ? line.decorationColor : color;
+                const float thickness = std::max(1.0f, line.fontSize * 0.07f);
+                const float decorationWidth = std::max(line.width, 1.0f);
+
+                if ((decoration & TextDecorationUnderline) != 0u)
+                {
+                    const float underlineY = baseline + std::max(1.0f, line.fontSize * 0.12f);
+                    list.Add(PaintCommandType::FillRect,
+                             Rect{ lineX, underlineY, decorationWidth, thickness }, index)
+                        .color = decorationColor;
+                }
+
+                if ((decoration & TextDecorationOverline) != 0u)
+                {
+                    const float overlineY = top;
+                    list.Add(PaintCommandType::FillRect,
+                             Rect{ lineX, overlineY, decorationWidth, thickness }, index)
+                        .color = decorationColor;
+                }
+
+                if ((decoration & TextDecorationLineThrough) != 0u)
+                {
+                    const float strikeY = baseline - line.fontSize * 0.28f;
+                    list.Add(PaintCommandType::FillRect,
+                             Rect{ lineX, strikeY, decorationWidth, thickness }, index)
+                        .color = decorationColor;
+                }
             }
 
             if (field != nullptr && focused && caretVisible && !field->HasSelection())

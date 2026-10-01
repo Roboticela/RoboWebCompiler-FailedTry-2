@@ -78,6 +78,10 @@ namespace RoboCSSCompiler
         TextTransform,
         WhiteSpace,
         Direction,
+        FontKerning,
+        FontFeatureSettings,
+        TextDecorationLine,
+        TextDecorationColor,
 
         // --- overflow -------------------------------------------------------
         OverflowX,
@@ -169,6 +173,10 @@ namespace RoboCSSCompiler
         Overflow,
         /// `start | end | left | right | center | justify`
         TextAlign,
+        /// `none | underline | overline | line-through` or several of them.
+        TextDecorationLine,
+        /// `normal | <feature-tag-value>#`, the OpenType feature settings.
+        FontFeatureSettings,
         /// A comma separated list of family names, quoted or not.
         FontFamily,
         /// `normal | bold | bolder | lighter | 1..1000`

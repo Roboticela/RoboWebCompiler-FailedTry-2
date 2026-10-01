@@ -22,9 +22,15 @@ rem
 rem Examples:
 rem     Tools\Watch.bat
 rem     Tools\Watch.bat Examples\Watch\index.html
+rem     Tools\Watch.bat Examples\Watch\typography.html
 rem     Tools\Watch.bat Examples\LandingPage\index.html Examples\LandingPage\app.css
 rem     Tools\Watch.bat Examples\LandingPage\index.html --width 1200 --height 800
 rem     Tools\Watch.bat Examples\Watch\index.html --auto
+rem
+rem The stylesheet is the one the document links; failing that, `app.css` beside
+rem it. `Examples\Watch\typography.html` links `typography.css` and puts every
+rem font and text property on one page, which is what makes it the quickest way
+rem to see the text engine's own work.
 rem
 rem The editor is the first one of `code`, `notepad++` and `notepad` that is on
 rem the path; set ROBO_EDITOR to choose another one.
@@ -39,11 +45,22 @@ setlocal enabledelayedexpansion
 set "RoboRoot=%~dp0.."
 for %%I in ("%RoboRoot%") do set "RoboRoot=%%~fI"
 
-rem The build the presets produce first, then the one the Visual Studio build
-rem produces: a checkout is usually one of the two, and neither is worth
-rem reconfiguring just to look at a stylesheet.
-set "RoboExe=%RoboRoot%\build-clang\bin\RoboWatch.exe"
-if not exist "%RoboExe%" set "RoboExe=%RoboRoot%\build\bin\RoboWatch.exe"
+rem Both builds are looked for and the newer executable is the one used. A
+rem checkout is usually one of the two, but it can hold both, and after a
+rem rebuild one of them is a revision behind. A preview that draws yesterday's
+rem text engine is worse than no preview at all, so the choice is made by
+rem modification time rather than by a fixed order.
+set "RoboExe="
+
+for /f "usebackq delims=" %%I in (`powershell -NoProfile -Command "Get-Item -ErrorAction SilentlyContinue '%RoboRoot%\build\bin\RoboWatch.exe','%RoboRoot%\build-clang\bin\RoboWatch.exe' | Sort-Object LastWriteTime -Descending | Select-Object -First 1 -ExpandProperty FullName"`) do set "RoboExe=%%I"
+
+rem PowerShell is always present on the systems this driver supports, but if it
+rem somehow is not, the preset build and then the CMake build are the order the
+rem driver used before.
+if not defined RoboExe (
+    set "RoboExe=%RoboRoot%\build-clang\bin\RoboWatch.exe"
+    if not exist "%RoboExe%" set "RoboExe=%RoboRoot%\build\bin\RoboWatch.exe"
+)
 
 set "RoboDocument="
 set "RoboStyleSheet="
@@ -161,12 +178,13 @@ echo.
 echo With no arguments it previews Examples\Watch\index.html.
 echo.
 echo Options are passed to RoboWatch; run
-echo     build-clang\bin\RoboWatch.exe --help
+echo     RoboWatch.exe --help
 echo for the list.
 echo.
 echo Examples:
 echo     Tools\Watch.bat
 echo     Tools\Watch.bat Examples\LandingPage\index.html
+echo     Tools\Watch.bat Examples\Watch\typography.html
 echo     Tools\Watch.bat Examples\LandingPage\index.html --width 1200 --height 800
 echo     Tools\Watch.bat Examples\Watch\index.html --auto
 exit /b 2

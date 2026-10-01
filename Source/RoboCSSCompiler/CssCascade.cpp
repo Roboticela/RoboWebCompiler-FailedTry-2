@@ -1342,6 +1342,132 @@ namespace RoboCSSCompiler
             return true;
         }
 
+        if (rule == "text-decoration")
+        {
+            // `text-decoration: <line> || <style> || <thickness> || <color>`.
+            // The runtime draws a solid line in one colour, so the line keywords
+            // and the colour are lowered and the style and thickness keywords
+            // are accepted and dropped rather than refused: they are valid CSS
+            // and drawing a solid line is the honest fallback.
+            const std::vector<const CSSComponentValue*> items = TopLevelItems(value);
+
+            if (items.empty())
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidShorthand, location,
+                                  "text-decoration needs a value.", "no value given",
+                                  "Write 'underline' or 'underline red'.", "text-decoration");
+                return false;
+            }
+
+            static const char* const kStyles[] = { "solid", "double", "dotted", "dashed", "wavy" };
+            static const char* const kLines[] = { "underline", "overline", "line-through" };
+
+            std::vector<CSSValue> lines;
+            bool noneGiven = false;
+            bool hasColor = false;
+            CSSValue color;
+            bool thicknessReported = false;
+
+            for (const CSSComponentValue* item : items)
+            {
+                if (item->token.type == CSSTokenType::Ident)
+                {
+                    const std::string name = LowerCase(item->token.text);
+
+                    if (name == "none")
+                    {
+                        noneGiven = true;
+                        continue;
+                    }
+
+                    if (name == "blink")
+                    {
+                        continue;
+                    }
+
+                    bool isLine = false;
+                    for (const char* line : kLines)
+                    {
+                        isLine = isLine || name == line;
+                    }
+
+                    if (isLine)
+                    {
+                        lines.push_back(CSSValue::MakeKeyword(name));
+                        continue;
+                    }
+
+                    bool isStyle = false;
+                    for (const char* style : kStyles)
+                    {
+                        isStyle = isStyle || name == style;
+                    }
+
+                    if (isStyle)
+                    {
+                        continue;
+                    }
+
+                    if (name == "auto")
+                    {
+                        continue;
+                    }
+                }
+
+                // What is left is the colour or the thickness. A colour parses
+                // against the longhand's grammar; a thickness is a length, which
+                // the runtime does not model.
+                if (!hasColor)
+                {
+                    std::vector<CSSComponentValue> single{ *item };
+                    CSSValue parsed;
+
+                    if (parseAgainst(shorthand.targets.right, single, parsed, "the decoration colour"))
+                    {
+                        color = parsed;
+                        hasColor = true;
+                        continue;
+                    }
+                }
+
+                if (!thicknessReported)
+                {
+                    diagnostics.Warning(CSSDiagnosticCode::UnsupportedFeature, location,
+                                        "text-decoration thickness is not implemented.",
+                                        "the native text engine draws a line of its own width",
+                                        "Use text-decoration-line and text-decoration-color.",
+                                        "text-decoration");
+                    thicknessReported = true;
+                }
+            }
+
+            CSSValue lineValue;
+
+            if (lines.empty() || noneGiven)
+            {
+                lineValue = CSSValue::MakeKeyword("none");
+            }
+            else if (lines.size() == 1)
+            {
+                lineValue = lines[0];
+            }
+            else
+            {
+                lineValue.kind = CSSValueKind::List;
+                lineValue.items = std::move(lines);
+                lineValue.location = location;
+            }
+
+            out.emplace_back(shorthand.targets.top, lineValue);
+
+            if (hasColor)
+            {
+                out.emplace_back(shorthand.targets.right, color);
+            }
+
+            return true;
+        }
+
         if (rule == "font")
         {
             // `[ <font-style> || <font-weight> ]? <font-size> [ / <line-height> ]? <font-family>`

@@ -525,19 +525,15 @@ namespace RoboRenderer
 
     // --- feature tables ----------------------------------------------------
 
-    void OtLayout::ApplySubstitution(std::uint32_t scriptTag,
-                                     std::vector<ShapedGlyph>& glyphs) const
+    std::vector<std::uint32_t> OtLayout::EffectiveFeatures(const ShapeSettings* settings,
+                                                           bool substitution) const
     {
-        if (!hasSubstitution || scriptTag == 0)
-        {
-            return;
-        }
-
         // The features that are ON by default, in the order a shaper applies
         // them. Discretionary features (`dlig`, `salt`, `smcp`, `onum`, ...) are
-        // deliberately absent: the document has to ask for them, and there is no
-        // request mechanism yet, so enabling them would silently change text.
-        static const std::uint32_t kFeatures[] = {
+        // deliberately absent: the document has to ask for them with
+        // `font-feature-settings`, and until it does, enabling them would
+        // silently change text.
+        static const std::uint32_t kDefaultSubstitution[] = {
             // Shared and Latin.
             Tag4('c', 'c', 'm', 'p'), Tag4('l', 'o', 'c', 'l'), Tag4('r', 'l', 'i', 'g'),
             Tag4('l', 'i', 'g', 'a'), Tag4('c', 'l', 'i', 'g'), Tag4('c', 'a', 'l', 't'),
@@ -552,9 +548,110 @@ namespace RoboRenderer
             Tag4('v', 'a', 't', 'u'), Tag4('c', 'j', 'c', 't'), Tag4('c', 'f', 'a', 'r'),
             Tag4('p', 'r', 'e', 's'), Tag4('a', 'b', 'v', 's'), Tag4('b', 'l', 'w', 's'),
             Tag4('p', 's', 't', 's'), Tag4('h', 'a', 'l', 'n'),
+            // GPOS defaults ride in the same list so one rule decides both
+            // tables; `kern` is dropped below when the document says so.
+            Tag4('m', 'a', 'r', 'k'), Tag4('m', 'k', 'm', 'k'),
+            Tag4('c', 'u', 'r', 's'), Tag4('d', 'i', 's', 't'),
         };
 
-        for (std::uint32_t tag : kFeatures)
+        static const std::uint32_t kDefaultPositioning[] = {
+            Tag4('k', 'e', 'r', 'n'), Tag4('m', 'a', 'r', 'k'),
+            Tag4('m', 'k', 'm', 'k'), Tag4('c', 'u', 'r', 's'),
+            Tag4('d', 'i', 's', 't'),
+        };
+
+        const std::uint32_t kernTag = Tag4('k', 'e', 'r', 'n');
+
+        std::vector<std::uint32_t> tags;
+
+        const auto requested = [settings](std::uint32_t tag, std::uint16_t& value) {
+            if (settings == nullptr || settings->features == nullptr)
+            {
+                return false;
+            }
+
+            for (std::size_t index = 0; index < settings->featureCount; ++index)
+            {
+                if (settings->features[index].tag == tag)
+                {
+                    value = settings->features[index].value;
+                    return true;
+                }
+            }
+
+            return false;
+        };
+
+        if (substitution)
+        {
+            for (std::uint32_t tag : kDefaultSubstitution)
+            {
+                std::uint16_t value = 0;
+
+                if (requested(tag, value) && value == 0)
+                {
+                    continue;
+                }
+
+                tags.push_back(tag);
+            }
+        }
+        else
+        {
+            for (std::uint32_t tag : kDefaultPositioning)
+            {
+                std::uint16_t value = 0;
+
+                // `font-kerning: none` is how a document removes kerning; the
+                // default `auto` leaves it on.
+                if (tag == kernTag && settings != nullptr && !settings->kerning)
+                {
+                    continue;
+                }
+
+                if (requested(tag, value) && value == 0)
+                {
+                    continue;
+                }
+
+                tags.push_back(tag);
+            }
+        }
+
+        // Everything the document asked for by name, whether or not it is a
+        // default. A tag already in the list is not applied twice, and a tag
+        // turned off above is not brought back by an earlier entry.
+        if (settings != nullptr && settings->features != nullptr)
+        {
+            for (std::size_t index = 0; index < settings->featureCount; ++index)
+            {
+                const FontFeatureSetting& setting = settings->features[index];
+
+                if (setting.value == 0 || setting.tag == 0)
+                {
+                    continue;
+                }
+
+                if (std::find(tags.begin(), tags.end(), setting.tag) == tags.end())
+                {
+                    tags.push_back(setting.tag);
+                }
+            }
+        }
+
+        return tags;
+    }
+
+    void OtLayout::ApplySubstitution(std::uint32_t scriptTag,
+                                     std::vector<ShapedGlyph>& glyphs,
+                                     const ShapeSettings* settings) const
+    {
+        if (!hasSubstitution || scriptTag == 0)
+        {
+            return;
+        }
+
+        for (std::uint32_t tag : EffectiveFeatures(settings, true))
         {
             const std::vector<std::uint16_t> lookups =
                 FeatureLookups(scriptTag, {tag}, true);
@@ -566,20 +663,15 @@ namespace RoboRenderer
     }
 
     void OtLayout::ApplyPositioning(std::uint32_t scriptTag,
-                                    std::vector<ShapedGlyph>& glyphs) const
+                                    std::vector<ShapedGlyph>& glyphs,
+                                    const ShapeSettings* settings) const
     {
         if (!hasPositioning || scriptTag == 0)
         {
             return;
         }
 
-        static const std::uint32_t kFeatures[] = {
-            Tag4('k', 'e', 'r', 'n'), Tag4('m', 'a', 'r', 'k'),
-            Tag4('m', 'k', 'm', 'k'), Tag4('c', 'u', 'r', 's'),
-            Tag4('d', 'i', 's', 't'),
-        };
-
-        for (std::uint32_t tag : kFeatures)
+        for (std::uint32_t tag : EffectiveFeatures(settings, false))
         {
             const std::vector<std::uint16_t> lookups =
                 FeatureLookups(scriptTag, {tag}, false);
@@ -590,7 +682,9 @@ namespace RoboRenderer
         }
     }
 
-    void OtLayout::Shape(std::uint32_t scriptTag, std::vector<ShapedGlyph>& glyphs) const
+    void OtLayout::Shape(std::uint32_t scriptTag,
+                         std::vector<ShapedGlyph>& glyphs,
+                         const ShapeSettings* settings) const
     {
         if (glyphs.empty())
         {
@@ -602,8 +696,8 @@ namespace RoboRenderer
             glyph.mark = IsMarkGlyph(glyph.glyph);
         }
 
-        ApplySubstitution(scriptTag, glyphs);
-        ApplyPositioning(scriptTag, glyphs);
+        ApplySubstitution(scriptTag, glyphs, settings);
+        ApplyPositioning(scriptTag, glyphs, settings);
 
         for (ShapedGlyph& glyph : glyphs)
         {

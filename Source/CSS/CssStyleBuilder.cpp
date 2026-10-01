@@ -39,8 +39,13 @@ namespace RoboHTMLCompiler
         using RoboRenderer::StyleFlagBorderRightWidth;
         using RoboRenderer::StyleFlagBorderTopWidth;
         using RoboRenderer::StyleFlagDisplay;
+        using RoboRenderer::FontKerningKind;
+        using RoboRenderer::StyleFlagFontFeatures;
+        using RoboRenderer::StyleFlagFontKerning;
         using RoboRenderer::StyleFlagFontSize;
         using RoboRenderer::StyleFlagFontWeight;
+        using RoboRenderer::StyleFlagTextDecoration;
+        using RoboRenderer::StyleFlagTextDecorationColor;
         using RoboRenderer::StyleFlagDirection;
         using RoboRenderer::StyleFlagFontFamily;
         using RoboRenderer::StyleFlagFontStyle;
@@ -67,6 +72,11 @@ namespace RoboHTMLCompiler
         using RoboRenderer::StyleFlagWidth;
         using RoboRenderer::StyleFlagWordSpacing;
         using RoboRenderer::TextAlignKind;
+        using RoboRenderer::TextDecorationFlags;
+        using RoboRenderer::TextDecorationLineThrough;
+        using RoboRenderer::TextDecorationNone;
+        using RoboRenderer::TextDecorationOverline;
+        using RoboRenderer::TextDecorationUnderline;
 
         std::string LowerCase(std::string value)
         {
@@ -463,11 +473,13 @@ namespace RoboHTMLCompiler
             bool Lower(const CSSComputedStyle& computed,
                        const SourceLocation& location,
                        CompiledStyle& out,
-                       std::string& fontFamily)
+                       std::string& fontFamily,
+                       std::string& featureSettings)
             {
                 out = CompiledStyle{};
                 out.specified = 0u;
                 fontFamily.clear();
+                featureSettings.clear();
 
                 const float elementFontSize = FontSizeOf(&computed, context.rootFontSize);
 
@@ -505,7 +517,7 @@ namespace RoboHTMLCompiler
 
                 LowerBorders(computed, location, elementFontSize, out);
                 LowerBackground(computed, location, out);
-                LowerText(computed, location, elementFontSize, out, fontFamily);
+                LowerText(computed, location, elementFontSize, out, fontFamily, featureSettings);
                 LowerOverflow(computed, location, out);
 
                 return out.specified != 0u;
@@ -914,7 +926,8 @@ namespace RoboHTMLCompiler
                            const SourceLocation& location,
                            float elementFontSize,
                            CompiledStyle& out,
-                           std::string& fontFamily)
+                           std::string& fontFamily,
+                           std::string& featureSettings)
             {
                 const CSSValue* color = Value(computed, CSSPropertyId::Color);
 
@@ -1017,6 +1030,172 @@ namespace RoboHTMLCompiler
                 LowerTextTransform(computed, out);
                 LowerWhiteSpace(computed, out);
                 LowerDirection(computed, out);
+                LowerFontKerning(computed, out);
+                LowerFontFeatures(computed, out, featureSettings);
+                LowerTextDecoration(computed, out);
+            }
+
+            void LowerFontKerning(const CSSComputedStyle& computed, CompiledStyle& out)
+            {
+                const CSSValue* kerning = Value(computed, CSSPropertyId::FontKerning);
+
+                if (kerning == nullptr || kerning->kind != CSSValueKind::Keyword)
+                {
+                    return;
+                }
+
+                if (kerning->text == "none")
+                {
+                    out.fontKerning = FontKerningKind::None;
+                }
+                else if (kerning->text == "normal")
+                {
+                    out.fontKerning = FontKerningKind::Normal;
+                }
+                else
+                {
+                    out.fontKerning = FontKerningKind::Auto;
+                }
+
+                out.specified |= StyleFlagFontKerning;
+            }
+
+            void LowerFontFeatures(const CSSComputedStyle& computed,
+                                   CompiledStyle& out,
+                                   std::string& featureSettings)
+            {
+                const CSSValue* settings = Value(computed, CSSPropertyId::FontFeatureSettings);
+
+                if (settings == nullptr || settings->kind == CSSValueKind::Keyword)
+                {
+                    return;
+                }
+
+                // The shaper wants one compact declaration it can parse, and the
+                // compiled style carries a document string index rather than a
+                // vector of settings, so the list is written back out here.
+                std::string written;
+
+                for (const CSSValue& entry : settings->items)
+                {
+                    const CSSValue* tag = &entry;
+                    const CSSValue* number = nullptr;
+
+                    if (entry.kind == CSSValueKind::List)
+                    {
+                        if (entry.items.empty())
+                        {
+                            continue;
+                        }
+
+                        tag = &entry.items[0];
+                        number = entry.items.size() > 1 ? &entry.items[1] : nullptr;
+                    }
+
+                    if (tag->kind != CSSValueKind::String)
+                    {
+                        continue;
+                    }
+
+                    if (!written.empty())
+                    {
+                        written += ", ";
+                    }
+
+                    written += "\"" + tag->text + "\"";
+
+                    if (number != nullptr)
+                    {
+                        written += " ";
+
+                        // CSS numbers arrive as doubles; a feature value is a
+                        // small non-negative integer, and a negative one is
+                        // clamped the way the grammar says.
+                        const long value = std::lround(number->number);
+                        written += std::to_string(value < 0 ? 0 : value);
+                    }
+                }
+
+                if (written.empty())
+                {
+                    return;
+                }
+
+                featureSettings = written;
+                out.specified |= StyleFlagFontFeatures;
+            }
+
+            void LowerTextDecoration(const CSSComputedStyle& computed, CompiledStyle& out)
+            {
+                const CSSValue* line = Value(computed, CSSPropertyId::TextDecorationLine);
+                const CSSValue* color = Value(computed, CSSPropertyId::TextDecorationColor);
+
+                if (line == nullptr && color == nullptr)
+                {
+                    return;
+                }
+
+                std::uint8_t decoration = TextDecorationNone;
+                bool anyLine = false;
+
+                const auto addLine = [&](const CSSValue& value) {
+                    if (value.kind != CSSValueKind::Keyword && value.kind != CSSValueKind::Ident)
+                    {
+                        return;
+                    }
+
+                    anyLine = true;
+
+                    if (value.text == "underline")
+                    {
+                        decoration |= TextDecorationUnderline;
+                    }
+                    else if (value.text == "overline")
+                    {
+                        decoration |= TextDecorationOverline;
+                    }
+                    else if (value.text == "line-through")
+                    {
+                        decoration |= TextDecorationLineThrough;
+                    }
+                };
+
+                if (line != nullptr)
+                {
+                    if (line->kind == CSSValueKind::List)
+                    {
+                        for (const CSSValue& entry : line->items)
+                        {
+                            addLine(entry);
+                        }
+                    }
+                    else
+                    {
+                        addLine(*line);
+                    }
+
+                    out.textDecoration = decoration;
+                }
+                else
+                {
+                    // Only the colour was stated: the line keeps the default.
+                    out.textDecoration = TextDecorationNone;
+                }
+
+                if (color != nullptr && color->kind == CSSValueKind::Color &&
+                    color->color.kind != CSSColorKind::CurrentColor)
+                {
+                    out.textDecorationColor = ToNativeColor(color->color);
+                    out.specified |= StyleFlagTextDecorationColor;
+                }
+
+                // `none` is the initial value, so a style that says only `none`
+                // has nothing to store; stating it still counts as authoring the
+                // property, which is what the flag records.
+                if (anyLine || line != nullptr)
+                {
+                    out.specified |= StyleFlagTextDecoration;
+                }
             }
 
             void LowerFontFamily(const CSSComputedStyle& computed, CompiledStyle& out, std::string& fontFamily)
@@ -1344,12 +1523,14 @@ namespace RoboHTMLCompiler
     {
         out.styles.clear();
         out.fontFamilies.clear();
+        out.featureSettings.clear();
         out.indexBySourcePosition.clear();
 
         // Index 0 stays empty: a style index of 0 is the compiled format's way of
         // saying "the native default", so the authored table starts at 1.
         out.styles.emplace_back(CompiledStyle{});
         out.fontFamilies.emplace_back();
+        out.featureSettings.emplace_back();
 
         if (document.root == nullptr || document.root->children.empty())
         {
@@ -1493,8 +1674,9 @@ namespace RoboHTMLCompiler
 
             CompiledStyle lowered;
             std::string fontFamily;
+            std::string featureSettings;
 
-            if (!lowerer.Lower(computed, location, lowered, fontFamily))
+            if (!lowerer.Lower(computed, location, lowered, fontFamily, featureSettings))
             {
                 continue;
             }
@@ -1508,6 +1690,8 @@ namespace RoboHTMLCompiler
             std::string key(reinterpret_cast<const char*>(&lowered), sizeof(lowered));
             key += '|';
             key += fontFamily;
+            key += '|';
+            key += featureSettings;
             const auto existing = interned.find(key);
 
             if (existing != interned.end())
@@ -1538,6 +1722,7 @@ namespace RoboHTMLCompiler
             interned.emplace(key, styleIndex);
             out.styles.push_back(lowered);
             out.fontFamilies.push_back(fontFamily);
+            out.featureSettings.push_back(featureSettings);
             out.indexBySourcePosition[position] = styleIndex;
             ++out.styledElementCount;
         }

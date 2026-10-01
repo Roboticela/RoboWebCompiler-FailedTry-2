@@ -249,12 +249,13 @@ namespace RoboRenderer
                                   std::to_string(element.attributeHeight));
             }
 
-            if (!IsUsableLength(element.value) || !IsUsableLength(element.minimum) || !IsUsableLength(element.maximum))
+            if (!IsUsableLength(element.numericValue) || !IsUsableLength(element.minimum) ||
+                !IsUsableLength(element.maximum))
             {
                 diagnostics.Error(RendererDiagnosticCode::InvalidLayoutData,
                                   elementIndex,
                                   "A numeric value is not finite.",
-                                  "value " + std::to_string(element.value) + " min " + std::to_string(element.minimum) +
+                                  "value " + std::to_string(element.numericValue) + " min " + std::to_string(element.minimum) +
                                       " max " + std::to_string(element.maximum));
             }
 

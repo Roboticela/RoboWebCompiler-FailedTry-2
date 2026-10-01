@@ -171,6 +171,10 @@ namespace RoboRenderer
         const char* fontFamily = nullptr;
         FontSlantKind fontStyle = FontSlantKind::Upright;
         TextDirectionKind direction = TextDirectionKind::Auto;
+        /// `font-kerning` and `font-feature-settings`, so painting measures and
+        /// shapes the fragment exactly as layout did.
+        bool kerning = true;
+        const char* fontFeatures = nullptr;
 
         std::uint32_t startByte = 0;
         std::uint32_t endByte = 0;
@@ -181,6 +185,13 @@ namespace RoboRenderer
         bool controlValue = false;
         /// True when the fragment should be underlined (links).
         bool underline = false;
+        /// `text-decoration-line`, as `TextDecorationFlags` bits. A link's
+        /// underline sets the same bit, so one field decides every decoration.
+        std::uint8_t decoration = TextDecorationNone;
+        /// `text-decoration-color`; the text colour paints it when the style
+        /// leaves the colour at `currentColor`.
+        Color decorationColor = Color::Rgba(0, 0, 0, 255);
+        bool hasDecorationColor = false;
         /// Vertical offset for ruby annotations.
         float yOffset = 0.0f;
     };
@@ -299,12 +310,21 @@ namespace RoboRenderer
             bool preserveWhitespace = false;
             float yOffset = 0.0f;
 
+            /// `text-decoration-line` bits and the colour they are drawn in,
+            /// carried to the line the item lands on.
+            std::uint8_t decoration = TextDecorationNone;
+            Color decorationColor = Color::Rgba(0, 0, 0, 255);
+            bool hasDecorationColor = false;
+
             /// The CSS text options this item is measured and painted with.
             float letterSpacing = 0.0f;
             float wordSpacing = 0.0f;
             const char* fontFamily = nullptr;
             FontSlantKind fontStyle = FontSlantKind::Upright;
             TextDirectionKind direction = TextDirectionKind::Auto;
+            /// `font-kerning` and `font-feature-settings`, passed to the shaper.
+            bool kerning = true;
+            const char* fontFeatures = nullptr;
             /// `line-height` as a multiple of the font size, 0 for "normal".
             float lineHeightScale = 0.0f;
             /// `white-space: nowrap`: the run never wraps, however wide it is.

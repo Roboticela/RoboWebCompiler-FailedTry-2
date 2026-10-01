@@ -88,6 +88,13 @@ namespace RoboRenderer
                     ColorLayer entry;
                     entry.glyphId = layer.glyph;
                     entry.paletteIndex = layer.paletteIndex;
+                    entry.shade = layer.shade;
+                    entry.xx = layer.xx;
+                    entry.xy = layer.xy;
+                    entry.yx = layer.yx;
+                    entry.yy = layer.yy;
+                    entry.dx = layer.dx;
+                    entry.dy = layer.dy;
                     out.push_back(entry);
                 }
                 return !out.empty();
@@ -104,6 +111,11 @@ namespace RoboRenderer
                              std::int32_t& bearingY) const override
             {
                 return font->BitmapGlyph(glyphId, preferPpem, data, length, bearingX, bearingY);
+            }
+
+            bool SvgGlyph(std::uint16_t glyphId, std::vector<std::uint8_t>& out) const override
+            {
+                return font->SvgDocument(glyphId, out);
             }
 
             const ContourPoint* ContourPoints() const override
@@ -160,7 +172,8 @@ namespace RoboRenderer
 
             bool ShapeRun(const std::uint32_t* codepoints,
                           std::size_t count,
-                          std::vector<ShapedGlyph>& out) const override
+                          std::vector<ShapedGlyph>& out,
+                          const ShapeSettings* settings = nullptr) const override
             {
                 out.clear();
 
@@ -213,7 +226,7 @@ namespace RoboRenderer
                     out.push_back(glyph);
                 }
 
-                layout->Shape(scriptTag, out);
+                layout->Shape(scriptTag, out, settings);
                 return true;
             }
 
@@ -340,6 +353,12 @@ namespace RoboRenderer
             {
                 return base->BitmapGlyph(glyphId, preferPpem, data, length, bearingX, bearingY);
             }
+
+            bool SvgGlyph(std::uint16_t glyphId, std::vector<std::uint8_t>& out) const override
+            {
+                return base->SvgGlyph(glyphId, out);
+            }
+
             const ContourPoint* ContourPoints() const override { return base->ContourPoints(); }
             const std::uint32_t* ContourEnds() const override { return base->ContourEnds(); }
             const StrokePoint* Points() const override { return base->Points(); }
@@ -410,9 +429,10 @@ namespace RoboRenderer
 
             bool ShapeRun(const std::uint32_t* codepoints,
                           std::size_t count,
-                          std::vector<ShapedGlyph>& out) const override
+                          std::vector<ShapedGlyph>& out,
+                          const ShapeSettings* settings = nullptr) const override
             {
-                if (!base->ShapeRun(codepoints, count, out))
+                if (!base->ShapeRun(codepoints, count, out, settings))
                 {
                     return false;
                 }
@@ -477,6 +497,11 @@ namespace RoboRenderer
                 return base->BitmapGlyph(glyphId, preferPpem, data, length, bearingX, bearingY);
             }
 
+            bool SvgGlyph(std::uint16_t glyphId, std::vector<std::uint8_t>& out) const override
+            {
+                return base->SvgGlyph(glyphId, out);
+            }
+
             const ContourPoint* ContourPoints() const override { return base->ContourPoints(); }
             const std::uint32_t* ContourEnds() const override { return base->ContourEnds(); }
             const StrokePoint* Points() const override { return base->Points(); }
@@ -538,11 +563,12 @@ namespace RoboRenderer
 
             bool ShapeRun(const std::uint32_t* codepoints,
                           std::size_t count,
-                          std::vector<ShapedGlyph>& out) const override
+                          std::vector<ShapedGlyph>& out,
+                          const ShapeSettings* settings = nullptr) const override
             {
                 // A shear changes no advance, so the shaped metrics are the
                 // upright ones and only painting leans.
-                return base->ShapeRun(codepoints, count, out);
+                return base->ShapeRun(codepoints, count, out, settings);
             }
 
         private:

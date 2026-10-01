@@ -546,12 +546,23 @@ namespace RoboRenderer
         const TextDirectionKind direction =
             IsSpecified(style.specified, StyleFlagDirection) ? style.direction : TextDirectionKind::Auto;
 
+        // `font-kerning` and `font-feature-settings` decide how the run shapes,
+        // so they are measured with the same settings painting will use.
+        const bool kerning = !(IsSpecified(style.specified, StyleFlagFontKerning) &&
+                               style.fontKerning == FontKerningKind::None);
+        const char* fontFeatures =
+            IsSpecified(style.specified, StyleFlagFontFeatures) && style.fontFeatures != 0
+                ? StringAt(document, style.fontFeatures)
+                : nullptr;
+
         TextRunStyle runStyle;
         runStyle.letterSpacing = IsSpecified(style.specified, StyleFlagLetterSpacing) ? style.letterSpacing : 0.0f;
         runStyle.wordSpacing = IsSpecified(style.specified, StyleFlagWordSpacing) ? style.wordSpacing : 0.0f;
         runStyle.fontFamily = family;
         runStyle.slant = slant;
         runStyle.direction = direction;
+        runStyle.kerning = kerning;
+        runStyle.fontFeatures = fontFeatures;
 
         const FontFace& face = fonts.Face(style.fontWeight, family, slant);
         const float scale = style.fontSize / face.UnitsPerEm();
@@ -575,6 +586,17 @@ namespace RoboRenderer
         item.placeholder = isPlaceholder;
         item.controlValue = isControlValue;
         item.underline = category == RenderCategory::Link;
+        item.decoration = IsSpecified(style.specified, StyleFlagTextDecoration)
+                              ? style.textDecoration
+                              : TextDecorationNone;
+        if (item.underline)
+        {
+            item.decoration |= TextDecorationUnderline;
+        }
+        item.hasDecorationColor = IsSpecified(style.specified, StyleFlagTextDecorationColor) != 0;
+        item.decorationColor = style.textDecorationColor;
+        item.kerning = kerning;
+        item.fontFeatures = fontFeatures;
         item.preserveWhitespace = preserved;
         item.letterSpacing = runStyle.letterSpacing;
         item.wordSpacing = runStyle.wordSpacing;
@@ -843,6 +865,11 @@ namespace RoboRenderer
                     line.placeholder = fragment.item->placeholder;
                     line.controlValue = fragment.item->controlValue;
                     line.underline = fragment.item->underline;
+                    line.decoration = fragment.item->decoration;
+                    line.decorationColor = fragment.item->decorationColor;
+                    line.hasDecorationColor = fragment.item->hasDecorationColor;
+                    line.kerning = fragment.item->kerning;
+                    line.fontFeatures = fragment.item->fontFeatures;
                     line.yOffset = fragment.item->yOffset;
                     result.lines.push_back(line);
                 }
@@ -901,6 +928,8 @@ namespace RoboRenderer
                 runStyle.fontFamily = item.fontFamily;
                 runStyle.slant = item.fontStyle;
                 runStyle.direction = item.direction;
+                runStyle.kerning = item.kerning;
+                runStyle.fontFeatures = item.fontFeatures;
 
                 wrappedLines.clear();
                 textLayout.Wrap(item.text + offset, item.fontSize, item.weight,

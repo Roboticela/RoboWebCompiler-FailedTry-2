@@ -234,6 +234,25 @@ namespace RoboRenderer
         RightToLeft = 2
     };
 
+    /// Which lines `text-decoration-line` draws, as a bitmask: one run can carry
+    /// an underline and a strikethrough at once.
+    enum TextDecorationFlags : std::uint8_t
+    {
+        TextDecorationNone = 0u,
+        TextDecorationUnderline = 1u << 0,
+        TextDecorationOverline = 1u << 1,
+        TextDecorationLineThrough = 1u << 2
+    };
+
+    /// `font-kerning`.
+    enum class FontKerningKind : std::uint8_t
+    {
+        /// `auto`: the font's kerning applies, which is the default.
+        Auto = 0,
+        Normal = 1,
+        None = 2
+    };
+
     /// What activating a button does. Resolved at compile time from the button's
     /// `type` attribute so the runtime never reads an attribute.
     enum class ButtonBehavior : std::uint8_t
@@ -332,6 +351,10 @@ namespace RoboRenderer
         StyleFlagDirection = 1ull << 32,
         StyleFlagFontStyle = 1ull << 33,
         StyleFlagFontFamily = 1ull << 34,
+        StyleFlagFontKerning = 1ull << 35,
+        StyleFlagFontFeatures = 1ull << 36,
+        StyleFlagTextDecoration = 1ull << 37,
+        StyleFlagTextDecorationColor = 1ull << 38,
 
         /// Every margin edge, for a shorthand that set all four.
         StyleFlagMargin = StyleFlagMarginTop | StyleFlagMarginRight | StyleFlagMarginBottom | StyleFlagMarginLeft,
@@ -398,6 +421,23 @@ namespace RoboRenderer
         /// `font-family`, as an index into the document's strings. 0 means "the
         /// primary family", so an unstyled element needs no entry.
         StringIndex fontFamily = 0;
+
+        /// `font-feature-settings` as written, as an index into the document's
+        /// strings. 0 means "the defaults", which is what an unstyled element
+        /// needs. Parsed by the shaper rather than stored typed.
+        StringIndex fontFeatures = 0;
+
+        /// `font-kerning`. `Auto` leaves the font's kerning on, which is the
+        /// shaper's own default.
+        FontKerningKind fontKerning = FontKerningKind::Auto;
+
+        /// `text-decoration-line`, as `TextDecorationFlags` bits.
+        std::uint8_t textDecoration = TextDecorationNone;
+
+        /// `text-decoration-color`. The text colour paints the decoration when
+        /// `StyleFlagTextDecorationColor` is not set, which is CSS's
+        /// `currentColor`.
+        Color textDecorationColor = Color::Rgba(0, 0, 0, 255);
 
         /// True when the color fields carry a value rather than a default that
         /// the category default should fill in. Kept beside `specified` because

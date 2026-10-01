@@ -126,6 +126,15 @@ namespace RoboRenderer
         std::string message;
     };
 
+    /// Inflates a raw DEFLATE stream (no zlib or gzip wrapper). Used by the `SVG`
+    /// glyph reader, whose documents may be stored deflated.
+    bool InflateDeflate(const std::uint8_t* data, std::size_t size, std::vector<std::uint8_t>& out);
+
+    /// Decompresses an RFC 1952 gzip stream into `out`. Returns false when the
+    /// bytes are not a usable gzip stream; an empty result is a valid empty
+    /// document.
+    bool Gunzip(const std::uint8_t* data, std::size_t size, std::vector<std::uint8_t>& out);
+
     /// Decodes an encoded image, choosing the codec from the bytes themselves.
     ImageDecodeResult DecodeImage(const std::uint8_t* data, std::size_t size, Image& out);
 

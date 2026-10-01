@@ -1276,6 +1276,79 @@ namespace RoboRenderer
         return "Unknown";
     }
 
+    bool InflateDeflate(const std::uint8_t* data, std::size_t size, std::vector<std::uint8_t>& out)
+    {
+        out.clear();
+
+        if (data == nullptr || size == 0)
+        {
+            return false;
+        }
+
+        std::string error;
+        BitReader reader(data, size);
+        return InflateRaw(reader, out, error);
+    }
+
+    bool Gunzip(const std::uint8_t* data, std::size_t size, std::vector<std::uint8_t>& out)
+    {
+        out.clear();
+
+        if (data == nullptr || size < 18)
+        {
+            return false;
+        }
+
+        // RFC 1952: a 10-byte header, an optional extra field, name and comment,
+        // then the deflate payload and an 8-byte CRC/size trailer.
+        if (data[0] != 0x1F || data[1] != 0x8B || data[2] != 0x08)
+        {
+            return false;
+        }
+
+        const std::uint8_t flags = data[3];
+        std::size_t offset = 10;
+
+        if ((flags & 0x04u) != 0) // FEXTRA
+        {
+            if (offset + 2 > size)
+            {
+                return false;
+            }
+            const std::uint16_t extra = static_cast<std::uint16_t>(data[offset]) |
+                                        (static_cast<std::uint16_t>(data[offset + 1]) << 8);
+            offset += 2 + extra;
+        }
+        if ((flags & 0x08u) != 0) // FNAME
+        {
+            while (offset < size && data[offset] != 0)
+            {
+                ++offset;
+            }
+            ++offset;
+        }
+        if ((flags & 0x10u) != 0) // FCOMMENT
+        {
+            while (offset < size && data[offset] != 0)
+            {
+                ++offset;
+            }
+            ++offset;
+        }
+
+        if ((flags & 0x02u) != 0)
+        {
+            return false; // FHCRC: the header checksum is rare and not needed here.
+        }
+
+        if (offset >= size)
+        {
+            return false;
+        }
+
+        return InflateDeflate(data + offset, size - offset, out);
+    }
+
     ImageDecodeResult DecodeImage(const std::uint8_t* data, std::size_t size, Image& out)
     {
         if (data == nullptr || size == 0)

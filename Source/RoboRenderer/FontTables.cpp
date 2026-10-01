@@ -7,14 +7,19 @@
 // the `CBDT`/`CBLC` bitmaps emoji fonts ship), and the vertical metrics that
 // turn a horizontal run on its side.
 //
-// Both readers are deliberately shallow: a colour face that only ships COLR v1
-// reports no layers rather than guessing at a paint graph, and a face whose
-// bitmap is at a size the caller did not ask for still reports the glyph it
-// has. Nothing here allocates until it has something to return.
+// The readers are deliberately shallow: nothing here allocates until it has
+// something to return, and a table the face does not carry is answered in a
+// comparison rather than an exception. A colour face has its whole colour
+// surface read: COLR v0 layers, the COLR v1 paint graph walked to layer, solid
+// or gradient leaves (with the transforms composed, not dropped), the
+// `CBDT`/`CBLC` and `sbix` embedded bitmaps, and the `SVG ` documents.
 // ---------------------------------------------------------------------------
 #include "RoboRenderer/FontFile.h"
 
+#include "RoboRenderer/Image.h"
+
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <functional>
 
@@ -126,8 +131,66 @@ namespace RoboRenderer
 
             const std::uint32_t layerCount = ReadU32(layerList);
 
-            std::function<void(std::uint32_t, std::uint16_t, int)> walk =
-                [&](std::uint32_t paint, std::uint16_t current, int depth) {
+            // A `COLR` v1 paint graph nests transforms, so the walk carries the
+            // affine they compose into down to every leaf: a translated or
+            // scaled layer's outline lands where the graph put it, and the
+            // inverse is what samples its gradient exactly.
+            struct Affine
+            {
+                float xx = 1.0f;
+                float xy = 0.0f;
+                float yx = 0.0f;
+                float yy = 1.0f;
+                float dx = 0.0f;
+                float dy = 0.0f;
+            };
+
+            const auto compose = [](const Affine& outer, const Affine& inner) -> Affine {
+                Affine result;
+                result.xx = outer.xx * inner.xx + outer.xy * inner.yx;
+                result.xy = outer.xx * inner.xy + outer.xy * inner.yy;
+                result.yx = outer.yx * inner.xx + outer.yy * inner.yx;
+                result.yy = outer.yx * inner.xy + outer.yy * inner.yy;
+                result.dx = outer.xx * inner.dx + outer.xy * inner.dy + outer.dx;
+                result.dy = outer.yx * inner.dx + outer.yy * inner.dy + outer.dy;
+                return result;
+            };
+
+            const auto fixed = [this](std::uint32_t offset) -> float {
+                return static_cast<float>(ReadI16(offset)) / 16384.0f;
+            };
+
+            const auto applyAffine = [](ColorLayer& layer, const Affine& value) {
+                layer.xx = value.xx;
+                layer.xy = value.xy;
+                layer.yx = value.yx;
+                layer.yy = value.yy;
+                layer.dx = value.dx;
+                layer.dy = value.dy;
+            };
+
+            const auto readColorLine = [&](std::uint32_t colorLine, FontFace::ColorShade& shade) {
+                const std::uint16_t stopCount = ReadU16(colorLine + 1);
+                shade.stops.clear();
+
+                for (std::uint16_t index = 0; index < stopCount; ++index)
+                {
+                    const std::uint32_t stop = colorLine + 3 + static_cast<std::uint32_t>(index) * 6;
+                    if (static_cast<std::uint64_t>(stop) + 6 > bytes.size())
+                    {
+                        break;
+                    }
+
+                    FontFace::ColorShade::Stop entry;
+                    entry.offset = fixed(stop);
+                    entry.paletteIndex = ReadU16(stop + 2);
+                    entry.alpha = fixed(stop + 4);
+                    shade.stops.push_back(entry);
+                }
+            };
+
+            std::function<void(std::uint32_t, std::uint16_t, int, Affine)> walk =
+                [&](std::uint32_t paint, std::uint16_t current, int depth, Affine transform) {
                     if (depth > 64 || static_cast<std::uint64_t>(paint) + 1 > bytes.size())
                     {
                         return;
@@ -151,7 +214,7 @@ namespace RoboRenderer
                                 break;
                             }
                             // Layer paint offsets are relative to the LayerList.
-                            walk(layerList + ReadU32(layerList + 4 + layer * 4), current, depth + 1);
+                            walk(layerList + ReadU32(layerList + 4 + layer * 4), current, depth + 1, transform);
                         }
                         break;
                     }
@@ -167,6 +230,8 @@ namespace RoboRenderer
                             ColorLayer layer;
                             layer.glyph = current;
                             layer.paletteIndex = ReadU16(paint + 1);
+                            layer.shade.kind = FontFace::ColorShade::Kind::Solid;
+                            applyAffine(layer, transform);
                             out.push_back(layer);
                         }
                         break;
@@ -177,7 +242,7 @@ namespace RoboRenderer
                         {
                             return;
                         }
-                        walk(paint + readU24(paint + 1), ReadU16(paint + 4), depth + 1);
+                        walk(paint + readU24(paint + 1), ReadU16(paint + 4), depth + 1, transform);
                         break;
                     }
                     case 11: // PaintColrGlyph
@@ -190,7 +255,7 @@ namespace RoboRenderer
                         std::uint32_t sub = 0;
                         if (paintForGlyph(target, sub))
                         {
-                            walk(sub, target, depth + 1);
+                            walk(sub, target, depth + 1, transform);
                         }
                         break;
                     }
@@ -201,26 +266,76 @@ namespace RoboRenderer
                     case 8: // PaintSweepGradient
                     case 9: // PaintVarSweepGradient
                     {
-                        // The rasterizer paints flat layers, so a gradient is
-                        // approximated by its first colour stop. The glyph mask
-                        // is exact; only the shading is flattened.
-                        if (static_cast<std::uint64_t>(paint) + 4 > bytes.size())
+                        if (current == 0 || static_cast<std::uint64_t>(paint) + 4 > bytes.size())
                         {
                             return;
                         }
+
                         const std::uint32_t colorLine = paint + readU24(paint + 1);
-                        if (static_cast<std::uint64_t>(colorLine) + 9 > bytes.size())
+                        if (static_cast<std::uint64_t>(colorLine) + 3 > bytes.size())
                         {
                             return;
                         }
-                        const std::uint16_t stopCount = ReadU16(colorLine + 1);
-                        if (stopCount == 0 || current == 0)
+
+                        // Every gradient carries its own geometry in font units,
+                        // so its stops are sampled at the exact point they land
+                        // on rather than being flattened to a flat colour.
+                        const std::uint8_t paintFormat = bytes[paint];
+                        FontFace::ColorShade shade;
+
+                        if (paintFormat == 4 || paintFormat == 5)
+                        {
+                            if (static_cast<std::uint64_t>(paint) + 16 > bytes.size())
+                            {
+                                return;
+                            }
+                            shade.kind = FontFace::ColorShade::Kind::Linear;
+                            shade.x0 = ReadI16(paint + 4);
+                            shade.y0 = ReadI16(paint + 6);
+                            shade.x1 = ReadI16(paint + 8);
+                            shade.y1 = ReadI16(paint + 10);
+                            shade.x2 = ReadI16(paint + 12);
+                            shade.y2 = ReadI16(paint + 14);
+                        }
+                        else if (paintFormat == 6 || paintFormat == 7)
+                        {
+                            if (static_cast<std::uint64_t>(paint) + 16 > bytes.size())
+                            {
+                                return;
+                            }
+                            shade.kind = FontFace::ColorShade::Kind::Radial;
+                            shade.x0 = ReadI16(paint + 4);
+                            shade.y0 = ReadI16(paint + 6);
+                            shade.r0 = ReadU16(paint + 8);
+                            shade.x1 = ReadI16(paint + 10);
+                            shade.y1 = ReadI16(paint + 12);
+                            shade.r1 = ReadU16(paint + 14);
+                        }
+                        else
+                        {
+                            if (static_cast<std::uint64_t>(paint) + 12 > bytes.size())
+                            {
+                                return;
+                            }
+                            shade.kind = FontFace::ColorShade::Kind::Sweep;
+                            shade.x0 = ReadI16(paint + 4);
+                            shade.y0 = ReadI16(paint + 6);
+                            // Angles are F2Dot14 in units of 180 degrees.
+                            shade.x1 = fixed(paint + 8) * 180.0f;
+                            shade.y1 = fixed(paint + 10) * 180.0f;
+                        }
+
+                        readColorLine(colorLine, shade);
+                        if (shade.stops.empty())
                         {
                             return;
                         }
+
                         ColorLayer layer;
                         layer.glyph = current;
-                        layer.paletteIndex = ReadU16(colorLine + 5); // first stop
+                        layer.paletteIndex = shade.stops.front().paletteIndex;
+                        layer.shade = std::move(shade);
+                        applyAffine(layer, transform);
                         out.push_back(layer);
                         break;
                     }
@@ -235,17 +350,119 @@ namespace RoboRenderer
                     case 28: // PaintSkew
                     case 30: // PaintSkewAroundCenter
                     {
-                        // The geometry changes the placement of the sub-paint, not
-                        // the layer structure, so the sub-paint is walked as-is.
-                        walk(paint + readU24(paint + 1), current, depth + 1);
+                        if (static_cast<std::uint64_t>(paint) + 4 > bytes.size())
+                        {
+                            return;
+                        }
+
+                        const std::uint8_t paintFormat = bytes[paint];
+                        Affine local;
+
+                        if (paintFormat == 12) // general affine
+                        {
+                            const std::uint32_t record = paint + readU24(paint + 4);
+                            if (static_cast<std::uint64_t>(record) + 12 > bytes.size())
+                            {
+                                return;
+                            }
+                            local.xx = fixed(record);
+                            local.yx = fixed(record + 2);
+                            local.xy = fixed(record + 4);
+                            local.yy = fixed(record + 6);
+                            local.dx = fixed(record + 8);
+                            local.dy = fixed(record + 10);
+                        }
+                        else if (paintFormat == 14) // translate
+                        {
+                            if (static_cast<std::uint64_t>(paint) + 8 > bytes.size())
+                            {
+                                return;
+                            }
+                            local.dx = static_cast<float>(ReadI16(paint + 4));
+                            local.dy = static_cast<float>(ReadI16(paint + 6));
+                        }
+                        else if (paintFormat == 16 || paintFormat == 20) // scale
+                        {
+                            if (static_cast<std::uint64_t>(paint) + (paintFormat == 16 ? 8u : 6u) > bytes.size())
+                            {
+                                return;
+                            }
+                            const float scaleX = fixed(paint + 4);
+                            const float scaleY = paintFormat == 16 ? fixed(paint + 6) : scaleX;
+                            local.xx = scaleX;
+                            local.yy = scaleY;
+                        }
+                        else if (paintFormat == 18 || paintFormat == 22) // scale around centre
+                        {
+                            const std::uint32_t size = paintFormat == 18 ? 12u : 10u;
+                            if (static_cast<std::uint64_t>(paint) + size > bytes.size())
+                            {
+                                return;
+                            }
+                            const float scaleX = fixed(paint + 4);
+                            const float scaleY = paintFormat == 18 ? fixed(paint + 6) : scaleX;
+                            const float centerX = fixed(paint + (paintFormat == 18 ? 8u : 6u));
+                            const float centerY = fixed(paint + (paintFormat == 18 ? 10u : 8u));
+                            local.xx = scaleX;
+                            local.yy = scaleY;
+                            local.dx = centerX - scaleX * centerX;
+                            local.dy = centerY - scaleY * centerY;
+                        }
+                        else if (paintFormat == 24 || paintFormat == 26) // rotate
+                        {
+                            const std::uint32_t size = paintFormat == 24 ? 6u : 10u;
+                            if (static_cast<std::uint64_t>(paint) + size > bytes.size())
+                            {
+                                return;
+                            }
+                            const float angle = fixed(paint + 4) * 3.14159265358979323846f;
+                            const float cosine = std::cos(angle);
+                            const float sine = std::sin(angle);
+                            local.xx = cosine;
+                            local.xy = -sine;
+                            local.yx = sine;
+                            local.yy = cosine;
+
+                            if (paintFormat == 26)
+                            {
+                                const float centerX = fixed(paint + 6);
+                                const float centerY = fixed(paint + 8);
+                                local.dx = centerX - (cosine * centerX - sine * centerY);
+                                local.dy = centerY - (sine * centerX + cosine * centerY);
+                            }
+                        }
+                        else // skew (28, 30)
+                        {
+                            const std::uint32_t size = paintFormat == 28 ? 8u : 12u;
+                            if (static_cast<std::uint64_t>(paint) + size > bytes.size())
+                            {
+                                return;
+                            }
+                            const float xAngle = fixed(paint + 4) * 3.14159265358979323846f;
+                            const float yAngle = fixed(paint + 6) * 3.14159265358979323846f;
+                            const float xTangent = std::tan(xAngle);
+                            const float yTangent = std::tan(yAngle);
+                            local.xy = xTangent;
+                            local.yx = yTangent;
+
+                            if (paintFormat == 30)
+                            {
+                                const float centerX = fixed(paint + 8);
+                                const float centerY = fixed(paint + 10);
+                                local.dx = -xTangent * centerY;
+                                local.dy = -yTangent * centerX;
+                            }
+                        }
+
+                        walk(paint + readU24(paint + 1), current, depth + 1, compose(transform, local));
                         break;
                     }
                     case 32: // PaintComposite
                     {
                         const std::uint32_t source = paint + readU24(paint + 1);
                         const std::uint32_t backdrop = paint + readU24(paint + 4);
-                        walk(backdrop, current, depth + 1);
-                        walk(source, current, depth + 1);
+                        walk(backdrop, current, depth + 1, transform);
+                        walk(source, current, depth + 1, transform);
                         break;
                     }
                     default:
@@ -253,7 +470,7 @@ namespace RoboRenderer
                     }
                 };
 
-            walk(root, glyph, 0);
+            walk(root, glyph, 0, Affine{});
             return !out.empty();
         }
 
@@ -369,6 +586,14 @@ namespace RoboRenderer
         length = 0;
         bearingX = 0;
         bearingY = 0;
+
+        // A `sbix` face stores its colour glyphs as raw image files, which the
+        // caller decodes with the same codec a `CBDT` strike uses. It is tried
+        // first because a face that ships `sbix` rarely ships `CBDT` too.
+        if (SbixBitmap(glyph, preferPpem, data, length, bearingX, bearingY))
+        {
+            return true;
+        }
 
         if (!cblc.present || !cbdt.present ||
             static_cast<std::uint64_t>(cblc.offset) + 8 > bytes.size())
@@ -510,6 +735,185 @@ namespace RoboRenderer
 
                 return data != nullptr;
             }
+        }
+
+        return false;
+    }
+
+    // --- colour bitmaps (sbix) ---------------------------------------------
+
+    bool SfntFont::SbixBitmap(std::uint16_t glyph,
+                              std::uint16_t preferPpem,
+                              const std::uint8_t*& data,
+                              std::uint32_t& length,
+                              std::int32_t& bearingX,
+                              std::int32_t& bearingY) const
+    {
+        data = nullptr;
+        length = 0;
+        bearingX = 0;
+        bearingY = 0;
+
+        // `sbix`: version, flags, strike count, then one offset per strike. A
+        // strike is `ppem`, `ppi`, and `glyphCount + 1` offsets into the strike,
+        // which bracket each glyph's own image record.
+        if (!sbix.present || glyphCount == 0 ||
+            static_cast<std::uint64_t>(sbix.offset) + 8 > bytes.size())
+        {
+            return false;
+        }
+
+        const std::uint32_t strikeCount = ReadU32(sbix.offset + 4);
+        if (strikeCount == 0)
+        {
+            return false;
+        }
+
+        // Pick the strike whose `ppem` is closest to the requested device size.
+        std::uint32_t chosen = strikeCount;
+        int bestDelta = 0;
+
+        for (std::uint32_t strike = 0; strike < strikeCount; ++strike)
+        {
+            const std::uint32_t record = sbix.offset + 8 + strike * 4;
+            if (static_cast<std::uint64_t>(record) + 4 > bytes.size())
+            {
+                break;
+            }
+
+            const std::uint32_t strikeOffset = sbix.offset + ReadU32(record);
+            if (static_cast<std::uint64_t>(strikeOffset) + 4 > bytes.size())
+            {
+                continue;
+            }
+
+            const int ppem = ReadU16(strikeOffset);
+            const int delta = preferPpem == 0 ? static_cast<int>(strike)
+                                              : std::abs(ppem - static_cast<int>(preferPpem));
+
+            if (chosen == strikeCount || delta < bestDelta)
+            {
+                chosen = strike;
+                bestDelta = delta;
+            }
+        }
+
+        if (chosen >= strikeCount)
+        {
+            return false;
+        }
+
+        const std::uint32_t strikeStart =
+            sbix.offset + ReadU32(sbix.offset + 8 + chosen * 4);
+        const std::uint32_t offsets = strikeStart + 4;
+
+        if (static_cast<std::uint64_t>(offsets) + (static_cast<std::uint64_t>(glyphCount) + 1) * 4 >
+            bytes.size())
+        {
+            return false;
+        }
+
+        const std::uint32_t glyphStart = strikeStart + ReadU32(offsets + glyph * 4);
+        const std::uint32_t glyphEnd = strikeStart + ReadU32(offsets + (glyph + 1) * 4);
+
+        // An empty range (equal offsets) is "this glyph has no bitmap", which is
+        // the ordinary case for the outlines a colour font leaves blank.
+        if (glyphEnd <= glyphStart || static_cast<std::uint64_t>(glyphStart) + 8 > bytes.size() ||
+            glyphEnd > bytes.size())
+        {
+            return false;
+        }
+
+        // The record is a four-byte graphic type, an origin offset in font
+        // pixels (y upwards), then the payload. `dupe` points at another glyph's
+        // image, which is an optimization this reader follows only one hop.
+        const std::uint8_t* type = bytes.data() + glyphStart;
+        if (type[0] == 'd' && type[1] == 'u' && type[2] == 'p' && type[3] == 'e')
+        {
+            if (static_cast<std::uint64_t>(glyphStart) + 10 > glyphEnd)
+            {
+                return false;
+            }
+            const std::uint16_t target = ReadU16(glyphStart + 8);
+            if (target == glyph)
+            {
+                return false;
+            }
+            return SbixBitmap(target, preferPpem, data, length, bearingX, bearingY);
+        }
+
+        const bool isPng = type[0] == 'p' && type[1] == 'n' && type[2] == 'g' && type[3] == ' ';
+        if (!isPng)
+        {
+            // JPEG and TIFF payloads are legal `sbix` graphics the runtime's own
+            // decoder does not read; reporting them as absent lets the caller
+            // fall back to the outline rather than painting a broken image.
+            return false;
+        }
+
+        bearingX = ReadI16(glyphStart + 4);
+        bearingY = ReadI16(glyphStart + 6);
+        data = bytes.data() + glyphStart + 8;
+        length = glyphEnd - (glyphStart + 8);
+        return true;
+    }
+
+    // --- colour glyphs (SVG) -----------------------------------------------
+
+    bool SfntFont::SvgDocument(std::uint16_t glyph, std::vector<std::uint8_t>& out) const
+    {
+        out.clear();
+
+        // `SVG `: version, an offset to the document list, and a reserved word.
+        // The list is a count and one `start..end` record per document, each
+        // naming the document's offset and length.
+        if (!svg.present || static_cast<std::uint64_t>(svg.offset) + 6 > bytes.size())
+        {
+            return false;
+        }
+
+        const std::uint32_t list = svg.offset + ReadU32(svg.offset + 2);
+        if (static_cast<std::uint64_t>(list) + 2 > bytes.size())
+        {
+            return false;
+        }
+
+        const std::uint16_t count = ReadU16(list);
+
+        for (std::uint16_t index = 0; index < count; ++index)
+        {
+            const std::uint32_t record = list + 2 + static_cast<std::uint32_t>(index) * 12;
+            if (static_cast<std::uint64_t>(record) + 12 > bytes.size())
+            {
+                break;
+            }
+
+            const std::uint16_t start = ReadU16(record);
+            const std::uint16_t end = ReadU16(record + 2);
+            if (glyph < start || glyph > end)
+            {
+                continue;
+            }
+
+            const std::uint32_t document = list + ReadU32(record + 4);
+            const std::uint32_t length = ReadU32(record + 8);
+
+            if (length == 0 || static_cast<std::uint64_t>(document) + length > bytes.size())
+            {
+                return false;
+            }
+
+            const std::uint8_t* data = bytes.data() + document;
+
+            // A gzip stream begins 0x1f 0x8b 0x08; a plain document begins its
+            // XML. Both are legal, so the bytes decide which they are.
+            if (length >= 3 && data[0] == 0x1F && data[1] == 0x8B && data[2] == 0x08)
+            {
+                return Gunzip(data, length, out);
+            }
+
+            out.assign(data, data + length);
+            return !out.empty();
         }
 
         return false;

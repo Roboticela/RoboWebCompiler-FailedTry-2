@@ -10,13 +10,11 @@
 //
 // On top of the geometry sit the tables that make text *type* rather than a row
 // of shapes: `GSUB`/`GPOS`/`GDEF` (see `OtLayout`) so a run shapes, `fvar`/
-// `avar`/`gvar`/`HVAR` so a variable face instantiates, and the colour tables
-// (`COLR`/`CPAL`, `CBDT`/`CBLC`) so an emoji draws in colour.
-//
-// What it still does not do:
-//   - the full `COLR` v1 paint graph (transforms and gradients are flattened to
-//     the layers beneath them rather than composited exactly),
-//   - `sbix` and `SVG ` colour glyphs beyond reporting that the tables exist.
+// `avar`/`gvar`/`HVAR` so a variable face instantiates, and the colour tables so
+// an emoji draws in colour. All three colour formats are read: `COLR`/`CPAL`
+// (v0 layers and the full v1 paint graph, transforms and gradients composited
+// exactly), `CBDT`/`CBLC` and `sbix` embedded bitmaps, and `SVG ` glyph
+// documents (`SvgGlyph.cpp`).
 //
 // Everything is in font units, y upwards from the baseline, exactly as the
 // font stores it. The rasterizer is the only thing that knows about pixels.
@@ -171,8 +169,12 @@ namespace RoboRenderer
         static std::uint32_t ScriptTagForName(const char* scriptName);
 
         /// Shapes a run in place: substitution first, then positioning. Glyph
-        /// ids come in already mapped from code points.
-        void Shape(std::uint32_t scriptTag, std::vector<ShapedGlyph>& glyphs) const;
+        /// ids come in already mapped from code points. `settings` is the
+        /// document's `font-kerning` and `font-feature-settings`; null means the
+        /// shaper's defaults.
+        void Shape(std::uint32_t scriptTag,
+                   std::vector<ShapedGlyph>& glyphs,
+                   const ShapeSettings* settings = nullptr) const;
 
         /// True when the glyph is a mark in `GDEF`.
         bool IsMarkGlyph(std::uint16_t glyph) const;
@@ -206,8 +208,18 @@ namespace RoboRenderer
         void ParseLookupList(std::uint32_t offset, bool substitution);
         void ParseGdef(std::uint32_t offset);
 
-        void ApplySubstitution(std::uint32_t scriptTag, std::vector<ShapedGlyph>& glyphs) const;
-        void ApplyPositioning(std::uint32_t scriptTag, std::vector<ShapedGlyph>& glyphs) const;
+        /// The features a run turns on, in the order a shaper applies them: the
+        /// defaults, minus anything `font-feature-settings` turned off, plus
+        /// anything it turned on. `substitution` picks the GSUB or GPOS table.
+        std::vector<std::uint32_t> EffectiveFeatures(const ShapeSettings* settings,
+                                                     bool substitution) const;
+
+        void ApplySubstitution(std::uint32_t scriptTag,
+                               std::vector<ShapedGlyph>& glyphs,
+                               const ShapeSettings* settings) const;
+        void ApplyPositioning(std::uint32_t scriptTag,
+                              std::vector<ShapedGlyph>& glyphs,
+                              const ShapeSettings* settings) const;
         void ApplyLookups(const std::vector<std::uint16_t>& lookupIndices,
                           const std::vector<LookupRef>& pool,
                           std::vector<ShapedGlyph>& glyphs) const;
@@ -402,6 +414,15 @@ namespace RoboRenderer
         {
             std::uint16_t glyph = 0;
             std::uint16_t paletteIndex = 0;
+            /// The exact shading: a flat palette entry or a gradient.
+            FontFace::ColorShade shade;
+            /// The affine transform the paint graph placed on this layer.
+            float xx = 1.0f;
+            float xy = 0.0f;
+            float yx = 0.0f;
+            float yy = 1.0f;
+            float dx = 0.0f;
+            float dy = 0.0f;
         };
         bool ColorLayers(std::uint16_t glyph, std::vector<ColorLayer>& out) const;
 
@@ -410,9 +431,10 @@ namespace RoboRenderer
                           std::uint8_t& blue, std::uint8_t& alpha) const;
         std::uint16_t PaletteCount() const;
 
-        /// The colour font's own drawable bitmaps, when it ships them (`CBDT`).
-        /// `preferPpem` picks the strike closest to that pixel size; zero means
-        /// take the first strike that covers the glyph.
+        /// The colour font's own drawable bitmaps, when it ships them (`CBDT`
+        /// strikes or an `sbix` table). `preferPpem` picks the strike closest to
+        /// that pixel size; zero means take the first strike that covers the
+        /// glyph.
         bool BitmapGlyph(std::uint16_t glyph,
                          std::uint16_t preferPpem,
                          const std::uint8_t*& data,
@@ -422,6 +444,10 @@ namespace RoboRenderer
 
         /// True when the face carries an `SVG ` table.
         bool HasSvgGlyphs() const { return svg.present; }
+
+        /// The decoded SVG document for a glyph, gunzipped when the font stored
+        /// it compressed. False when there is no document for the glyph.
+        bool SvgDocument(std::uint16_t glyph, std::vector<std::uint8_t>& out) const;
 
         /// Vertical metrics and origin, when the face declares them.
         bool HasVerticalMetrics() const { return vhea.present && vmtx.present; }
@@ -444,6 +470,15 @@ namespace RoboRenderer
         std::uint16_t ReadU16(std::uint32_t offset) const;
         std::int16_t ReadI16(std::uint32_t offset) const;
         std::uint32_t ReadU32(std::uint32_t offset) const;
+
+        /// The `sbix` half of `BitmapGlyph`: locate a glyph's image record in
+        /// the strike nearest the requested size and hand back its payload.
+        bool SbixBitmap(std::uint16_t glyph,
+                        std::uint16_t preferPpem,
+                        const std::uint8_t*& data,
+                        std::uint32_t& length,
+                        std::int32_t& bearingX,
+                        std::int32_t& bearingY) const;
 
         void ReadHead();
         void ReadHhea();

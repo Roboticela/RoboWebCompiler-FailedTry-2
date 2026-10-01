@@ -99,6 +99,31 @@ namespace RoboRenderer
         bool mark = false;
     };
 
+    /// One explicit OpenType feature setting, from `font-feature-settings`.
+    /// `value` is the CSS number: 0 turns the feature off, anything else
+    /// requests it (a stylistic set or character variant names its index).
+    struct FontFeatureSetting
+    {
+        std::uint32_t tag = 0;
+        std::uint16_t value = 1;
+    };
+
+    /// How a run is shaped: the OpenType settings the document asked for.
+    ///
+    /// A null `settings` means the defaults: the features a shaper applies with
+    /// nothing said (`ccmp`, `liga`, `calt`, Arabic joining, `kern`, `mark`), and
+    /// the discretionary ones (`dlig`, `salt`, `smcp`, ...) off, because a
+    /// document that says nothing must not get them.
+    struct ShapeSettings
+    {
+        /// `font-kerning: none` turns the `kern` feature off; the default `auto`
+        /// leaves it on, which is what a shaper does when nothing is said.
+        bool kerning = true;
+        /// `font-feature-settings`, parsed. The array must outlive the call.
+        const FontFeatureSetting* features = nullptr;
+        std::size_t featureCount = 0;
+    };
+
     /// One glyph of a face.
     struct Glyph
     {
@@ -200,12 +225,60 @@ namespace RoboRenderer
         /// wants outlines and only the colour face has them.
         virtual bool HasColorGlyphs() const { return false; }
 
+        /// How one colour layer is shaded: a flat palette entry, or a gradient
+        /// with its own stops. A gradient that survives this far is composited
+        /// exactly rather than approximated by its first stop.
+        struct ColorShade
+        {
+            enum class Kind : std::uint8_t
+            {
+                Solid = 0,
+                Linear,
+                Radial,
+                Sweep
+            };
+
+            struct Stop
+            {
+                /// Position along the gradient, 0..1.
+                float offset = 0.0f;
+                std::uint16_t paletteIndex = 0;
+                /// Stop alpha, 0..1.
+                float alpha = 1.0f;
+            };
+
+            Kind kind = Kind::Solid;
+            std::vector<Stop> stops;
+
+            /// Linear: `(x0,y0)` to `(x1,y1)`, with `(x2,y2)` giving the axis the
+            /// gradient is perpendicular to. Radial: circle `(x0,y0,r0)` to
+            /// `(x1,y1,r1)`. Sweep: centre `(x0,y0)`, angles `x1`..`y1` in degrees.
+            /// All in font units, in the layer's own (pre-transform) space.
+            float x0 = 0.0f;
+            float y0 = 0.0f;
+            float x1 = 0.0f;
+            float y1 = 0.0f;
+            float x2 = 0.0f;
+            float y2 = 0.0f;
+            float r0 = 0.0f;
+            float r1 = 0.0f;
+        };
+
         /// One layer of a colour (COLR) glyph: another glyph painted in a
-        /// palette colour, composited in order.
+        /// palette colour or a gradient, composited in order. `xx..dy` is the
+        /// affine transform the paint graph placed on the layer, applied to the
+        /// glyph's outline and inverted to sample a gradient exactly.
         struct ColorLayer
         {
             std::uint16_t glyphId = 0;
             std::uint16_t paletteIndex = 0;
+            ColorShade shade;
+            float xx = 1.0f;
+            float xy = 0.0f;
+            float yx = 0.0f;
+            float yy = 1.0f;
+            float dx = 0.0f;
+            float dy = 0.0f;
         };
 
         /// The COLR layers of a glyph. False when the glyph is a plain outline
@@ -258,11 +331,13 @@ namespace RoboRenderer
         /// Returns false when the face cannot shape the run.
         virtual bool ShapeRun(const std::uint32_t* codepoints,
                               std::size_t count,
-                              std::vector<ShapedGlyph>& glyphs) const
+                              std::vector<ShapedGlyph>& glyphs,
+                              const ShapeSettings* settings = nullptr) const
         {
             (void)codepoints;
             (void)count;
             (void)glyphs;
+            (void)settings;
             return false;
         }
 
@@ -274,6 +349,16 @@ namespace RoboRenderer
         {
             (void)glyphId;
             return nullptr;
+        }
+
+        /// The `SVG ` glyph document a colour glyph is drawn from, decoded from
+        /// its gzip wrapper when the font stored it compressed. False when the
+        /// face has no `SVG ` table or no document for the glyph.
+        virtual bool SvgGlyph(std::uint16_t glyphId, std::vector<std::uint8_t>& out) const
+        {
+            (void)glyphId;
+            (void)out;
+            return false;
         }
     };
 
@@ -541,6 +626,13 @@ namespace RoboRenderer
         /// `direction`: the paragraph's base direction. `Auto` keeps the
         /// runtime's rule (the first strong character decides).
         TextDirectionKind direction = TextDirectionKind::Auto;
+        /// `font-kerning: none` suppresses the `kern` feature. The default `auto`
+        /// leaves it on.
+        bool kerning = true;
+        /// `font-feature-settings` as the document wrote it, or nullptr for the
+        /// defaults. Parsed on the way to the shaper rather than stored typed,
+        /// because the shaper is the only consumer.
+        const char* fontFeatures = nullptr;
     };
 
     /// Text measurement and line breaking.
@@ -587,6 +679,21 @@ namespace RoboRenderer
                       FontWeightKind weight,
                       std::vector<PositionedGlyph>& out,
                       const TextRunStyle* runStyle = nullptr) const;
+
+        /// Parses a `font-feature-settings` declaration into settings. A tag is
+        /// a quoted string (or a bare pair of letters); the number after it is
+        /// the CSS value, and a missing number means 1. Returns how many
+        /// settings were written, which is bounded by `capacity`. `normal`
+        /// parses to nothing, exactly as CSS defines it.
+        static std::size_t ParseFontFeatures(const char* text,
+                                             FontFeatureSetting* out,
+                                             std::size_t capacity);
+
+        /// The shaper settings a run style asks for. `storage` is filled only
+        /// when the style names features, and the returned settings point into
+        /// it, so `storage` must outlive them.
+        static ShapeSettings SettingsFor(const TextRunStyle* runStyle,
+                                         std::vector<FontFeatureSetting>& storage);
 
         /// Horizontal advance of a tab stop: four spaces, the white-space model
         /// the HTML-only phase uses.

@@ -13,6 +13,7 @@ using namespace RoboTest;
 
 #include "RoboRenderer/Bidi.h"
 #include "RoboRenderer/FontFile.h"
+#include "RoboRenderer/SvgGlyph.h"
 #include "RoboRenderer/Text.h"
 
 #include <algorithm>
@@ -730,6 +731,215 @@ ROBO_TEST(Typography, CssTextPropertiesReachTheRuntime)
     ROBO_CHECK_EQ(lowercaseCount, static_cast<std::size_t>(0));
     ROBO_CHECK_EQ(uppercaseCount, static_cast<std::size_t>(3));
 }
+
+ROBO_TEST(Typography, SvgFillParsesColorsAndNone)
+{
+    SvgPaint paint;
+
+    ROBO_CHECK(ParseSvgFill("#ff0000", paint));
+    ROBO_CHECK(paint.kind == SvgPaint::Kind::Solid);
+    ROBO_CHECK(paint.red > 0.99f && paint.green == 0.0f && paint.blue == 0.0f);
+
+    ROBO_CHECK(ParseSvgFill("rgb(0, 128, 255)", paint));
+    ROBO_CHECK(paint.green > 0.49f && paint.green < 0.51f);
+    ROBO_CHECK(paint.blue > 0.99f);
+
+    // `none` paints nothing, and a gradient reference is the caller's to resolve.
+    ROBO_CHECK(ParseSvgFill("none", paint) == false);
+    ROBO_CHECK(ParseSvgFill("url(#g)", paint) == false);
+}
+
+ROBO_TEST(Typography, SvgGlyphDocumentFlattensToFilledShapes)
+{
+    const std::string document = "<svg xmlns=\"http://www.w3.org/2000/svg\">"
+                                 "<path d=\"M0 0 L100 0 L100 100 Z\" fill=\"#00ff00\"/>"
+                                 "</svg>";
+
+    std::vector<SvgShape> shapes;
+    const bool rendered =
+        RenderSvgGlyph(reinterpret_cast<const std::uint8_t*>(document.data()), document.size(), shapes);
+
+    ROBO_CHECK(rendered);
+    ROBO_CHECK_EQ(shapes.size(), static_cast<std::size_t>(1));
+
+    if (!shapes.empty())
+    {
+        ROBO_CHECK_EQ(shapes[0].contours.size(), static_cast<std::size_t>(1));
+        ROBO_CHECK(shapes[0].contours[0].size() >= 3);
+        ROBO_CHECK(shapes[0].paint.green > 0.99f);
+
+        // SVG y grows downwards; the font-space contour is flipped.
+        bool flipped = false;
+        for (const SvgPoint& point : shapes[0].contours[0])
+        {
+            if (point.y < -50.0f)
+            {
+                flipped = true;
+            }
+        }
+        ROBO_CHECK(flipped);
+    }
+}
+
+ROBO_TEST(Typography, SvgGlyphGradientResolvesAgainstTheShape)
+{
+    const std::string document =
+        "<svg xmlns=\"http://www.w3.org/2000/svg\">"
+        "<defs><linearGradient id=\"g\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">"
+        "<stop offset=\"0\" stop-color=\"#ff0000\"/>"
+        "<stop offset=\"1\" stop-color=\"#0000ff\"/>"
+        "</linearGradient></defs>"
+        "<path d=\"M0 0 L100 0 L100 100 L0 100 Z\" fill=\"url(#g)\"/>"
+        "</svg>";
+
+    std::vector<SvgShape> shapes;
+    ROBO_CHECK(
+        RenderSvgGlyph(reinterpret_cast<const std::uint8_t*>(document.data()), document.size(), shapes));
+    ROBO_CHECK_EQ(shapes.size(), static_cast<std::size_t>(1));
+
+    if (!shapes.empty())
+    {
+        ROBO_CHECK(shapes[0].paint.kind == SvgPaint::Kind::Linear);
+        ROBO_CHECK_EQ(shapes[0].paint.stops.size(), static_cast<std::size_t>(2));
+        // The objectBoundingBox coordinates resolve to the shape's height.
+        ROBO_CHECK(std::abs(shapes[0].paint.y1 - shapes[0].paint.y0) > 1.0f);
+    }
+}
+
+ROBO_TEST(Typography, FontKerningCanBeTurnedOff)
+{
+    FontRegistry fonts;
+    TextLayout layout(fonts);
+
+    TextRunStyle kerned;
+    TextRunStyle unkerned;
+    unkerned.kerning = false;
+
+    const char* pairs[] = { "AV", "AW", "To", "Yo", "WA", "Pa" };
+    bool observed = false;
+
+    for (const char* pair : pairs)
+    {
+        const float tight = layout.Measure(pair, 48.0f, FontWeightKind::Normal, &kerned);
+        const float loose = layout.Measure(pair, 48.0f, FontWeightKind::Normal, &unkerned);
+
+        // Removing the `kern` feature can only give the pair its own advances
+        // back, never tighten it further.
+        ROBO_CHECK(loose >= tight - 0.01f);
+
+        if (loose > tight + 0.05f)
+        {
+            observed = true;
+        }
+    }
+
+    ROBO_CHECK(observed);
+}
+
+ROBO_TEST(Typography, FontFeatureSettingsReachTheShaper)
+{
+    FontRegistry fonts;
+    TextLayout layout(fonts);
+
+    TextRunStyle defaults;
+    TextRunStyle withoutLigatures;
+    withoutLigatures.fontFeatures = "\"liga\" 0";
+
+    // A ligature replaces several glyphs with one, so turning the feature off
+    // can only make the run no narrower.
+    const char* text = "fi fl ffi";
+    const float withLigatures = layout.Measure(text, 48.0f, FontWeightKind::Normal, &defaults);
+    const float plain = layout.Measure(text, 48.0f, FontWeightKind::Normal, &withoutLigatures);
+
+    ROBO_CHECK(plain >= withLigatures - 0.01f);
+
+    // The declaration is parsed the way CSS writes it, and `normal` parses to
+    // nothing at all rather than to a feature named normal.
+    FontFeatureSetting settings[8];
+    ROBO_CHECK_EQ(TextLayout::ParseFontFeatures("\"liga\" 0, \"kern\" 1", settings, 8),
+                  static_cast<std::size_t>(2));
+    ROBO_CHECK_EQ(TextLayout::ParseFontFeatures("normal", settings, 8), static_cast<std::size_t>(0));
+    ROBO_CHECK_EQ(TextLayout::ParseFontFeatures("", settings, 8), static_cast<std::size_t>(0));
+    ROBO_CHECK_EQ(TextLayout::ParseFontFeatures("\"dlig\"", settings, 8), static_cast<std::size_t>(1));
+    ROBO_CHECK_EQ(settings[0].value, static_cast<std::uint16_t>(1));
+}
+
+ROBO_TEST(Typography, CssKerningFeaturesAndDecorationReachTheRuntime)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"styled\">AV text</p>", application,
+        { { "app.css", ".styled { font-kerning: none; font-feature-settings: \"liga\" 0; "
+                        "text-decoration: underline }" } },
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    bool sawKerning = false;
+    bool sawFeatures = false;
+    bool sawDecoration = false;
+    std::string featureText;
+
+    for (std::uint32_t index = 0; index < document.styleCount; ++index)
+    {
+        const CompiledStyle& style = document.styles[index];
+
+        if (IsSpecified(style.specified, StyleFlagFontKerning) && style.fontKerning == FontKerningKind::None)
+        {
+            sawKerning = true;
+        }
+
+        if (IsSpecified(style.specified, StyleFlagFontFeatures) && style.fontFeatures != 0)
+        {
+            sawFeatures = true;
+            featureText = StringAt(document, style.fontFeatures);
+        }
+
+        if (IsSpecified(style.specified, StyleFlagTextDecoration) &&
+            style.textDecoration == TextDecorationUnderline)
+        {
+            sawDecoration = true;
+        }
+    }
+
+    ROBO_CHECK(sawKerning);
+    ROBO_CHECK(sawFeatures);
+    ROBO_CHECK(sawDecoration);
+    ROBO_CHECK(featureText == "\"liga\" 0");
+
+    // And the decoration is painted: the underline is a filled rectangle the
+    // undecorated document does not have.
+    const auto filledRects = [](::RoboRenderer::RoboRenderer& renderer) {
+        std::size_t count = 0;
+
+        for (const PaintCommand& command : renderer.Paint().List().Commands())
+        {
+            if (command.type == PaintCommandType::FillRect)
+            {
+                ++count;
+            }
+        }
+
+        return count;
+    };
+
+    TestRenderer decorated(document, 400.0f, 200.0f);
+    ROBO_CHECK(decorated.Frame());
+    const std::size_t decoratedRects = filledRects(decorated.renderer);
+
+    RoboTools::CompiledApplication plainApplication;
+    ROBO_CHECK(CompileBodyWithSources("<p class=\"styled\">AV text</p>", plainApplication,
+                                      { { "app.css", ".styled { font-kerning: none }" } }, error));
+
+    TestRenderer undecorated(plainApplication.Document(), 400.0f, 200.0f);
+    ROBO_CHECK(undecorated.Frame());
+
+    ROBO_CHECK(decoratedRects > filledRects(undecorated.renderer));
+}
+
 
 
 

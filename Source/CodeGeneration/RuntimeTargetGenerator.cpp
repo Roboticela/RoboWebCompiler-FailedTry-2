@@ -159,7 +159,11 @@ namespace RoboHTMLCompiler
                 { StyleFlagTextTransform, "StyleFlagTextTransform" },
                 { StyleFlagDirection, "StyleFlagDirection" },
                 { StyleFlagFontStyle, "StyleFlagFontStyle" },
-                { StyleFlagFontFamily, "StyleFlagFontFamily" }
+                { StyleFlagFontFamily, "StyleFlagFontFamily" },
+                { StyleFlagFontKerning, "StyleFlagFontKerning" },
+                { StyleFlagFontFeatures, "StyleFlagFontFeatures" },
+                { StyleFlagTextDecoration, "StyleFlagTextDecoration" },
+                { StyleFlagTextDecorationColor, "StyleFlagTextDecorationColor" }
             };
 
             std::string expression;
@@ -311,6 +315,18 @@ namespace RoboHTMLCompiler
             case TextDirectionKind::Auto: return "Auto";
             case TextDirectionKind::LeftToRight: return "LeftToRight";
             case TextDirectionKind::RightToLeft: return "RightToLeft";
+            }
+
+            return "Auto";
+        }
+
+        const char* FontKerningName(FontKerningKind kerning)
+        {
+            switch (kerning)
+            {
+            case FontKerningKind::Auto: return "Auto";
+            case FontKerningKind::Normal: return "Normal";
+            case FontKerningKind::None: return "None";
             }
 
             return "Auto";
@@ -897,6 +913,28 @@ namespace RoboHTMLCompiler
                 {
                     source << "            tables.styles[" << index
                            << "].fontFamily = " << style.fontFamily << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagFontKerning))
+                {
+                    source << "            tables.styles[" << index
+                           << "].fontKerning = RoboRenderer::FontKerningKind::"
+                           << FontKerningName(style.fontKerning) << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagFontFeatures))
+                {
+                    source << "            tables.styles[" << index
+                           << "].fontFeatures = " << style.fontFeatures << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagTextDecoration))
+                {
+                    source << "            tables.styles[" << index << "].textDecoration = "
+                           << static_cast<unsigned>(style.textDecoration) << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagTextDecorationColor))
+                {
+                    source << "            tables.styles[" << index
+                           << "].textDecorationColor = " << ColorExpression(style.textDecorationColor)
+                           << ";\n";
                 }
                 if (IsSpecified(style.specified, StyleFlagDisplay))
                 {

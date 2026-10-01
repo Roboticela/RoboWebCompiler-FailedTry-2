@@ -798,6 +798,20 @@ namespace RoboHTMLCompiler
                     storage.styles[index].fontFamily = interner.Intern(authoredStyles->fontFamilies[index]);
                 }
             }
+
+            // `font-feature-settings` is a declaration rather than a scalar, so
+            // it lives in the string table too; the style carries its index and
+            // the shaper parses it.
+            const std::size_t featureCount =
+                std::min(storage.styles.size(), authoredStyles->featureSettings.size());
+            for (std::size_t index = 0; index < featureCount; ++index)
+            {
+                if (!authoredStyles->featureSettings[index].empty())
+                {
+                    storage.styles[index].fontFeatures =
+                        interner.Intern(authoredStyles->featureSettings[index]);
+                }
+            }
         }
 
         storage.Finalize();

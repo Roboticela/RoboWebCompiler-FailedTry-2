@@ -1794,6 +1794,221 @@ namespace RoboCSSCompiler
             return false;
         }
 
+        bool ParseTextDecorationLineValue(const std::vector<CSSComponentValue>& components,
+                                          CSSValue& out,
+                                          const CSSSourceLocation& location,
+                                          CSSDiagnosticSink& diagnostics)
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.empty())
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidGrammar, location,
+                                  "Expected a text-decoration-line keyword.", "no value given",
+                                  "Write 'underline', 'overline', 'line-through' or 'none'.",
+                                  "text-decoration-line");
+                return false;
+            }
+
+            static const char* const kKeywords[] = { "none", "underline", "overline", "line-through", "blink" };
+
+            std::vector<CSSValue> keywords;
+
+            for (const CSSComponentValue* value : values)
+            {
+                if (value->token.type != CSSTokenType::Ident)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                                      location,
+                                      "Invalid value for 'text-decoration-line'.",
+                                      "the grammar is one or more of none, underline, overline, "
+                                      "line-through, blink",
+                                      "Write 'underline', 'overline', 'line-through' or 'none'.",
+                                      ComponentsToText(components));
+                    return false;
+                }
+
+                const std::string name = LowerCase(value->token.text);
+                bool known = false;
+
+                for (const char* keyword : kKeywords)
+                {
+                    known = known || name == keyword;
+                }
+
+                // `blink` is valid CSS and is a declaration to do nothing: it is
+                // accepted and dropped rather than refused.
+                if (name == "blink")
+                {
+                    continue;
+                }
+
+                if (!known)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                                      location,
+                                      "Unknown text-decoration-line keyword: '" + value->token.text + "'.",
+                                      "not a keyword the reference defines",
+                                      "Write 'underline', 'overline', 'line-through' or 'none'.",
+                                      value->token.text);
+                    return false;
+                }
+
+                keywords.push_back(CSSValue::MakeKeyword(name));
+            }
+
+            if (keywords.empty())
+            {
+                out = CSSValue::MakeKeyword("none");
+                return true;
+            }
+
+            if (keywords.size() == 1)
+            {
+                out = keywords[0];
+                return true;
+            }
+
+            out = CSSValue();
+            out.kind = CSSValueKind::List;
+            out.items = std::move(keywords);
+            out.location = location;
+            return true;
+        }
+
+        bool ParseFontFeatureSettingsValue(const std::vector<CSSComponentValue>& components,
+                                           CSSValue& out,
+                                           const CSSSourceLocation& location,
+                                           CSSDiagnosticSink& diagnostics)
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.size() == 1 && values[0]->token.type == CSSTokenType::Ident &&
+                LowerCase(values[0]->token.text) == "normal")
+            {
+                out = CSSValue::MakeKeyword("normal");
+                return true;
+            }
+
+            // The value is a comma separated list, so the separators are part of
+            // it and the raw components are walked rather than the significant
+            // ones. Each entry is `"tag"` or `"tag" <number>`; a bare run of
+            // letters is accepted too, because that is how the vocabulary spells
+            // the CSS 2.1 font-feature keywords.
+            std::vector<CSSValue> settings;
+            std::vector<CSSValue> pending;
+
+            const auto flush = [&]() {
+                if (pending.empty())
+                {
+                    return true;
+                }
+
+                if (pending.size() == 1)
+                {
+                    settings.push_back(pending[0]);
+                }
+                else
+                {
+                    CSSValue entry;
+                    entry.kind = CSSValueKind::List;
+                    entry.items = pending;
+                    entry.location = location;
+                    settings.push_back(std::move(entry));
+                }
+
+                pending.clear();
+                return true;
+            };
+
+            for (const CSSComponentValue& component : components)
+            {
+                if (component.token.type == CSSTokenType::Whitespace ||
+                    component.token.type == CSSTokenType::EndOfFile)
+                {
+                    continue;
+                }
+
+                if (component.token.type == CSSTokenType::Comma)
+                {
+                    if (pending.empty())
+                    {
+                        diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                          "Expected a feature tag before the comma.",
+                                          "an empty entry is not a font feature setting",
+                                          "Write \"liga\" 1, \"kern\" 0.", "font-feature-settings");
+                        return false;
+                    }
+
+                    flush();
+                    continue;
+                }
+
+                if (pending.size() >= 2)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                      "Too many components in a font feature setting.",
+                                      "a setting is a tag and at most one number",
+                                      "Write \"liga\" 1, \"kern\" 0.",                        "font-feature-settings");
+                    return false;
+                }
+
+                if (pending.empty())
+                {
+                    if (component.token.type != CSSTokenType::QuotedString &&
+                        component.token.type != CSSTokenType::Ident)
+                    {
+                        diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                          "Expected a quoted feature tag.",
+                                          "a font feature tag is a four character string",
+                                          "Write \"liga\" 1, \"kern\" 0.", "font-feature-settings");
+                        return false;
+                    }
+
+                    pending.push_back(CSSValue::MakeString(component.token.text));
+                    continue;
+                }
+
+                if (component.token.type != CSSTokenType::Number)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                      "Expected the feature's value number.",
+                                      "a setting is a tag and at most one number",
+                                      "Write \"liga\" 1, \"kern\" 0.", "font-feature-settings");
+                    return false;
+                }
+
+                pending.push_back(CSSValue::MakeNumber(component.token.number, component.token.isInteger));
+            }
+
+            if (pending.size() == 1 && pending[0].kind == CSSValueKind::String)
+            {
+                // `font-feature-settings: "liga"` is not enough: a setting needs
+                // its value, and a tag on its own is a syntax error in CSS too.
+                diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                  "Expected the feature's value number after '" + pending[0].text + "'.",
+                                  "a setting is a tag and its number",
+                                  "Write \"liga\" 1, \"kern\" 0.", "font-feature-settings");
+                return false;
+            }
+
+            flush();
+
+            if (settings.empty())
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidGrammar, location,
+                                  "Expected a font feature setting.", "no value given",
+                                  "Write \"liga\" 1, or 'normal'.", "font-feature-settings");
+                return false;
+            }
+
+            out = CSSValue();
+            out.kind = CSSValueKind::CommaList;
+            out.items = std::move(settings);
+            out.location = location;
+            return true;
+        }
+
         bool ParseFontWeightValue(const std::vector<CSSComponentValue>& components,
                                   CSSValue& out,
                                   const CSSSourceLocation& location,
@@ -2244,6 +2459,12 @@ namespace RoboCSSCompiler
 
         case CSSValueGrammar::TextAlign:
             return ParseTextAlignValue(components, out, location, diagnostics);
+
+        case CSSValueGrammar::TextDecorationLine:
+            return ParseTextDecorationLineValue(components, out, location, diagnostics);
+
+        case CSSValueGrammar::FontFeatureSettings:
+            return ParseFontFeatureSettingsValue(components, out, location, diagnostics);
 
         case CSSValueGrammar::FontWeight:
             return ParseFontWeightValue(components, out, location, diagnostics);
