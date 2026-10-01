@@ -31,6 +31,8 @@
 
 namespace RoboRenderer
 {
+    class FontFace;
+
     /// A point of a glyph outline in font units (y grows upwards from the
     /// baseline). A negative x means "lift the pen": it starts a new stroke.
     struct StrokePoint
@@ -49,10 +51,61 @@ namespace RoboRenderer
         bool onCurve = true;
     };
 
+    /// One positioned glyph produced by shaping a run. Advances and offsets are
+    /// in font units; the caller converts with the face's `UnitsPerEm`.
+    ///
+    /// Shaping is what turns a sequence of code points into the glyphs a font
+    /// actually wants drawn: a ligature replaces several, a mark is offset onto
+    /// its base, a pair is kerned, and an Arabic letter takes its contextual
+    /// form. A run that has not been shaped is one glyph per code point.
+    struct ShapedGlyph
+    {
+        /// Source code point the glyph came from (the first one, for a ligature).
+        std::uint32_t codepoint = 0;
+        std::uint16_t glyph = 0;
+        /// Index of the first source code point this glyph covers.
+        std::uint32_t cluster = 0;
+        /// How many source code points the glyph replaced (1 unless a ligature).
+        std::uint8_t components = 1;
+        float xAdvance = 0.0f;
+        float yAdvance = 0.0f;
+        float xOffset = 0.0f;
+        float yOffset = 0.0f;
+        /// True when the glyph is a mark, which the shaper keeps attached.
+        bool mark = false;
+    };
+
+    /// A glyph of a shaped run, in logical order and ready to place. This is
+    /// what line measurement and painting both walk, so the two always agree on
+    /// where a glyph lands.
+    struct PositionedGlyph
+    {
+        /// The face that draws the glyph, and its index in the registry's chain
+        /// (the rasterizer's cache key).
+        const FontFace* face = nullptr;
+        std::uint32_t faceIndex = 0;
+        /// The font's own glyph id, or 0 when the face has none (the stroke
+        /// font), in which case the code point identifies the glyph instead.
+        std::uint16_t glyphId = 0;
+        /// Source code point (the first one, for a ligature).
+        std::uint32_t codepoint = 0;
+        /// Byte offset in the source string of the glyph's first code point.
+        std::uint32_t byteStart = 0;
+        /// Pen advance in logical units.
+        float advance = 0.0f;
+        float xOffset = 0.0f;
+        float yOffset = 0.0f;
+        /// True when the glyph is a mark positioned on another glyph.
+        bool mark = false;
+    };
+
     /// One glyph of a face.
     struct Glyph
     {
         std::uint32_t codepoint = 0;
+        /// The font's own glyph id, for a face backed by a real font. Shaped
+        /// glyphs are addressed by this rather than by code point.
+        std::uint16_t glyphId = 0;
         /// Horizontal advance in font units.
         float advance = 0.0f;
         /// Bounds in font units, relative to the pen position on the baseline.
@@ -132,6 +185,82 @@ namespace RoboRenderer
         /// sbix). Reported so a caller can prefer a monochrome sibling when it
         /// wants outlines and only the colour face has them.
         virtual bool HasColorGlyphs() const { return false; }
+
+        /// One layer of a colour (COLR) glyph: another glyph painted in a
+        /// palette colour, composited in order.
+        struct ColorLayer
+        {
+            std::uint16_t glyphId = 0;
+            std::uint16_t paletteIndex = 0;
+        };
+
+        /// The COLR layers of a glyph. False when the glyph is a plain outline
+        /// or the face has no `COLR` table.
+        virtual bool ColorLayers(std::uint16_t glyphId, std::vector<ColorLayer>& out) const
+        {
+            (void)glyphId;
+            (void)out;
+            return false;
+        }
+
+        /// A `CPAL` entry, addressed by colour index within the first palette.
+        virtual bool PaletteEntry(std::uint16_t index, std::uint8_t& red, std::uint8_t& green,
+                                  std::uint8_t& blue, std::uint8_t& alpha) const
+        {
+            (void)index;
+            (void)red;
+            (void)green;
+            (void)blue;
+            (void)alpha;
+            return false;
+        }
+
+        /// The face's own embedded bitmap for a glyph (`CBDT`/`CBLC`), when it
+        /// ships one. `data` is the encoded image (usually PNG) and `bearingX`/
+        /// `bearingY` are in font pixels, y upwards.
+        virtual bool BitmapGlyph(std::uint16_t glyphId,
+                                 std::uint16_t preferPpem,
+                                 const std::uint8_t*& data,
+                                 std::uint32_t& length,
+                                 std::int32_t& bearingX,
+                                 std::int32_t& bearingY) const
+        {
+            (void)glyphId;
+            (void)preferPpem;
+            (void)data;
+            (void)length;
+            (void)bearingX;
+            (void)bearingY;
+            return false;
+        }
+
+        // --- shaping -------------------------------------------------------
+        //
+        // A face that carries OpenType Layout shapes a run itself; a face that
+        // does not (the stroke font, or a font with no `GSUB`/`GPOS`) reports
+        // false and the caller falls back to one glyph per code point.
+
+        /// Shapes `count` code points into positioned glyphs in font units.
+        /// Returns false when the face cannot shape the run.
+        virtual bool ShapeRun(const std::uint32_t* codepoints,
+                              std::size_t count,
+                              std::vector<ShapedGlyph>& glyphs) const
+        {
+            (void)codepoints;
+            (void)count;
+            (void)glyphs;
+            return false;
+        }
+
+        /// The glyph a shaped run asked for, addressed by the font's glyph id.
+        /// Returns nullptr for a face whose glyphs are only reachable by code
+        /// point (the built-in stroke font), in which case the code point is
+        /// used instead.
+        virtual const Glyph* FindGlyphById(std::uint16_t glyphId) const
+        {
+            (void)glyphId;
+            return nullptr;
+        }
     };
 
     /// The built-in stroke font. Single weight family, ASCII coverage, designed
@@ -210,6 +339,13 @@ namespace RoboRenderer
         /// Number of faces in the fallback chain.
         std::size_t FaceCount() const { return chain.size(); }
 
+        /// The face at a chain index, or nullptr when the index is out of range.
+        /// The inverse of `IndexOf`, used to resolve a shaped glyph's face.
+        const FontFace* FaceAt(std::uint32_t index) const
+        {
+            return index < chain.size() ? chain[index] : nullptr;
+        }
+
     private:
         void Load(const std::vector<std::string>& directories);
         void Build(std::vector<std::shared_ptr<FontFace>> loaded);
@@ -261,6 +397,12 @@ namespace RoboRenderer
         float advance = 0.0f;
         /// Index of the coverage data inside the cache's coverage storage.
         std::uint32_t firstCoverage = 0;
+        /// True when the bitmap carries its own RGBA colour (a colour glyph), in
+        /// which case `firstColor` addresses the colour storage and the coverage
+        /// storage is unused.
+        bool color = false;
+        /// Index of the colour data inside the cache's colour storage, in pixels.
+        std::uint32_t firstColor = 0;
         bool blank = true;
     };
 
@@ -271,6 +413,9 @@ namespace RoboRenderer
     {
         const GlyphBitmap* bitmap = nullptr;
         const std::uint8_t* coverage = nullptr;
+        /// RGBA pixels (straight alpha) for a colour glyph, or nullptr for a
+        /// coverage glyph. `bitmap->width * bitmap->height * 4` bytes.
+        const std::uint8_t* color = nullptr;
     };
 
     /// Rasterizes glyph outlines into coverage bitmaps and keeps them.
@@ -287,6 +432,12 @@ namespace RoboRenderer
         /// An empty result means the glyph cannot be drawn.
         RasterizedGlyph Get(std::uint32_t codepoint, float fontSize, FontWeightKind weight,
                             float deviceScale);
+
+        /// Rasterizes a shaped glyph, addressed by the face's chain index and
+        /// the font's glyph id. A ligature or a contextual form has no code
+        /// point to look up, so it is fetched by id instead.
+        RasterizedGlyph GetShaped(std::uint32_t faceIndex, std::uint16_t glyphId, float fontSize,
+                                  FontWeightKind weight, float deviceScale);
 
         std::size_t SizeBucketCount() const { return buckets.size(); }
         std::size_t RasterizedGlyphCount() const { return rasterizedGlyphs; }
@@ -306,17 +457,31 @@ namespace RoboRenderer
             FontWeightKind weight = FontWeightKind::Normal;
             std::uint32_t faceId = 0;
             std::vector<std::uint8_t> coverage;
-            std::unordered_map<std::uint32_t, GlyphBitmap> glyphs;
+            /// RGBA pixels of the colour glyphs in this bucket, 4 bytes each.
+            std::vector<std::uint8_t> colors;
+            /// Keyed by code point, or by `(1 << 32) | glyphId` for a shaped
+            /// glyph that has no code point of its own.
+            std::unordered_map<std::uint64_t, GlyphBitmap> glyphs;
         };
 
         SizeBucket& BucketFor(std::uint32_t faceId,
                               float fontSize,
                               FontWeightKind weight,
                               float deviceScale);
-        void Rasterize(SizeBucket& bucket, const FontFace& face, std::uint32_t codepoint);
+        void RasterizeGlyph(SizeBucket& bucket, const FontFace& face, const Glyph& glyph,
+                            std::uint64_t key);
+
+        /// Rasterizes a colour glyph: `COLR` layers composited in their palette
+        /// colours, or the face's own `CBDT` bitmap. Returns false when the
+        /// glyph carries no colour, and the caller falls back to the outline.
+        bool RasterizeColor(SizeBucket& bucket, const FontFace& face, const Glyph& glyph,
+                            float scale, std::uint64_t key);
 
         const FontRegistry& fonts;
-        std::vector<SizeBucket> buckets;
+        /// Buckets are held by pointer so a `GlyphBitmap*` handed out by `Get`
+        /// stays valid when a later size or face grows the cache. A plain
+        /// vector of buckets would move them on reallocation.
+        std::vector<std::unique_ptr<SizeBucket>> buckets;
         std::size_t rasterizedGlyphs = 0;
         std::size_t coverageBytes = 0;
     };
@@ -344,6 +509,17 @@ namespace RoboRenderer
         /// same per-glyph advances that line breaking used, so both read them
         /// from one place.
         float Advance(std::uint32_t codepoint, float fontSize, FontWeightKind weight) const;
+
+        /// Shapes a UTF-8 run into positioned glyphs in logical order, using the
+        /// covering face's OpenType Layout where it has one. This is the single
+        /// source of truth for advances: measurement, hit testing and painting
+        /// all walk the same glyphs, so they cannot disagree.
+        void ShapeRun(const char* text,
+                      std::uint32_t startByte,
+                      std::uint32_t endByte,
+                      float fontSize,
+                      FontWeightKind weight,
+                      std::vector<PositionedGlyph>& out) const;
 
         /// Horizontal advance of a tab stop: four spaces, the white-space model
         /// the HTML-only phase uses.

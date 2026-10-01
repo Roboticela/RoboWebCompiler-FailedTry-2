@@ -17,6 +17,7 @@
 // ---------------------------------------------------------------------------
 #include "RoboRenderer/FontFile.h"
 #include "RoboRenderer/Text.h"
+#include "RoboRenderer/Unicode.h"
 
 #include <algorithm>
 #include <cctype>
@@ -41,6 +42,16 @@ namespace RoboRenderer
             return value;
         }
 
+        /// A four-character OpenType tag, big-endian, as the layout engine
+        /// compares them.
+        constexpr std::uint32_t Tag4(char a, char b, char c, char d)
+        {
+            return (static_cast<std::uint32_t>(a) << 24) |
+                   (static_cast<std::uint32_t>(b) << 16) |
+                   (static_cast<std::uint32_t>(c) << 8) |
+                   static_cast<std::uint32_t>(d);
+        }
+
         /// A face backed by one parsed sfnt face. Outlines are pulled lazily: a
         /// document that never draws a glyph never parses its contour.
         class SfntFontFace final : public FontFace
@@ -62,6 +73,38 @@ namespace RoboRenderer
             int WeightClass() const override { return font->WeightClass(); }
             bool HasColorGlyphs() const override { return font->HasColorGlyphs(); }
             bool UsesOutlines() const override { return font->HasOutlines(); }
+
+            bool ColorLayers(std::uint16_t glyphId, std::vector<ColorLayer>& out) const override
+            {
+                std::vector<SfntFont::ColorLayer> layers;
+                if (!font->ColorLayers(glyphId, layers))
+                {
+                    return false;
+                }
+
+                out.clear();
+                for (const SfntFont::ColorLayer& layer : layers)
+                {
+                    ColorLayer entry;
+                    entry.glyphId = layer.glyph;
+                    entry.paletteIndex = layer.paletteIndex;
+                    out.push_back(entry);
+                }
+                return !out.empty();
+            }
+
+            bool PaletteEntry(std::uint16_t index, std::uint8_t& red, std::uint8_t& green,
+                              std::uint8_t& blue, std::uint8_t& alpha) const override
+            {
+                return font->PaletteColor(index, red, green, blue, alpha);
+            }
+
+            bool BitmapGlyph(std::uint16_t glyphId, std::uint16_t preferPpem, const std::uint8_t*& data,
+                             std::uint32_t& length, std::int32_t& bearingX,
+                             std::int32_t& bearingY) const override
+            {
+                return font->BitmapGlyph(glyphId, preferPpem, data, length, bearingX, bearingY);
+            }
 
             const ContourPoint* ContourPoints() const override
             {
@@ -97,6 +140,83 @@ namespace RoboRenderer
                 return &inserted.first->second;
             }
 
+            const Glyph* FindGlyphById(std::uint16_t glyphId) const override
+            {
+                if (glyphId == 0 || glyphId >= font->GlyphCount())
+                {
+                    return nullptr;
+                }
+
+                const auto found = glyphsById.find(glyphId);
+                if (found != glyphsById.end())
+                {
+                    return &found->second;
+                }
+
+                Glyph glyph = BuildGlyph(0, glyphId);
+                const auto inserted = glyphsById.emplace(glyphId, glyph);
+                return &inserted.first->second;
+            }
+
+            bool ShapeRun(const std::uint32_t* codepoints,
+                          std::size_t count,
+                          std::vector<ShapedGlyph>& out) const override
+            {
+                out.clear();
+
+                const OtLayout* layout = font->Layout();
+                if (layout == nullptr || count == 0)
+                {
+                    return false;
+                }
+
+                // The script of the run's first strong character chooses the
+                // script system. Latin text lands on `latn`; a font without the
+                // tag still shapes through its default script.
+                std::uint32_t scriptTag = 0;
+                for (std::size_t index = 0; index < count; ++index)
+                {
+                    const std::uint32_t tag =
+                        OtLayout::ScriptTagForName(ScriptName(ScriptOf(codepoints[index])));
+                    if (tag != 0 && layout->HasScript(tag))
+                    {
+                        scriptTag = tag;
+                        break;
+                    }
+                }
+
+                if (scriptTag == 0)
+                {
+                    if (layout->HasScript(Tag4('D', 'F', 'L', 'T')))
+                    {
+                        scriptTag = Tag4('D', 'F', 'L', 'T');
+                    }
+                    else if (layout->HasScript(Tag4('l', 'a', 't', 'n')))
+                    {
+                        scriptTag = Tag4('l', 'a', 't', 'n');
+                    }
+                }
+
+                if (scriptTag == 0)
+                {
+                    return false;
+                }
+
+                out.reserve(count);
+                for (std::size_t index = 0; index < count; ++index)
+                {
+                    ShapedGlyph glyph;
+                    glyph.codepoint = codepoints[index];
+                    glyph.glyph = font->GlyphIndex(codepoints[index]);
+                    glyph.cluster = static_cast<std::uint32_t>(index);
+                    glyph.xAdvance = font->Advance(glyph.glyph);
+                    out.push_back(glyph);
+                }
+
+                layout->Shape(scriptTag, out);
+                return true;
+            }
+
             const Glyph& MissingGlyph() const override
             {
                 if (!missingBuilt)
@@ -130,6 +250,7 @@ namespace RoboRenderer
             {
                 Glyph glyph;
                 glyph.codepoint = codepoint;
+                glyph.glyphId = glyphIndex;
                 glyph.advance = font->Advance(glyphIndex);
 
                 float x0 = 0.0f;
@@ -170,6 +291,7 @@ namespace RoboRenderer
             std::string family;
 
             mutable std::unordered_map<std::uint32_t, Glyph> glyphs;
+            mutable std::unordered_map<std::uint16_t, Glyph> glyphsById;
             mutable std::vector<ContourPoint> points;
             mutable std::vector<std::uint32_t> ends;
             mutable Glyph missing;
@@ -197,6 +319,26 @@ namespace RoboRenderer
             int WeightClass() const override { return 700; }
             bool HasColorGlyphs() const override { return base->HasColorGlyphs(); }
             bool UsesOutlines() const override { return base->UsesOutlines(); }
+
+            // Colour glyphs are not emboldened: their colours come from the
+            // palette, not a synthetic dilation of coverage.
+            bool ColorLayers(std::uint16_t glyphId, std::vector<ColorLayer>& out) const override
+            {
+                return base->ColorLayers(glyphId, out);
+            }
+
+            bool PaletteEntry(std::uint16_t index, std::uint8_t& red, std::uint8_t& green,
+                              std::uint8_t& blue, std::uint8_t& alpha) const override
+            {
+                return base->PaletteEntry(index, red, green, blue, alpha);
+            }
+
+            bool BitmapGlyph(std::uint16_t glyphId, std::uint16_t preferPpem, const std::uint8_t*& data,
+                             std::uint32_t& length, std::int32_t& bearingX,
+                             std::int32_t& bearingY) const override
+            {
+                return base->BitmapGlyph(glyphId, preferPpem, data, length, bearingX, bearingY);
+            }
             const ContourPoint* ContourPoints() const override { return base->ContourPoints(); }
             const std::uint32_t* ContourEnds() const override { return base->ContourEnds(); }
             const StrokePoint* Points() const override { return base->Points(); }
@@ -241,10 +383,53 @@ namespace RoboRenderer
                 return missing;
             }
 
+            const Glyph* FindGlyphById(std::uint16_t glyphId) const override
+            {
+                const Glyph* source = base->FindGlyphById(glyphId);
+                if (source == nullptr)
+                {
+                    return nullptr;
+                }
+
+                const auto found = glyphsById.find(glyphId);
+                if (found != glyphsById.end())
+                {
+                    return &found->second;
+                }
+
+                const float unit = base->UnitsPerEm() > 0.0f ? base->UnitsPerEm() : 1000.0f;
+
+                Glyph glyph = *source;
+                glyph.advance = source->advance * 1.035f;
+                glyph.embolden = unit * 0.020f;
+
+                const auto inserted = glyphsById.emplace(glyphId, glyph);
+                return &inserted.first->second;
+            }
+
+            bool ShapeRun(const std::uint32_t* codepoints,
+                          std::size_t count,
+                          std::vector<ShapedGlyph>& out) const override
+            {
+                if (!base->ShapeRun(codepoints, count, out))
+                {
+                    return false;
+                }
+
+                // The synthetic weight widens advances exactly as `FindGlyph`
+                // does, so measurement and painting stay in step.
+                for (ShapedGlyph& glyph : out)
+                {
+                    glyph.xAdvance *= 1.035f;
+                }
+                return true;
+            }
+
         private:
             std::shared_ptr<const FontFace> base;
             std::string family;
             mutable std::unordered_map<std::uint32_t, Glyph> glyphs;
+            mutable std::unordered_map<std::uint16_t, Glyph> glyphsById;
             mutable Glyph missing;
             mutable bool missingBuilt = false;
         };
@@ -783,14 +968,34 @@ namespace RoboRenderer
         }
         else
         {
+            const FontFace* firstCover = nullptr;
+            const FontFace* colorCover = nullptr;
+
             for (std::size_t index = 2; index < chain.size(); ++index)
             {
-                if (chain[index]->Covers(codepoint))
+                if (!chain[index]->Covers(codepoint))
                 {
-                    result = chain[index];
-                    break;
+                    continue;
+                }
+                if (firstCover == nullptr)
+                {
+                    firstCover = chain[index];
+                }
+                if (colorCover == nullptr && chain[index]->HasColorGlyphs())
+                {
+                    colorCover = chain[index];
                 }
             }
+
+            // An emoji code point is meant to be coloured, so a colour face that
+            // covers it wins over an earlier monochrome symbol face. Text-default
+            // symbols keep the chain order they had.
+            const bool preferColor =
+                IsEmojiPresentation(codepoint) || IsEmoji(codepoint);
+
+            result = (preferColor && colorCover != nullptr)
+                ? colorCover
+                : (firstCover != nullptr ? firstCover : primary);
         }
 
         resolveCache[key] = result;

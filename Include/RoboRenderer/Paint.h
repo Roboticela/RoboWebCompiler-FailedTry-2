@@ -96,6 +96,11 @@ namespace RoboRenderer
         float x = 0.0f;
         float y = 0.0f;
         std::uint32_t codepoint = 0;
+        /// The face's chain index and the font's glyph id, for a shaped glyph.
+        /// A glyph id of zero means the backend resolves the code point instead,
+        /// which is what the built-in stroke face and unshaped runs use.
+        std::uint32_t faceId = 0;
+        std::uint16_t glyphId = 0;
     };
 
     /// How a control paints itself in its current state. The painters below

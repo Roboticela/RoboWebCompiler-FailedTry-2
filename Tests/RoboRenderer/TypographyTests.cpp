@@ -12,9 +12,11 @@
 using namespace RoboTest;
 
 #include "RoboRenderer/Bidi.h"
+#include "RoboRenderer/FontFile.h"
 #include "RoboRenderer/Text.h"
 
 #include <cmath>
+#include <cstring>
 #include <string>
 #include <vector>
 
@@ -181,3 +183,239 @@ ROBO_TEST(Typography, RightToLeftTextPaintsIntoItsLineBox)
     // The run painted glyphs at run time rather than an empty box.
     ROBO_CHECK(window.renderer.Metrics().glyphCount > 0);
 }
+
+ROBO_TEST(Typography, ColourGlyphsCarryTheirOwnPixels)
+{
+    FontRegistry fonts;
+    const std::uint32_t emoji = 0x1F600;
+    const FontFace& face = fonts.FaceFor(emoji, FontWeightKind::Normal);
+
+    // A host with no colour font has nothing to assert: the emoji resolve to a
+    // monochrome face and are rasterized as outlines like any other glyph.
+    if (!face.HasColorGlyphs())
+    {
+        return;
+    }
+
+    // The covering face must be the colour one, not an earlier monochrome
+    // symbol face: an emoji code point asks to be coloured.
+    ROBO_CHECK(face.Covers(emoji));
+
+    const Glyph* glyph = face.FindGlyph(emoji);
+    ROBO_CHECK(glyph != nullptr);
+    if (glyph == nullptr)
+    {
+        return;
+    }
+
+    std::vector<FontFace::ColorLayer> layers;
+    const bool hasLayers = face.ColorLayers(glyph->glyphId, layers) && !layers.empty();
+
+    GlyphCache cache(fonts);
+    const RasterizedGlyph rasterized = cache.Get(emoji, 32.0f, FontWeightKind::Normal, 1.0f);
+    ROBO_CHECK(rasterized.bitmap != nullptr);
+
+    if (rasterized.bitmap == nullptr)
+    {
+        return;
+    }
+
+    // A glyph the face reports colour layers for rasterizes to colour pixels, and
+    // at least one of them is actually painted.
+    if (hasLayers)
+    {
+        ROBO_CHECK(rasterized.bitmap->color);
+        ROBO_CHECK(rasterized.color != nullptr);
+
+        std::size_t opaque = 0;
+        if (rasterized.color != nullptr)
+        {
+            const std::size_t pixels =
+                static_cast<std::size_t>(rasterized.bitmap->width) * rasterized.bitmap->height;
+            for (std::size_t pixel = 0; pixel < pixels; ++pixel)
+            {
+                if (rasterized.color[pixel * 4 + 3] > 8)
+                {
+                    ++opaque;
+                }
+            }
+        }
+        ROBO_CHECK(opaque > 0);
+    }
+}
+
+ROBO_TEST(Typography, EmojiPaintInColourEndToEnd)
+{
+    FontRegistry fonts;
+    if (!fonts.FaceFor(0x1F600, FontWeightKind::Normal).HasColorGlyphs())
+    {
+        return;
+    }
+
+    RoboTools::CompiledApplication application;
+    std::string error;
+    std::vector<std::pair<std::string, std::string>> sheets = {
+        { "app.css", ".big { font-size: 64px; color: #000000; }\n.page { background-color: #ffffff; }\n" }
+    };
+
+    // The emoji is written as its UTF-8 bytes, which is what a document really
+    // carries.
+    ROBO_CHECK(CompileBodyWithSources("<p class=\"big\" id=\"e\">\xF0\x9F\x98\x80</p>", application,
+                                      sheets, error));
+
+    TestRenderer window(application.Document(), 200.0f, 200.0f);
+    ROBO_CHECK(window.Frame());
+
+    const Image& framebuffer = window.backend.Framebuffer();
+    std::size_t ink = 0;
+    std::size_t colored = 0;
+
+    for (std::uint32_t y = 0; y < framebuffer.height; ++y)
+    {
+        for (std::uint32_t x = 0; x < framebuffer.width; ++x)
+        {
+            const Color pixel = window.Pixel(x, y);
+            if (pixel.red < 250 || pixel.green < 250 || pixel.blue < 250)
+            {
+                ++ink;
+                const int red = pixel.red;
+                const int green = pixel.green;
+                const int blue = pixel.blue;
+                const int high = std::max(red, std::max(green, blue));
+                const int low = std::min(red, std::min(green, blue));
+                if (high - low >= 8)
+                {
+                    ++colored;
+                }
+            }
+        }
+    }
+
+    // The emoji painted ink, and that ink carried colour. A monochrome raster
+    // would fail the second check, which is the whole point of the colour path.
+    ROBO_CHECK(ink > 0);
+    ROBO_CHECK(colored > 0);
+}
+
+ROBO_TEST(Typography, TheBundledFaceCarriesRealLayoutTables)
+{
+    const std::string path = std::string(ROBO_TEST_SOURCE_DIR) + "/Fonts/Inter/InterVariable.ttf";
+    std::unique_ptr<SfntFont> font = SfntFont::LoadFile(path);
+
+    // A checkout without the bundled OFL face still builds and runs; it simply
+    // has nothing to assert about Inter's tables.
+    if (!font)
+    {
+        return;
+    }
+
+    ROBO_CHECK(font->HasLayoutTables());
+
+    const OtLayout* layout = font->Layout();
+    ROBO_CHECK(layout != nullptr);
+
+    if (layout != nullptr)
+    {
+        // A real text face carries both substitution and positioning.
+        ROBO_CHECK(layout->HasSubstitution());
+        ROBO_CHECK(layout->HasPositioning());
+        ROBO_CHECK(layout->HasScript(OtLayout::ScriptTagForName("Latin")));
+    }
+
+    // A Latin script tag resolves, and a name with no OpenType system does not.
+    ROBO_CHECK_EQ(OtLayout::ScriptTagForName("latin"), 0x6C61746Eu); // 'latn'
+    ROBO_CHECK_EQ(OtLayout::ScriptTagForName("not a script"), 0u);
+}
+
+ROBO_TEST(Typography, ShapingIsTheSingleSourceOfAdvances)
+{
+    FontRegistry fonts;
+    TextLayout layout(fonts);
+
+    const char* text = "Hello, typography";
+    std::vector<PositionedGlyph> glyphs;
+    layout.ShapeRun(text, 0, static_cast<std::uint32_t>(std::strlen(text)), 16.0f,
+                    FontWeightKind::Normal, glyphs);
+
+    ROBO_CHECK(!glyphs.empty());
+
+    float sum = 0.0f;
+    for (const PositionedGlyph& glyph : glyphs)
+    {
+        ROBO_CHECK(glyph.face != nullptr);
+        ROBO_CHECK(glyph.advance > 0.0f);
+        ROBO_CHECK(glyph.byteStart < std::strlen(text));
+        sum += glyph.advance;
+    }
+
+    // Measurement is exactly the sum of the shaped advances: line breaking and
+    // painting cannot disagree about where a glyph lands.
+    ROBO_CHECK(std::fabs(sum - layout.Measure(text, 16.0f, FontWeightKind::Normal)) < 0.001f);
+}
+
+ROBO_TEST(Typography, KerningNeverWidensAndUsuallyTightens)
+{
+    FontRegistry fonts;
+    TextLayout layout(fonts);
+
+    const char* pairs[] = { "AV", "AW", "To", "Yo", "WA", "Fi", "Pa" };
+    bool tightened = false;
+
+    for (const char* pair : pairs)
+    {
+        const std::string left(1, pair[0]);
+        const std::string right(1, pair[1]);
+
+        const float together = layout.Measure(pair, 48.0f, FontWeightKind::Normal);
+        const float apart = layout.Measure(left.c_str(), 48.0f, FontWeightKind::Normal) +
+                            layout.Measure(right.c_str(), 48.0f, FontWeightKind::Normal);
+
+        // A kern pair can only bring glyphs closer, never push them apart.
+        ROBO_CHECK(together <= apart + 0.01f);
+        if (together < apart - 0.05f)
+        {
+            tightened = true;
+        }
+    }
+
+    // At least one pair in the set is kerned in every real text face; a face
+    // with no `GPOS` would leave them all apart, which is the signal that
+    // shaping never ran.
+    ROBO_CHECK(tightened);
+}
+
+ROBO_TEST(Typography, AVariableFaceInstantiatesItsAxes)
+{
+    const std::string path = std::string(ROBO_TEST_SOURCE_DIR) + "/Fonts/Inter/InterVariable.ttf";
+    std::unique_ptr<SfntFont> font = SfntFont::LoadFile(path);
+    if (!font)
+    {
+        return;
+    }
+
+    ROBO_CHECK(font->IsVariable());
+    ROBO_CHECK(!font->Axes().empty());
+
+    // Inter's variable file exposes a weight axis.
+    bool hasWeight = false;
+    for (const SfntFont::VariationAxis& axis : font->Axes())
+    {
+        if (axis.tag == 0x77676874u) // 'wght'
+        {
+            hasWeight = true;
+        }
+    }
+    ROBO_CHECK(hasWeight);
+
+    const std::uint16_t glyph = font->GlyphIndex('A');
+    ROBO_CHECK(glyph != 0);
+
+    const float regular = font->Advance(glyph);
+    font->SetInstance({ 900.0f });
+    ROBO_CHECK(font->HasInstance());
+    const float black = font->Advance(glyph);
+
+    // A heavier instance never has a narrower 'A'.
+    ROBO_CHECK(black >= regular);
+}
+

@@ -16,6 +16,7 @@ set(RoboTestSources
     "${CMAKE_CURRENT_SOURCE_DIR}/RoboRenderer/RuntimeContractTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/RoboRenderer/StyleAndTextTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/RoboRenderer/TypographyTests.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/RoboRenderer/UnicodeTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/RoboRenderer/VisualTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/HTML/HtmlElementCoverageTests.cpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Integration/CompilationTests.cpp"

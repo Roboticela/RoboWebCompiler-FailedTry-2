@@ -563,9 +563,10 @@ applications). `ctest` also registers `RoboHTMLCompilerExample`, which compiles
 `Examples/BasicApp`.
 
 Runtime suites: `RuntimeContract` (the compiler→renderer seam), `Style`, `Text`,
-`Typography` (font loading, per-code-point fallback, bidi, Arabic joining,
-cluster-aware breaking), `Layout`, `Paint`, `Backend`, `Images`, `Input`,
-`Resources` and `Visual` (rendered frames compared against recorded references).
+`Unicode`, `Typography` (font loading, OpenType shaping via `GSUB`/`GPOS`,
+per-code-point fallback, colour emoji, variable instancing, bidi, cluster-aware
+breaking), `Layout`, `Paint`, `Backend`, `Images`, `Input`, `Resources` and
+`Visual` (rendered frames compared against recorded references).
 The generated-UI suite runs the renderer against compiled data the compiler
 emitted, not only against data a test built in memory.
 

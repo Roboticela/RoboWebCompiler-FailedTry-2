@@ -1,5 +1,6 @@
 #include "RoboRenderer/Text.h"
 #include "RoboRenderer/Bidi.h"
+#include "RoboRenderer/Image.h"
 
 #include <algorithm>
 #include <cmath>
@@ -614,6 +615,124 @@ namespace RoboRenderer
     {
     }
 
+    void TextLayout::ShapeRun(const char* text,
+                              std::uint32_t startByte,
+                              std::uint32_t endByte,
+                              float fontSize,
+                              FontWeightKind weight,
+                              std::vector<PositionedGlyph>& out) const
+    {
+        out.clear();
+
+        if (text == nullptr || fontSize <= 0.0f || startByte >= endByte)
+        {
+            return;
+        }
+
+        // Decode the run once, remembering each code point's byte offset and
+        // which face in the fallback chain covers it. Runs are grouped by face
+        // so a mixed-script string is shaped by each face in turn.
+        std::vector<std::uint32_t> codepoints;
+        std::vector<std::uint32_t> byteOffsets;
+        std::vector<const FontFace*> faces;
+
+        std::uint32_t offset = startByte;
+        while (text[offset] != '\0' && offset < endByte)
+        {
+            const std::uint32_t start = offset;
+            const std::uint32_t codepoint = DecodeUtf8(text, offset);
+
+            // Line breaks carry no advance; the caller has already split lines.
+            if (codepoint == '\r' || codepoint == '\n')
+            {
+                continue;
+            }
+
+            codepoints.push_back(codepoint);
+            byteOffsets.push_back(start);
+            faces.push_back(&registry.FaceFor(codepoint, weight));
+        }
+
+        const std::size_t count = codepoints.size();
+        std::size_t index = 0;
+
+        while (index < count)
+        {
+            const FontFace* face = faces[index];
+            const std::uint32_t faceIndex = registry.IndexOf(*face);
+
+            // A tab is a fixed four-space stop, not a shaped glyph.
+            if (codepoints[index] == '\t')
+            {
+                PositionedGlyph glyph;
+                glyph.face = face;
+                glyph.faceIndex = faceIndex;
+                glyph.codepoint = '\t';
+                glyph.byteStart = byteOffsets[index];
+                glyph.advance = TabAdvance(fontSize, weight);
+                out.push_back(glyph);
+                ++index;
+                continue;
+            }
+
+            // Extend the run while the same face keeps covering it.
+            std::size_t runEnd = index;
+            while (runEnd < count && faces[runEnd] == face && codepoints[runEnd] != '\t')
+            {
+                ++runEnd;
+            }
+
+            const float scale = fontSize / (face->UnitsPerEm() > 0.0f ? face->UnitsPerEm() : 1000.0f);
+
+            std::vector<ShapedGlyph> shaped;
+            if (face->ShapeRun(codepoints.data() + index, runEnd - index, shaped) && !shaped.empty())
+            {
+                for (const ShapedGlyph& glyph : shaped)
+                {
+                    const std::size_t local = std::min<std::size_t>(
+                        static_cast<std::size_t>(glyph.cluster), runEnd - index - 1);
+                    const std::size_t source = index + local;
+
+                    PositionedGlyph positioned;
+                    positioned.face = face;
+                    positioned.faceIndex = faceIndex;
+                    positioned.glyphId = glyph.glyph;
+                    positioned.codepoint = codepoints[source];
+                    positioned.byteStart = byteOffsets[source];
+                    positioned.advance = glyph.xAdvance * scale;
+                    positioned.xOffset = glyph.xOffset * scale;
+                    positioned.yOffset = glyph.yOffset * scale;
+                    positioned.mark = glyph.mark;
+                    out.push_back(positioned);
+                }
+            }
+            else
+            {
+                // No layout tables, or the face cannot shape: one glyph per
+                // code point, which is exactly what the font's `cmap` says.
+                for (std::size_t position = index; position < runEnd; ++position)
+                {
+                    const Glyph* glyph = face->FindGlyph(codepoints[position]);
+                    if (glyph == nullptr)
+                    {
+                        glyph = &face->MissingGlyph();
+                    }
+
+                    PositionedGlyph positioned;
+                    positioned.face = face;
+                    positioned.faceIndex = faceIndex;
+                    positioned.glyphId = glyph->glyphId;
+                    positioned.codepoint = codepoints[position];
+                    positioned.byteStart = byteOffsets[position];
+                    positioned.advance = glyph->advance * scale;
+                    out.push_back(positioned);
+                }
+            }
+
+            index = runEnd;
+        }
+    }
+
     float TextLayout::Measure(const char* text, float fontSize, FontWeightKind weight) const
     {
         if (text == nullptr || text[0] == '\0')
@@ -621,29 +740,19 @@ namespace RoboRenderer
             return 0.0f;
         }
 
-        float width = 0.0f;
-        std::uint32_t offset = 0;
-
-        while (text[offset] != '\0')
+        std::uint32_t length = 0;
+        while (text[length] != '\0')
         {
-            const std::uint32_t codepoint = DecodeUtf8(text, offset);
+            ++length;
+        }
 
-            if (codepoint == '\n')
-            {
-                // A hard break contributes no advance; the caller splits lines.
-                continue;
-            }
+        std::vector<PositionedGlyph> glyphs;
+        ShapeRun(text, 0, length, fontSize, weight, glyphs);
 
-            const FontFace& face = registry.FaceFor(codepoint, weight);
-            const float scale = fontSize / face.UnitsPerEm();
-
-            const Glyph* glyph = face.FindGlyph(codepoint);
-            if (glyph == nullptr)
-            {
-                glyph = &face.MissingGlyph();
-            }
-
-            width += glyph->advance * scale;
+        float width = 0.0f;
+        for (const PositionedGlyph& glyph : glyphs)
+        {
+            width += glyph.advance;
         }
 
         return width;
@@ -659,27 +768,30 @@ namespace RoboRenderer
             return 0.0f;
         }
 
-        float width = 0.0f;
-        std::uint32_t offset = 0;
-
-        while (text[offset] != '\0' && offset < byteCount)
+        std::uint32_t length = 0;
+        while (text[length] != '\0')
         {
-            const std::uint32_t codepoint = DecodeUtf8(text, offset);
-            if (codepoint == '\n')
+            ++length;
+        }
+
+        if (byteCount > length)
+        {
+            byteCount = length;
+        }
+
+        std::vector<PositionedGlyph> glyphs;
+        ShapeRun(text, 0, length, fontSize, weight, glyphs);
+
+        float width = 0.0f;
+        for (const PositionedGlyph& glyph : glyphs)
+        {
+            // A glyph belongs to the prefix when it starts inside it. A ligature
+            // whose last code point straddles the edge counts whole, which keeps
+            // the arithmetic monotonic.
+            if (glyph.byteStart < byteCount)
             {
-                continue;
+                width += glyph.advance;
             }
-
-            const FontFace& face = registry.FaceFor(codepoint, weight);
-            const float scale = fontSize / face.UnitsPerEm();
-
-            const Glyph* glyph = face.FindGlyph(codepoint);
-            if (glyph == nullptr)
-            {
-                glyph = &face.MissingGlyph();
-            }
-
-            width += glyph->advance * scale;
         }
 
         return width;
@@ -891,34 +1003,258 @@ namespace RoboRenderer
         const float deviceSize = fontSize * deviceScale;
         const std::uint32_t sizeKey = static_cast<std::uint32_t>(deviceSize * 4.0f + 0.5f);
 
-        for (SizeBucket& bucket : buckets)
+        for (const std::unique_ptr<SizeBucket>& existing : buckets)
         {
-            if (bucket.sizeKey == sizeKey && bucket.weight == weight && bucket.faceId == faceId)
+            if (existing->sizeKey == sizeKey && existing->weight == weight &&
+                existing->faceId == faceId)
             {
-                return bucket;
+                return *existing;
             }
         }
 
-        SizeBucket bucket;
-        bucket.sizeKey = sizeKey;
-        bucket.weight = weight;
-        bucket.faceId = faceId;
+        auto bucket = std::make_unique<SizeBucket>();
+        bucket->sizeKey = sizeKey;
+        bucket->weight = weight;
+        bucket->faceId = faceId;
 
+        SizeBucket& result = *bucket;
         buckets.push_back(std::move(bucket));
-        return buckets.back();
+        return result;
     }
 
-    void GlyphCache::Rasterize(SizeBucket& bucket, const FontFace& face, std::uint32_t codepoint)
+    bool GlyphCache::RasterizeColor(SizeBucket& bucket, const FontFace& face, const Glyph& glyph,
+                                    float scale, std::uint64_t key)
     {
-        const Glyph* glyph = face.FindGlyph(codepoint);
-        if (glyph == nullptr)
+        if (glyph.glyphId == 0 || !face.HasColorGlyphs())
         {
-            glyph = &face.MissingGlyph();
+            return false;
         }
+
+        // A COLR glyph paints as a stack of other glyphs, each in a palette
+        // colour. The base glyph usually has no outline of its own, so the
+        // extent comes from the union of the layers.
+        std::vector<FontFace::ColorLayer> layers;
+        if (face.ColorLayers(glyph.glyphId, layers) && !layers.empty())
+        {
+            std::vector<const Glyph*> layerGlyphs;
+            layerGlyphs.reserve(layers.size());
+
+            bool anyInk = false;
+            float x0 = 0.0f;
+            float y0 = 0.0f;
+            float x1 = 0.0f;
+            float y1 = 0.0f;
+
+            for (const FontFace::ColorLayer& layer : layers)
+            {
+                const Glyph* layerGlyph = face.FindGlyphById(layer.glyphId);
+                layerGlyphs.push_back(layerGlyph);
+
+                if (layerGlyph == nullptr || !layerGlyph->hasInk)
+                {
+                    continue;
+                }
+
+                if (!anyInk)
+                {
+                    x0 = layerGlyph->x0;
+                    y0 = layerGlyph->y0;
+                    x1 = layerGlyph->x1;
+                    y1 = layerGlyph->y1;
+                    anyInk = true;
+                }
+                else
+                {
+                    x0 = std::min(x0, layerGlyph->x0);
+                    y0 = std::min(y0, layerGlyph->y0);
+                    x1 = std::max(x1, layerGlyph->x1);
+                    y1 = std::max(y1, layerGlyph->y1);
+                }
+            }
+
+            if (!anyInk)
+            {
+                return false;
+            }
+
+            const float pad = 1.0f;
+            const int originX = static_cast<int>(std::floor(x0 * scale - pad));
+            const int originY = static_cast<int>(std::floor(-(y1 * scale + pad)));
+            const int width = static_cast<int>(std::ceil(x1 * scale + pad)) - originX;
+            const int height = static_cast<int>(std::ceil(-(y0 * scale - pad))) - originY;
+
+            if (width <= 0 || height <= 0 || width >= 4096 || height >= 4096)
+            {
+                return false;
+            }
+
+            const std::size_t pixels = static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
+            const std::size_t colorStart = bucket.colors.size();
+            bucket.colors.resize(colorStart + pixels * 4, 0);
+            std::uint8_t* target = bucket.colors.data() + colorStart;
+
+            std::vector<std::uint8_t> layerCoverage(pixels, 0);
+
+            for (std::size_t index = 0; index < layers.size(); ++index)
+            {
+                const Glyph* layerGlyph = layerGlyphs[index];
+                if (layerGlyph == nullptr || !layerGlyph->hasInk)
+                {
+                    continue;
+                }
+
+                std::fill(layerCoverage.begin(), layerCoverage.end(), 0);
+
+                std::vector<std::vector<Vec2>> polygons;
+                FlattenGlyph(face, *layerGlyph, scale, static_cast<float>(originX),
+                             static_cast<float>(originY), polygons);
+                FillPolygons(polygons, layerCoverage.data(), width, height);
+
+                std::uint8_t red = 0;
+                std::uint8_t green = 0;
+                std::uint8_t blue = 0;
+                std::uint8_t alpha = 0;
+
+                // A palette index the face does not have paints nothing, rather
+                // than an invented black.
+                if (!face.PaletteEntry(layers[index].paletteIndex, red, green, blue, alpha) ||
+                    alpha == 0)
+                {
+                    continue;
+                }
+
+                for (std::size_t pixel = 0; pixel < pixels; ++pixel)
+                {
+                    const std::uint32_t coverage = layerCoverage[pixel];
+                    if (coverage == 0)
+                    {
+                        continue;
+                    }
+
+                    const std::uint32_t sourceAlpha = (coverage * alpha) / 255u;
+                    const std::uint32_t inverse = 255u - sourceAlpha;
+                    std::uint8_t* destination = target + pixel * 4;
+
+                    destination[0] = static_cast<std::uint8_t>((red * sourceAlpha + destination[0] * inverse) / 255u);
+                    destination[1] = static_cast<std::uint8_t>((green * sourceAlpha + destination[1] * inverse) / 255u);
+                    destination[2] = static_cast<std::uint8_t>((blue * sourceAlpha + destination[2] * inverse) / 255u);
+                    destination[3] = static_cast<std::uint8_t>(sourceAlpha + (destination[3] * inverse) / 255u);
+                }
+            }
+
+            GlyphBitmap bitmap;
+            bitmap.advance = glyph.advance * scale;
+            bitmap.width = static_cast<std::uint32_t>(width);
+            bitmap.height = static_cast<std::uint32_t>(height);
+            bitmap.bearingX = static_cast<float>(originX);
+            bitmap.bearingY = static_cast<float>(originY);
+            bitmap.blank = false;
+            bitmap.color = true;
+            bitmap.firstColor = static_cast<std::uint32_t>(colorStart);
+            bucket.glyphs[key] = bitmap;
+            return true;
+        }
+
+        // An embedded bitmap (`CBDT`): the face ships the pixels, usually PNG.
+        const std::uint8_t* data = nullptr;
+        std::uint32_t length = 0;
+        std::int32_t bearingX = 0;
+        std::int32_t bearingY = 0;
+        const std::uint16_t ppem = static_cast<std::uint16_t>(
+            std::max(1.0f, std::round(static_cast<float>(bucket.sizeKey) * 0.25f)));
+
+        if (!face.BitmapGlyph(glyph.glyphId, ppem, data, length, bearingX, bearingY) || data == nullptr ||
+            length == 0)
+        {
+            return false;
+        }
+
+        Image image;
+        const ImageDecodeResult decoded = DecodeImage(data, length, image);
+        if (!decoded.success || image.width == 0 || image.height == 0)
+        {
+            return false;
+        }
+
+        const std::size_t pixels = static_cast<std::size_t>(image.width) * static_cast<std::size_t>(image.height);
+        const std::size_t colorStart = bucket.colors.size();
+        bucket.colors.resize(colorStart + pixels * 4, 0);
+        std::uint8_t* target = bucket.colors.data() + colorStart;
+
+        // Normalise whatever the decoder produced to straight RGBA.
+        for (std::size_t pixel = 0; pixel < pixels; ++pixel)
+        {
+            const std::uint8_t* source = image.pixels.data() + pixel * image.BytesPerPixel();
+            std::uint8_t red = 0;
+            std::uint8_t green = 0;
+            std::uint8_t blue = 0;
+            std::uint8_t alpha = 255;
+
+            switch (image.format)
+            {
+            case PixelFormat::Bgra8:
+                blue = source[0];
+                green = source[1];
+                red = source[2];
+                alpha = source[3];
+                break;
+            case PixelFormat::Gray8:
+                red = green = blue = source[0];
+                break;
+            case PixelFormat::Rgba8Premultiplied:
+                alpha = source[3];
+                if (alpha != 0)
+                {
+                    red = static_cast<std::uint8_t>(std::min(255u, source[0] * 255u / alpha));
+                    green = static_cast<std::uint8_t>(std::min(255u, source[1] * 255u / alpha));
+                    blue = static_cast<std::uint8_t>(std::min(255u, source[2] * 255u / alpha));
+                }
+                break;
+            case PixelFormat::Rgba8:
+            default:
+                red = source[0];
+                green = source[1];
+                blue = source[2];
+                alpha = source[3];
+                break;
+            }
+
+            target[pixel * 4 + 0] = red;
+            target[pixel * 4 + 1] = green;
+            target[pixel * 4 + 2] = blue;
+            target[pixel * 4 + 3] = alpha;
+        }
+
+        GlyphBitmap bitmap;
+        bitmap.advance = glyph.advance * scale;
+        bitmap.width = image.width;
+        bitmap.height = image.height;
+        bitmap.bearingX = static_cast<float>(bearingX);
+        // CBDT bearings are y upwards; the bitmap top sits above the baseline.
+        bitmap.bearingY = static_cast<float>(-bearingY);
+        bitmap.blank = false;
+        bitmap.color = true;
+        bitmap.firstColor = static_cast<std::uint32_t>(colorStart);
+        bucket.glyphs[key] = bitmap;
+        return true;
+    }
+
+    void GlyphCache::RasterizeGlyph(SizeBucket& bucket, const FontFace& face, const Glyph& sourceGlyph,
+                                    std::uint64_t key)
+    {
+        const Glyph& glyphValue = sourceGlyph;
+        const Glyph* glyph = &glyphValue;
 
         const float deviceSize = static_cast<float>(bucket.sizeKey) * 0.25f;
         const float unitsPerEm = face.UnitsPerEm() > 0.0f ? face.UnitsPerEm() : 1000.0f;
         const float scale = deviceSize / unitsPerEm;
+
+        // A colour glyph carries its own pixels; try that before any outline.
+        if (RasterizeColor(bucket, face, *glyph, scale, key))
+        {
+            ++rasterizedGlyphs;
+            return;
+        }
 
         GlyphBitmap bitmap;
         bitmap.advance = glyph->advance * scale;
@@ -927,7 +1263,7 @@ namespace RoboRenderer
         {
             // A space, or a glyph whose outline the face does not carry: it has
             // an advance and no coverage, which is exactly what blank means.
-            bucket.glyphs[codepoint] = bitmap;
+            bucket.glyphs[key] = bitmap;
             ++rasterizedGlyphs;
             return;
         }
@@ -947,7 +1283,7 @@ namespace RoboRenderer
 
         if (width <= 0 || height <= 0 || width >= 4096 || height >= 4096)
         {
-            bucket.glyphs[codepoint] = bitmap;
+            bucket.glyphs[key] = bitmap;
             ++rasterizedGlyphs;
             return;
         }
@@ -984,7 +1320,7 @@ namespace RoboRenderer
                              deviceSize, coverage);
         }
 
-        bucket.glyphs[codepoint] = bitmap;
+        bucket.glyphs[key] = bitmap;
         ++rasterizedGlyphs;
     }
 
@@ -1002,20 +1338,22 @@ namespace RoboRenderer
 
         // A code point no face in the chain maps has no coverage: the caller
         // paints nothing for it rather than an invented box.
-        if (face.FindGlyph(codepoint) == nullptr)
+        const Glyph* glyph = face.FindGlyph(codepoint);
+        if (glyph == nullptr)
         {
             return result;
         }
 
         const std::uint32_t faceId = fonts.IndexOf(face);
         SizeBucket& bucket = BucketFor(faceId, fontSize, weight, deviceScale);
+        const std::uint64_t key = codepoint;
 
-        if (bucket.glyphs.find(codepoint) == bucket.glyphs.end())
+        if (bucket.glyphs.find(key) == bucket.glyphs.end())
         {
-            Rasterize(bucket, face, codepoint);
+            RasterizeGlyph(bucket, face, *glyph, key);
         }
 
-        const auto found = bucket.glyphs.find(codepoint);
+        const auto found = bucket.glyphs.find(key);
         if (found == bucket.glyphs.end())
         {
             return result;
@@ -1023,7 +1361,60 @@ namespace RoboRenderer
 
         const GlyphBitmap& bitmap = found->second;
         result.bitmap = &bitmap;
-        result.coverage = bitmap.blank ? nullptr : bucket.coverage.data() + bitmap.firstCoverage;
+        result.coverage =
+            bitmap.blank || bitmap.color ? nullptr : bucket.coverage.data() + bitmap.firstCoverage;
+        result.color =
+            bitmap.color ? bucket.colors.data() + static_cast<std::size_t>(bitmap.firstColor) * 4
+                         : nullptr;
+        return result;
+    }
+
+    RasterizedGlyph GlyphCache::GetShaped(std::uint32_t faceIndex,
+                                         std::uint16_t glyphId,
+                                         float fontSize,
+                                         FontWeightKind weight,
+                                         float deviceScale)
+    {
+        RasterizedGlyph result;
+
+        if (fontSize <= 0.0f)
+        {
+            return result;
+        }
+
+        const FontFace* face = fonts.FaceAt(faceIndex);
+        if (face == nullptr)
+        {
+            return result;
+        }
+
+        const Glyph* glyph = face->FindGlyphById(glyphId);
+        if (glyph == nullptr)
+        {
+            return result;
+        }
+
+        SizeBucket& bucket = BucketFor(faceIndex, fontSize, weight, deviceScale);
+        const std::uint64_t key = (1ull << 32) | glyphId;
+
+        if (bucket.glyphs.find(key) == bucket.glyphs.end())
+        {
+            RasterizeGlyph(bucket, *face, *glyph, key);
+        }
+
+        const auto found = bucket.glyphs.find(key);
+        if (found == bucket.glyphs.end())
+        {
+            return result;
+        }
+
+        const GlyphBitmap& bitmap = found->second;
+        result.bitmap = &bitmap;
+        result.coverage =
+            bitmap.blank || bitmap.color ? nullptr : bucket.coverage.data() + bitmap.firstCoverage;
+        result.color =
+            bitmap.color ? bucket.colors.data() + static_cast<std::size_t>(bitmap.firstColor) * 4
+                         : nullptr;
         return result;
     }
 
@@ -1037,37 +1428,43 @@ namespace RoboRenderer
             return 0;
         }
 
-        float x = 0.0f;
-        std::uint32_t offset = 0;
-        std::uint32_t best = 0;
-        float bestDistance = std::fabs(localX);
-
-        while (text[offset] != '\0')
+        // Before the first glyph is always the start of the string.
+        if (localX <= 0.0f)
         {
-            const std::uint32_t codepointStart = offset;
-            const std::uint32_t codepoint = DecodeUtf8(text, offset);
+            return 0;
+        }
 
-            const float distance = std::fabs(localX - x);
-            if (distance < bestDistance)
+        std::uint32_t length = 0;
+        while (text[length] != '\0')
+        {
+            ++length;
+        }
+
+        std::vector<PositionedGlyph> glyphs;
+        ShapeRun(text, 0, length, fontSize, weight, glyphs);
+
+        float x = 0.0f;
+        std::uint32_t best = 0;
+        float bestDistance = localX; // distance to the string's start
+
+        for (std::size_t index = 0; index < glyphs.size(); ++index)
+        {
+            const float startDistance = std::fabs(localX - x);
+            if (startDistance < bestDistance)
             {
-                bestDistance = distance;
-                best = codepointStart;
+                bestDistance = startDistance;
+                best = glyphs[index].byteStart;
             }
 
-            const FontFace& face = registry.FaceFor(codepoint, weight);
-            const Glyph* glyph = face.FindGlyph(codepoint);
-            if (glyph == nullptr)
-            {
-                glyph = &face.MissingGlyph();
-            }
+            x += glyphs[index].advance;
 
-            x += glyph->advance * (fontSize / face.UnitsPerEm());
-
+            const std::uint32_t endByte =
+                (index + 1 < glyphs.size()) ? glyphs[index + 1].byteStart : length;
             const float endDistance = std::fabs(localX - x);
             if (endDistance < bestDistance)
             {
                 bestDistance = endDistance;
-                best = offset;
+                best = endByte;
             }
         }
 

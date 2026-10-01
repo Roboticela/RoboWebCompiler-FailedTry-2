@@ -12,10 +12,11 @@
             <h1>Typography Showcase</h1>
             <p class="lede">
                 One document, every writing system. The runtime resolves each code point
-                through Inter and then a fallback chain, measures and breaks real text, and
-                paints filled glyph outlines it rasterizes itself.
+                through Inter and then a fallback chain, shapes the run with the face's own
+                OpenType Layout, breaks real text, and paints filled glyph outlines and colour
+                glyphs it rasterizes itself.
             </p>
-            <p class="meta">Default family: Inter · Fallbacks: system faces · Colour: glyph coverage</p>
+            <p class="meta">Default family: Inter · Shaping: GSUB/GPOS · Colour: COLR/CPAL and CBDT · Fallbacks: system faces</p>
         </header>
 
         <section class="block">
@@ -31,6 +32,14 @@
             <p class="sample">Čeština: Příliš žluťoučký kůň úpěl ďábelské ódy.</p>
             <p class="sample">Svenska: Flygande bäckasiner söka hwila på mjuka tuvor.</p>
             <p class="sample">Türkçe: Pijamalı hasta yağız şoföre çabucak güvendi.</p>
+        </section>
+
+        <section class="block">
+            <h2>Shaping: ligatures, kerning and contextual forms</h2>
+            <p class="sample">Ligatures: fi fl ff ffi ffl st — the face fuses them where it can.</p>
+            <p class="sample">Kerning pairs: AV AW To Yo Wa VA LT — GPOS tightens them, never widens.</p>
+            <p class="sample">Numbers and currency: 1234567890 $1,234.56 €99 £42 ¥500</p>
+            <p class="sample">Fractions and ordinals: 1/2 1/4 3/4 1st 2nd 3rd 4th</p>
         </section>
 
         <section class="block">

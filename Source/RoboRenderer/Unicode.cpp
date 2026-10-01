@@ -298,7 +298,7 @@ namespace RoboRenderer
 
             for (std::uint8_t index = 0; index < entry->length; ++index)
             {
-                DecomposeRecursive(entry->parts[index], compatibility, out);
+                DecomposeRecursive(DecompositionData[entry->offset + index], compatibility, out);
             }
         }
 

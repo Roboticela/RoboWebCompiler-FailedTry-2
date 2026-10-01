@@ -336,6 +336,66 @@ namespace RoboRenderer
             {
                 target = &cbdt;
             }
+            else if (TagEquals(tag, "CBLC"))
+            {
+                target = &cblc;
+            }
+            else if (TagEquals(tag, "GSUB"))
+            {
+                target = &gsub;
+            }
+            else if (TagEquals(tag, "GPOS"))
+            {
+                target = &gpos;
+            }
+            else if (TagEquals(tag, "GDEF"))
+            {
+                target = &gdef;
+            }
+            else if (TagEquals(tag, "fvar"))
+            {
+                target = &fvar;
+            }
+            else if (TagEquals(tag, "avar"))
+            {
+                target = &avar;
+            }
+            else if (TagEquals(tag, "gvar"))
+            {
+                target = &gvar;
+            }
+            else if (TagEquals(tag, "HVAR"))
+            {
+                target = &hvar;
+            }
+            else if (TagEquals(tag, "MVAR"))
+            {
+                target = &mvar;
+            }
+            else if (TagEquals(tag, "vhea"))
+            {
+                target = &vhea;
+            }
+            else if (TagEquals(tag, "vmtx"))
+            {
+                target = &vmtx;
+            }
+            else if (TagEquals(tag, "VORG"))
+            {
+                target = &vorg;
+            }
+            else if (TagEquals(tag, "sbix"))
+            {
+                target = &sbix;
+            }
+            else if (TagEquals(tag, "SVG "))
+            {
+                target = &svg;
+            }
+            else if (tag[0] == 'C' && tag[1] == 'F' && tag[2] == 'F' && (tag[3] == ' ' || tag[3] == '2'))
+            {
+                target = &cff;
+            }
 
             if (target != nullptr && !target->present)
             {
@@ -360,7 +420,10 @@ namespace RoboRenderer
         ReadKern();
 
         hasGlyf = glyf.present && loca.present;
-        hasColor = colr.present || cbdt.present;
+        hasCff = cff.present;
+        hasColor = colr.present || cbdt.present || sbix.present || svg.present;
+
+        ReadVariations();
 
         return unitsPerEm != 0 && glyphCount != 0;
     }
@@ -858,7 +921,7 @@ namespace RoboRenderer
 
         const std::uint16_t metric = glyph < numberOfHMetrics ? glyph
                                                              : static_cast<std::uint16_t>(numberOfHMetrics - 1);
-        return static_cast<float>(ReadU16(hmtx.offset + metric * 4));
+        return static_cast<float>(ReadU16(hmtx.offset + metric * 4)) + AdvanceDelta(glyph);
     }
 
     void SfntFont::Bounds(std::uint16_t glyph,
@@ -914,7 +977,18 @@ namespace RoboRenderer
             return false;
         }
 
-        return ReadGlyf(glyph, out, 0);
+        if (!ReadGlyf(glyph, out, 0))
+        {
+            return false;
+        }
+
+        // A variable face's outline is the default one plus its `gvar` deltas.
+        if (instanceSet)
+        {
+            ApplyVariations(glyph, out);
+        }
+
+        return true;
     }
 
     bool SfntFont::ReadGlyf(std::uint16_t glyph, GlyphPath& out, int depth) const

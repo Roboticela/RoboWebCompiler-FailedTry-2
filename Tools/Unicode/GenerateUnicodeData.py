@@ -108,6 +108,35 @@ def parse_range_lines(path, index_by_name, field=2):
     return ranges
 
 
+def combine_bits(entries):
+    """Union overlapping bit-flag ranges into disjoint, sorted ranges."""
+    events = {}
+    for start, end, bits in entries:
+        events.setdefault(start, [0, 0])
+        events[start][0] |= bits
+        events.setdefault(end + 1, [0, 0])
+        events[end + 1][1] |= bits
+
+    result = []
+    active = 0
+    current_start = None
+
+    for point in sorted(events.keys()):
+        add, remove = events[point]
+        if active != 0 and current_start is not None:
+            result.append((current_start, point - 1, active))
+        active = (active & ~remove) | add
+        current_start = point
+
+    merged = []
+    for start, end, bits in result:
+        if merged and merged[-1][2] == bits and merged[-1][1] + 1 == start:
+            merged[-1] = (merged[-1][0], end, bits)
+        else:
+            merged.append((start, end, bits))
+    return merged
+
+
 def merge(ranges):
     """Sort and merge adjacent or overlapping ranges that share a value."""
     ranges = sorted(ranges, key=lambda item: (item[0], item[1]))
@@ -235,14 +264,35 @@ def main():
     sentence = merge(parse_range_lines(os.path.join(ucd, "SentenceBreakProperty.txt"), {v: i for i, v in enumerate(SENTENCE_BREAK)}))
     width = merge(parse_range_lines(os.path.join(ucd, "EastAsianWidth.txt"), {v: i for i, v in enumerate(EAST_ASIAN_WIDTH)}))
 
-    emoji = merge(parse_range_lines(os.path.join(ucd, "emoji-data.txt"), {
+    # Emoji properties overlap, so the flags are combined rather than indexed:
+    # a code point can be Emoji, Emoji_Presentation and Extended_Pictographic at
+    # once, and one lookup has to answer all of them.
+    emoji_entries = []
+    emoji_names = {
         "Emoji": EMOJI_EMOJI,
         "Emoji_Presentation": EMOJI_PRESENTATION,
         "Emoji_Modifier": EMOJI_MODIFIER,
         "Emoji_Modifier_Base": EMOJI_MODIFIER_BASE,
         "Emoji_Component": EMOJI_COMPONENT,
         "Extended_Pictographic": EMOJI_EXTENDED_PICTOGRAPHIC,
-    }))
+    }
+    emoji_path = os.path.join(ucd, "emoji-data.txt")
+    if os.path.exists(emoji_path):
+        with open(emoji_path, "r", encoding="utf-8") as handle:
+            for line in handle:
+                line = line.split("#", 1)[0].strip()
+                if not line:
+                    continue
+                parts = [part.strip() for part in line.split(";")]
+                if len(parts) < 2 or parts[1] not in emoji_names:
+                    continue
+                span = parts[0]
+                if ".." in span:
+                    low, high = span.split("..")
+                else:
+                    low = high = span
+                emoji_entries.append((int(low, 16), int(high, 16), emoji_names[parts[1]]))
+    emoji = combine_bits(emoji_entries)
 
     # Indic_Conjunct_Break: `Consonant`, `Extend`, `Linker`. Grapheme cluster
     # breaking (GB9c) joins a consonant to a following consonant across them.
@@ -384,15 +434,16 @@ def main():
         compositions.append((first, second, cp))
     compositions.sort()
 
-    # Decompositions as fixed records: at most two code points, which covers the
-    # canonical set and all but a handful of compatibility ones.
+    # Decompositions go into a flat pool: compatibility mappings can be long
+    # (a ligature or an Arabic phrase form), so a fixed record cannot hold them.
+    # Hangul decomposes algorithmically and is handled in code.
+    decomp_data = []
     decomp_records = []
     for cp in sorted(decomposition.keys()):
         canonical, cps = decomposition[cp]
-        # Hangul decomposes algorithmically; those entries are handled in code.
-        if len(cps) > 2:
-            continue
-        decomp_records.append((cp, canonical, cps))
+        offset = len(decomp_data)
+        decomp_data.extend(cps)
+        decomp_records.append((cp, canonical, offset, len(cps)))
 
     # ---------------------------------------------------------------------
     # Emit
@@ -410,7 +461,7 @@ def main():
             "namespace UnicodeData\n{\n"
             "    struct Range8 { std::uint32_t start; std::uint32_t end; std::uint8_t value; };\n"
             "    struct Range16 { std::uint32_t start; std::uint32_t end; std::uint16_t value; };\n"
-            "    struct Decomposition { std::uint32_t codepoint; std::uint8_t compat; std::uint8_t length; std::uint32_t parts[2]; };\n"
+            "    struct Decomposition { std::uint32_t codepoint; std::uint32_t offset; std::uint8_t compat; std::uint8_t length; };\n"
             "    struct CaseMap { std::uint32_t codepoint; std::uint32_t lower; std::uint32_t upper; std::uint32_t title; };\n"
             "    struct FullCaseMap { std::uint32_t codepoint; std::uint8_t lowerLength; std::uint8_t titleLength; std::uint8_t upperLength; std::uint32_t offset; };\n"
             "    struct MirrorPair { std::uint32_t codepoint; std::uint32_t mirror; };\n"
@@ -434,7 +485,8 @@ def main():
             kind = "Range16" if name == "ScriptRanges" else "Range8"
             handle.write("    extern const %s %s[];\n    extern const std::uint32_t %sCount;\n" % (kind, name, name))
 
-        handle.write("    extern const Decomposition Decompositions[];\n    extern const std::uint32_t DecompositionCount;\n")
+            handle.write("    extern const Decomposition Decompositions[];\n    extern const std::uint32_t DecompositionCount;\n")
+        handle.write("    extern const std::uint32_t DecompositionData[];\n    extern const std::uint32_t DecompositionDataCount;\n")
         handle.write("    extern const CaseMap SimpleCaseMaps[];\n    extern const std::uint32_t SimpleCaseCount;\n")
         handle.write("    extern const FullCaseMap FullCaseMaps[];\n    extern const std::uint32_t FullCaseCount;\n")
         handle.write("    extern const std::uint32_t FullCaseData[];\n    extern const std::uint32_t FullCaseDataCount;\n")
@@ -468,10 +520,14 @@ def main():
         handle.write(emit_range8("EmojiRanges", emoji) + "\n\n")
         handle.write(emit_range8("IndicConjunctRanges", incb) + "\n\n")
 
+        handle.write("const std::uint32_t DecompositionData[] = {\n")
+        for index in range(0, len(decomp_data), 12):
+            handle.write("    " + ", ".join("%su" % v for v in decomp_data[index:index + 12]) + ",\n")
+        handle.write("};\nconst std::uint32_t DecompositionDataCount = %du;\n\n" % len(decomp_data))
+
         handle.write("const Decomposition Decompositions[] = {\n")
-        for cp, canonical, cps in decomp_records:
-            parts = list(cps) + [0] * (2 - len(cps))
-            handle.write("    { %su, %du, %du, { %su, %su } },\n" % (cp, 0 if canonical else 1, len(cps), parts[0], parts[1]))
+        for cp, canonical, offset, length in decomp_records:
+            handle.write("    { %su, %du, %du, %du },\n" % (cp, offset, 0 if canonical else 1, length))
         handle.write("};\nconst std::uint32_t DecompositionCount = %du;\n\n" % len(decomp_records))
 
         handle.write("const CaseMap SimpleCaseMaps[] = {\n")
@@ -522,15 +578,15 @@ def main():
             handle.write('    "%s",\n' % name)
         handle.write("};\nconst std::uint32_t ScriptNameCount = %du;\n\n" % len(scripts))
 
-        for array_name, values in [
-            ("GeneralCategoryNames", GENERAL_CATEGORY),
-            ("BidiClassNames", BIDI_CLASS),
-            ("LineBreakNames", LINE_BREAK),
+        for array_name, count_name, values in [
+            ("GeneralCategoryNames", "GeneralCategoryNameCount", GENERAL_CATEGORY),
+            ("BidiClassNames", "BidiClassNameCount", BIDI_CLASS),
+            ("LineBreakNames", "LineBreakNameCount", LINE_BREAK),
         ]:
             handle.write("const char* const %s[] = {\n" % array_name)
             for name in values:
                 handle.write('    "%s",\n' % name)
-            handle.write("};\nconst std::uint32_t %sCount = %du;\n\n" % (array_name, len(values)))
+            handle.write("};\nconst std::uint32_t %s = %du;\n\n" % (count_name, len(values)))
 
         handle.write("}\n}\n")
 

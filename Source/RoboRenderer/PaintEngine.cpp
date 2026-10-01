@@ -809,109 +809,60 @@ namespace RoboRenderer
 
         const TextLayout& textLayout = layout.Text();
 
-        // Collect the run in logical order first. A right-to-left run is then
-        // reversed for display, and Arabic letters are given their contextual
-        // forms from their logical neighbours before either happens, because a
-        // letter's shape depends on the order the characters were written in,
-        // not on the order they are painted in.
-        struct RunEntry
+        // Shape the run in logical order. The face's own `GSUB`/`GPOS` decide
+        // ligatures, kerning and contextual forms; a run whose face cannot shape
+        // comes back one glyph per code point, and a fallback chain introduces a
+        // new run every time the covering face changes.
+        std::vector<PositionedGlyph> glyphs;
+        textLayout.ShapeRun(text, startByte, endByte, fontSize, weight, glyphs);
+
+        if (glyphs.empty())
         {
-            std::uint32_t codepoint = 0;
-            float advance = 0.0f;
-        };
-
-        std::vector<RunEntry> entries;
-        std::uint32_t offset = startByte;
-        bool rightToLeft = false;
-        bool directionResolved = false;
-
-        while (text[offset] != '\0' && offset < endByte)
-        {
-            const std::uint32_t codepoint = TextLayout::DecodeUtf8(text, offset);
-
-            if (codepoint == '\r' || codepoint == '\n')
-            {
-                continue;
-            }
-
-            if (codepoint == '\t')
-            {
-                RunEntry entry;
-                entry.codepoint = '\t';
-                entry.advance = textLayout.TabAdvance(fontSize, weight);
-                entries.push_back(entry);
-                continue;
-            }
-
-            // The first strong character decides the run's direction.
-            if (!directionResolved)
-            {
-                if (IsRtlCodepoint(codepoint))
-                {
-                    rightToLeft = true;
-                    directionResolved = true;
-                }
-                else if (IsLtrCodepoint(codepoint))
-                {
-                    rightToLeft = false;
-                    directionResolved = true;
-                }
-            }
-
-            RunEntry entry;
-            entry.codepoint = codepoint;
-            entry.advance = textLayout.Advance(codepoint, fontSize, weight);
-            entries.push_back(entry);
+            return;
         }
 
-        for (std::size_t index = 0; index < entries.size(); ++index)
+        // The first strong character decides the run's direction. A right-to-left
+        // run is reversed for display after shaping, so the letters were still
+        // shaped in the order they were written.
+        bool rightToLeft = false;
+        for (const PositionedGlyph& glyph : glyphs)
         {
-            std::uint32_t previous = 0;
-            std::uint32_t next = 0;
-
-            for (std::size_t back = index; back > 0; --back)
+            if (IsRtlCodepoint(glyph.codepoint))
             {
-                if (!IsClusterExtender(entries[back - 1].codepoint))
-                {
-                    previous = entries[back - 1].codepoint;
-                    break;
-                }
+                rightToLeft = true;
+                break;
             }
-
-            for (std::size_t forward = index + 1; forward < entries.size(); ++forward)
+            if (IsLtrCodepoint(glyph.codepoint))
             {
-                if (!IsClusterExtender(entries[forward].codepoint))
-                {
-                    next = entries[forward].codepoint;
-                    break;
-                }
+                break;
             }
-
-            entries[index].codepoint = ArabicShapedCodepoint(previous, entries[index].codepoint, next);
         }
 
         if (rightToLeft)
         {
-            std::reverse(entries.begin(), entries.end());
+            std::reverse(glyphs.begin(), glyphs.end());
         }
 
         float pen = x;
         const std::uint32_t firstGlyph = static_cast<std::uint32_t>(list.GlyphCount());
         std::uint32_t glyphCount = 0;
 
-        for (const RunEntry& entry : entries)
+        for (const PositionedGlyph& positioned : glyphs)
         {
-            if (entry.codepoint != ' ' && entry.codepoint != 0x00A0 && entry.codepoint != '\t')
+            if (positioned.codepoint != ' ' && positioned.codepoint != 0x00A0 &&
+                positioned.codepoint != '\t')
             {
                 PaintGlyph glyph;
-                glyph.x = pen;
-                glyph.y = baseline;
-                glyph.codepoint = entry.codepoint;
+                glyph.x = pen + positioned.xOffset;
+                glyph.y = baseline - positioned.yOffset;
+                glyph.codepoint = positioned.codepoint;
+                glyph.faceId = positioned.faceIndex;
+                glyph.glyphId = positioned.glyphId;
                 list.AddGlyph(glyph);
                 ++glyphCount;
             }
 
-            pen += entry.advance;
+            pen += positioned.advance;
         }
 
         if (glyphCount == 0)

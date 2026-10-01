@@ -694,10 +694,17 @@ namespace RoboRenderer
 
             const PaintGlyph& glyph = glyphs[glyphIndex];
 
-            const RasterizedGlyph rasterized = frameContext.glyphs->Get(glyph.codepoint, command.fontSize,
-                                                                       command.weight, scale);
+            // A shaped glyph is fetched by its font glyph id; a run the face
+            // could not shape (or the built-in stroke font) falls back to the
+            // code point.
+            const RasterizedGlyph rasterized =
+                glyph.glyphId != 0
+                    ? frameContext.glyphs->GetShaped(glyph.faceId, glyph.glyphId, command.fontSize,
+                                                     command.weight, scale)
+                    : frameContext.glyphs->Get(glyph.codepoint, command.fontSize, command.weight, scale);
 
-            if (rasterized.bitmap == nullptr || rasterized.coverage == nullptr)
+            if (rasterized.bitmap == nullptr ||
+                (rasterized.coverage == nullptr && rasterized.color == nullptr))
             {
                 continue;
             }
@@ -729,6 +736,34 @@ namespace RoboRenderer
                 const std::int32_t bitmapY = y - static_cast<std::int32_t>(std::floor(bitmapTop));
                 if (bitmapY < 0 || bitmapY >= static_cast<std::int32_t>(bitmap.height))
                 {
+                    continue;
+                }
+
+                if (rasterized.color != nullptr)
+                {
+                    // A colour glyph brings its own RGBA pixels; the command's
+                    // colour is ignored.
+                    const std::uint8_t* colorRow =
+                        rasterized.color + static_cast<std::size_t>(bitmapY) * bitmap.width * 4;
+
+                    for (std::int32_t x = firstX; x < lastX; ++x)
+                    {
+                        const std::int32_t bitmapX =
+                            x - static_cast<std::int32_t>(std::floor(bitmapLeft));
+                        if (bitmapX < 0 || bitmapX >= static_cast<std::int32_t>(bitmap.width))
+                        {
+                            continue;
+                        }
+
+                        const std::uint8_t* source = colorRow + static_cast<std::size_t>(bitmapX) * 4;
+                        if (source[3] == 0)
+                        {
+                            continue;
+                        }
+
+                        BlendPixel(x, y, Color{ source[0], source[1], source[2], source[3] }, 1.0f);
+                    }
+
                     continue;
                 }
 

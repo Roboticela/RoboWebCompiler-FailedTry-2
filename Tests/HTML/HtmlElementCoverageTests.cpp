@@ -1,6 +1,8 @@
 #include "../TestFramework.h"
 #include "../TestHelpers.h"
 
+#include "RoboHTMLCompiler/HtmlLexer.h"
+
 #include <string>
 #include <vector>
 
@@ -389,4 +391,50 @@ ROBO_TEST(HtmlCoverage, NestedNamespacesParse)
     ROBO_CHECK(htmlCount >= 3);
 
     ROBO_CHECK(ValidateDocument(document, sink));
+}
+
+ROBO_TEST(Html, CharacterReferencesAreDecodedInText)
+{
+    DiagnosticSink sink;
+    HtmlLexer lexer("a &amp; b &#65; &#x1F600; &lt;tag&gt; &nbsp; &notareal; c", "test.html", sink);
+    const std::vector<Token> tokens = lexer.Tokenize();
+
+    ROBO_CHECK(!tokens.empty());
+    if (tokens.empty())
+    {
+        return;
+    }
+
+    const std::string& text = tokens[0].text;
+
+    // Named and numeric references decode; an unknown name is left as written.
+    ROBO_CHECK(text.find("a & b") == 0);
+    ROBO_CHECK(text.find("A") != std::string::npos);
+    ROBO_CHECK(text.find("\xF0\x9F\x98\x80") != std::string::npos);    // 😀
+    ROBO_CHECK(text.find("<tag>") != std::string::npos);
+    ROBO_CHECK(text.find("\xC2\xA0") != std::string::npos);              // nbsp
+    ROBO_CHECK(text.find("&notareal;") != std::string::npos);
+}
+
+ROBO_TEST(Html, CharacterReferencesAreDecodedInAttributes)
+{
+    DiagnosticSink sink;
+    HtmlLexer lexer("<img alt=\"Tom &amp; Jerry\" title='&#169;'>", "test.html", sink);
+    const std::vector<Token> tokens = lexer.Tokenize();
+
+    ROBO_CHECK(!tokens.empty());
+    if (tokens.empty())
+    {
+        return;
+    }
+
+    const Token& tag = tokens[0];
+    ROBO_CHECK(tag.kind == TokenKind::StartTag);
+    ROBO_CHECK(tag.attributes.size() == 2u);
+
+    if (tag.attributes.size() == 2u)
+    {
+        ROBO_CHECK(tag.attributes[0].value == "Tom & Jerry");
+        ROBO_CHECK(tag.attributes[1].value == "\xC2\xA9"); // ©
+    }
 }

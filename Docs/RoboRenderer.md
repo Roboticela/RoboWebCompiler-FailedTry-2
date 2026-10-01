@@ -219,40 +219,74 @@ The behaviours worth naming, because each one is a decision:
 ## 6. Text
 
 `Include/RoboRenderer/Text.h`, `Source/RoboRenderer/Text.cpp`,
-`Source/RoboRenderer/FontFile.{h,cpp}`, `Source/RoboRenderer/FontStack.cpp`,
+`Source/RoboRenderer/FontFile.{h,cpp}`, `Source/RoboRenderer/FontTables.cpp`,
+`Source/RoboRenderer/OpenTypeLayout.cpp`, `Source/RoboRenderer/FontVariations.cpp`,
+`Source/RoboRenderer/FontStack.cpp`, `Include/RoboRenderer/Unicode.h`,
+`Source/RoboRenderer/Unicode.cpp`, `Source/RoboRenderer/Generated/UnicodeData.{h,cpp}`,
 `Source/RoboRenderer/Bidi.{h,cpp}`, `Source/RoboRenderer/StrokeFont.cpp`.
 
 Text is measured, broken, shaped and painted from **real font files**. `SfntFont`
 parses the sfnt container — `head`, `hhea`, `hmtx`, `maxp`, `cmap`, `glyf`/`loca`,
-`OS/2`, `name`, `kern`, and the presence of `COLR`/`CPAL`/`CBDT` — and resolves a
-code point to a glyph and a glyph to filled contours (composite glyphs included).
-`FontRegistry` loads those faces from disk and answers two questions: which face
-is the primary one for a weight, and which face in the fallback chain actually
-covers a code point.
+`OS/2`, `name`, `kern`, `vhea`/`vmtx`/`VORG`, the layout tables `GSUB`/`GPOS`/`GDEF`,
+the variation tables `fvar`/`avar`/`gvar`/`HVAR`/`MVAR`, and the colour tables
+`COLR`/`CPAL`/`CBDT`/`CBLC`/`sbix`/`SVG ` — and resolves a code point to a glyph
+and a glyph to filled contours (composite glyphs included). `FontRegistry` loads
+those faces from disk and answers which face is primary for a weight and which
+face in the fallback chain actually covers a code point.
 
-**Inter is the default family.** It is loaded from `Fonts/Inter/`; because the
-vendored file is the variable font's default (Regular) instance, bold is
-synthesized — advances widen and the rasterizer dilates the coverage — so a bold
-run measurably measures wider than the same run in regular weight. Everything
-Inter does not cover falls through to a curated chain of system faces (Segoe UI,
-Nirmala UI, Malgun Gothic, Microsoft YaHei, Yu Gothic, Segoe UI Emoji, …), chosen
-by code-point coverage. A host with no font files at all falls back to the
-built-in **stroke face**: a compiled-in vector glyph table, so a renderer still
-draws text rather than nothing.
+**Shaping is real.** `OpenTypeLayout.cpp` implements `GSUB` (single, multiple,
+alternate, ligature, contextual and chained-contextual, extension and
+reverse-chaining), `GPOS` (single, pair, cursive, mark-to-base, mark-to-ligature,
+mark-to-mark, contextual and chained-contextual, extension) and `GDEF` (glyph
+classes, mark attachment classes, mark glyph sets). Only the features that are ON
+by default are applied — `ccmp`, `locl`, `rlig`, `liga`, `clig`, `calt`, the
+Arabic/Syriac joining forms and the Indic conjunct forms — so discretionary
+features (`dlig`, `salt`, `smcp`, …) never silently change text. A run's script
+system is chosen from the first strong character's Unicode script
+(`OtLayout::ScriptTagForName`), and `ShapedGlyph` carries advances, offsets and
+clusters in font design units.
 
-**Direction and joining.** A run's direction is decided by its first strong
-character, and a right-to-left run is reversed for display. Arabic letters are
-given their contextual presentation forms (isolated, initial, medial, final) from
-their logical neighbours, so Arabic is not merely reversed but joined. A
-full Unicode bidi algorithm and OpenType Layout are out of scope for this phase:
-a letter whose contextual form a face does not carry keeps its base form.
+**Inter is the default family.** It is loaded from `Fonts/Inter/` as a variable
+font; `SetInstance` resolves `fvar` axes (applying `avar` remapping), interpolates
+`gvar` deltas into the outlines and `HVAR` deltas into the advances. When a weight
+the file does not carry is asked for, bold is synthesized — advances widen and the
+rasterizer dilates the coverage — so a bold run measurably measures wider than the
+same run in regular weight. Everything Inter does not cover falls through to a
+curated chain of system faces (Segoe UI, Nirmala UI, Malgun Gothic, Microsoft
+YaHei, Yu Gothic, Segoe UI Emoji, …), chosen by code-point coverage. An emoji code
+point prefers a colour-capable face over an earlier monochrome symbol face. A host
+with no font files at all falls back to the built-in **stroke face**: a compiled-in
+vector glyph table, so a renderer still draws text rather than nothing.
+
+**Colour glyphs.** `COLR` v0 layer lists are read directly; `COLR` v1 paint graphs
+are flattened to the same layer list (transforms are dropped and gradients are
+approximated by their first colour stop), which is enough for the colour emoji the
+Windows and macOS faces ship. `CBDT`/`CBLC` embedded bitmaps are decoded with the
+runtime's own PNG codec, choosing the strike closest to the device size. The
+`GlyphCache` composites COLR layers in their `CPAL` colours into an RGBA bitmap and
+hands it to the backend, which blends it instead of tinting coverage.
+
+**Unicode.** `Unicode.{h,cpp}` (data generated by `Tools/Unicode/GenerateUnicodeData.py`,
+Unicode 16.0.0) supplies general category, script, bidi class, combining class,
+line-break class, East Asian width, emoji properties, normalization (NFC/NFD/NFKC/
+NFKD), case mapping, grapheme/word/sentence segmentation, line-break
+opportunities and the full bidi algorithm (`ResolveParagraph`). `Bidi.h` keeps the
+smaller predicates the paint run reorderer asks: `IsRtlCodepoint`, `IsLtrCodepoint`,
+`IsCjkCodepoint`, `IsClusterExtender`, `IsRegionalIndicator`.
+
+**Direction.** A run's direction is decided by its first strong character; the run
+is shaped in logical order and then a right-to-left run is reversed for display, so
+the letters were joined in the order they were written.
 
 * `Measure(text, size, weight)` — the width of a UTF-8 string.
 * `MeasurePrefix` — the width of the first *n* bytes, which is what caret
   positioning and hit testing inside a text field need.
-* `LineHeight`, `Advance`, `TabAdvance` — a tab stop is four spaces. A glyph's
-  advance comes from whichever face in the chain covers its code point, so
-  measurement and painting agree across a mixed-script run.
+* `LineHeight`, `Advance`, `TabAdvance` — a tab stop is four spaces.
+* `ShapeRun(text, start, end, size, weight, glyphs)` — the single source of truth
+  for advances: it groups the run by covering face, shapes each group with that
+  face's `GSUB`/`GPOS`, and returns positioned glyphs. `Measure`, `MeasurePrefix`,
+  `HitTestOffset` and the paint pass all walk these glyphs, so measurement and
+  painting can never disagree about where a glyph lands.
 * `Wrap(text, size, weight, availableWidth, preserveWhitespace, lines)` — breaks
   into lines at spaces, hyphens and explicit line breaks, and never inside a
   grapheme cluster: a combining mark, variation selector, skin-tone modifier or
@@ -263,18 +297,17 @@ a letter whose contextual form a face does not carry keeps its base form.
   `DecodeUtf8` — the byte/code-point conversions that keep the runtime's indices
   unambiguous.
 
-`Bidi.h` carries the script questions the run reorderer asks: `IsRtlCodepoint`,
-`IsLtrCodepoint`, `IsCjkCodepoint`, `IsClusterExtender`, `IsRegionalIndicator`,
-and `ArabicShapedCodepoint`.
-
-`GlyphCache` rasterizes a glyph once per (face, code point, font size, weight) and
-hands the same coverage bitmap to every backend that asks. A filled outline is
-flattened to polygons and filled with the non-zero winding rule on a 4x4 sampling
-grid; the built-in stroke face is stroked instead. The cache is owned by the
-renderer rather than the backend, because a cache is a correctness question (all
-backends must rasterize identically), not a backend implementation detail. A
-device-scale change makes every cached bitmap wrong rather than merely stale, so
-`Resize` clears the cache.
+`GlyphCache` rasterizes a glyph once per (face, font size, weight) and hands the
+same bitmap to every backend that asks. A glyph is addressed by code point, or by
+its font glyph id when shaping produced a ligature or contextual form that has no
+code point of its own. A filled outline is flattened to polygons and filled with
+the non-zero winding rule on a 4x4 sampling grid; a colour glyph is composited in
+its palette colours (or decoded from its embedded bitmap) into RGBA pixels; the
+built-in stroke face is stroked instead. The cache is owned by the renderer rather
+than the backend, because a cache is a correctness question (all backends must
+rasterize identically), not a backend implementation detail. A device-scale change
+makes every cached bitmap wrong rather than merely stale, so `Resize` clears the
+cache.
 
 ---
 
