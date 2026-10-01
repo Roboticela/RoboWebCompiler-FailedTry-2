@@ -53,13 +53,20 @@ namespace RoboRenderer
                 style.foreground = TextColor;
                 style.borderColor = BorderColor;
                 style.fontSize = fontSize;
-                style.lineHeight = 1.35f;
+                style.lineHeight = 0.0f;
                 style.letterSpacing = 0.0f;
+                style.wordSpacing = 0.0f;
+                style.textIndent = 0.0f;
                 style.display = display;
                 style.overflowX = OverflowKind::Visible;
                 style.overflowY = OverflowKind::Visible;
                 style.textAlign = TextAlignKind::Start;
                 style.fontWeight = weight;
+                style.fontStyle = FontSlantKind::Upright;
+                style.whiteSpace = WhiteSpaceKind::Normal;
+                style.textTransform = TextTransformKind::None;
+                style.direction = TextDirectionKind::Auto;
+                style.fontFamily = 0;
                 style.hasBackground = 0;
                 style.hasForeground = 0;
                 style.hasBorder = 0;
@@ -643,7 +650,7 @@ namespace RoboRenderer
 
     void StyleTableProvider::ApplyAuthored(CompiledStyle& target, const CompiledStyle& authored)
     {
-        const std::uint32_t specified = authored.specified;
+        const std::uint64_t specified = authored.specified;
 
         if (IsSpecified(specified, StyleFlagWidth))
         {
@@ -718,6 +725,38 @@ namespace RoboRenderer
         {
             target.letterSpacing = authored.letterSpacing;
         }
+        if (IsSpecified(specified, StyleFlagLineHeight))
+        {
+            target.lineHeight = authored.lineHeight;
+        }
+        if (IsSpecified(specified, StyleFlagWordSpacing))
+        {
+            target.wordSpacing = authored.wordSpacing;
+        }
+        if (IsSpecified(specified, StyleFlagTextIndent))
+        {
+            target.textIndent = authored.textIndent;
+        }
+        if (IsSpecified(specified, StyleFlagWhiteSpace))
+        {
+            target.whiteSpace = authored.whiteSpace;
+        }
+        if (IsSpecified(specified, StyleFlagTextTransform))
+        {
+            target.textTransform = authored.textTransform;
+        }
+        if (IsSpecified(specified, StyleFlagDirection))
+        {
+            target.direction = authored.direction;
+        }
+        if (IsSpecified(specified, StyleFlagFontStyle))
+        {
+            target.fontStyle = authored.fontStyle;
+        }
+        if (IsSpecified(specified, StyleFlagFontFamily))
+        {
+            target.fontFamily = authored.fontFamily;
+        }
         if (IsSpecified(specified, StyleFlagTextAlign))
         {
             target.textAlign = authored.textAlign;
@@ -745,6 +784,11 @@ namespace RoboRenderer
             target.hasBorder = 1;
         }
 
+        // The composed style carries the author's mask, so a consumer can tell a
+        // field the document set from one the category default supplied. Without
+        // this the flags a text property is gated on would always read false and
+        // the value would sit in the struct unread.
+        target.specified = specified;
         target.sourceStyleId = authored.sourceStyleId;
     }
 

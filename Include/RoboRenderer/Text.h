@@ -128,6 +128,11 @@ namespace RoboRenderer
         /// much when it is non-zero, which is what lets one Inter instance stand
         /// in for every weight.
         float embolden = 0.0f;
+        /// Synthetic oblique, as the shear applied to x per unit of y above the
+        /// baseline (a font unit ratio). Zero means the face is upright. Used
+        /// when `font-style: italic` is asked for and no italic file is
+        /// installed, which is what a browser obliques too.
+        float slant = 0.0f;
         /// False for space and other blank glyphs.
         bool hasInk = false;
     };
@@ -180,6 +185,15 @@ namespace RoboRenderer
         /// reports less than the weight it was asked for is emboldened
         /// synthetically rather than silently drawn light.
         virtual int WeightClass() const { return 400; }
+
+        /// True when the face is an italic or oblique design, whether it ships
+        /// one or the runtime synthesized it. `font-style: italic` selects on
+        /// this, preferring a real file over a shear.
+        virtual bool IsItalic() const { return false; }
+
+        /// True when the face's oblique is synthetic (a shear of an upright
+        /// design) rather than a design of its own.
+        virtual bool IsSyntheticItalic() const { return false; }
 
         /// True when the face carries colour glyph tables (COLR/CPAL, CBDT or
         /// sbix). Reported so a caller can prefer a monochrome sibling when it
@@ -323,6 +337,20 @@ namespace RoboRenderer
         /// face, whose missing glyph is the .notdef box.
         const FontFace& FaceFor(std::uint32_t codepoint, FontWeightKind weight) const;
 
+        /// A face from a CSS `font-family` list: the first family the host
+        /// actually has that covers the code point, or the ordinary fallback
+        /// when no family matches. `family` is a comma separated list.
+        const FontFace& FaceFor(std::uint32_t codepoint,
+                                FontWeightKind weight,
+                                const char* family,
+                                FontSlantKind slant = FontSlantKind::Upright) const;
+
+        /// The metrics face for a `font-family` list and weight: the matching
+        /// family when the host has it, otherwise the primary face.
+        const FontFace& Face(FontWeightKind weight,
+                             const char* family,
+                             FontSlantKind slant = FontSlantKind::Upright) const;
+
         /// Position of a face in the chain, used as a cache key. A face that is
         /// not in the chain reports 0.
         std::uint32_t IndexOf(const FontFace& face) const;
@@ -332,6 +360,10 @@ namespace RoboRenderer
 
         /// True when bold had to be synthesized from the regular face.
         bool HasSyntheticBold() const { return syntheticBold; }
+
+        /// True when the italic face is a shear of the upright design rather
+        /// than a file of its own.
+        bool HasSyntheticItalic() const { return syntheticItalic; }
 
         /// True when no real font file was found and the stroke face is in use.
         bool UsesStrokeFallback() const { return usesStrokeFallback; }
@@ -359,8 +391,13 @@ namespace RoboRenderer
 
         const FontFace* faceRegular = nullptr;
         const FontFace* faceBold = nullptr;
+        /// The italic/oblique siblings, real when the host has them and a shear
+        /// of the upright design otherwise.
+        const FontFace* faceItalic = nullptr;
+        const FontFace* faceBoldItalic = nullptr;
         std::string primaryFamily = "Robo Stroke";
         bool syntheticBold = false;
+        bool syntheticItalic = false;
         bool usesStrokeFallback = true;
     };
 
@@ -486,6 +523,26 @@ namespace RoboRenderer
         std::size_t coverageBytes = 0;
     };
 
+    /// The text-affecting options one run is laid out with. Everything here is
+    /// opt-in: a null `TextRunStyle` means exactly the behaviour an unstyled
+    /// document had, so the CSS text properties cannot change a document that
+    /// does not use them.
+    struct TextRunStyle
+    {
+        /// `letter-spacing`, in logical units, added after every glyph.
+        float letterSpacing = 0.0f;
+        /// `word-spacing`, in logical units, added to every space.
+        float wordSpacing = 0.0f;
+        /// Comma separated `font-family` list, or nullptr for the primary
+        /// family. The string must outlive the call; a document string does.
+        const char* fontFamily = nullptr;
+        /// `font-style`: whether an italic or oblique face is wanted.
+        FontSlantKind slant = FontSlantKind::Upright;
+        /// `direction`: the paragraph's base direction. `Auto` keeps the
+        /// runtime's rule (the first strong character decides).
+        TextDirectionKind direction = TextDirectionKind::Auto;
+    };
+
     /// Text measurement and line breaking.
     ///
     /// Units: font sizes and results are logical units (see RenderTargetInfo);
@@ -496,11 +553,17 @@ namespace RoboRenderer
         explicit TextLayout(const FontRegistry& registry);
 
         /// Width of a UTF-8 string at a font size, in logical units.
-        float Measure(const char* text, float fontSize, FontWeightKind weight) const;
+        float Measure(const char* text,
+                      float fontSize,
+                      FontWeightKind weight,
+                      const TextRunStyle* runStyle = nullptr) const;
 
         /// Width of the first `byteCount` bytes of a UTF-8 string.
-        float MeasurePrefix(const char* text, std::uint32_t byteCount, float fontSize,
-                            FontWeightKind weight) const;
+        float MeasurePrefix(const char* text,
+                            std::uint32_t byteCount,
+                            float fontSize,
+                            FontWeightKind weight,
+                            const TextRunStyle* runStyle = nullptr) const;
 
         /// Line height for a font size (ascent + descent + line gap).
         float LineHeight(float fontSize, FontWeightKind weight) const;
@@ -508,7 +571,10 @@ namespace RoboRenderer
         /// Advance of a single code point, in logical units. Painting needs the
         /// same per-glyph advances that line breaking used, so both read them
         /// from one place.
-        float Advance(std::uint32_t codepoint, float fontSize, FontWeightKind weight) const;
+        float Advance(std::uint32_t codepoint,
+                      float fontSize,
+                      FontWeightKind weight,
+                      const TextRunStyle* runStyle = nullptr) const;
 
         /// Shapes a UTF-8 run into positioned glyphs in logical order, using the
         /// covering face's OpenType Layout where it has one. This is the single
@@ -519,7 +585,8 @@ namespace RoboRenderer
                       std::uint32_t endByte,
                       float fontSize,
                       FontWeightKind weight,
-                      std::vector<PositionedGlyph>& out) const;
+                      std::vector<PositionedGlyph>& out,
+                      const TextRunStyle* runStyle = nullptr) const;
 
         /// Horizontal advance of a tab stop: four spaces, the white-space model
         /// the HTML-only phase uses.
@@ -541,7 +608,8 @@ namespace RoboRenderer
                   FontWeightKind weight,
                   float availableWidth,
                   bool preserveWhitespace,
-                  std::vector<TextLine>& lines) const;
+                  std::vector<TextLine>& lines,
+                  const TextRunStyle* runStyle = nullptr) const;
 
         /// Byte offset of a code point index inside a UTF-8 string. The result is
         /// clamped to the string's end.
@@ -558,8 +626,11 @@ namespace RoboRenderer
 
         /// Byte offset of the code point whose box contains `localX`, for caret
         /// placement: the nearest boundary.
-        std::uint32_t HitTestOffset(const char* text, float localX, float fontSize,
-                                    FontWeightKind weight) const;
+        std::uint32_t HitTestOffset(const char* text,
+                                    float localX,
+                                    float fontSize,
+                                    FontWeightKind weight,
+                                    const TextRunStyle* runStyle = nullptr) const;
 
     private:
         const FontRegistry& registry;

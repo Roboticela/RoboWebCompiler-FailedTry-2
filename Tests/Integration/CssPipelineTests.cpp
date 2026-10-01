@@ -111,6 +111,47 @@ ROBO_TEST(CssPipeline, AuthoredStylesReachTheCompiledTable)
     ROBO_CHECK(style.padding.top >= 15.9f && style.padding.top <= 16.1f);
 }
 
+ROBO_TEST(CssPipeline, TextPropertiesReachTheCompiledTable)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"note\">hello world</div>",
+        application,
+        Sheet(".note { font-family: 'Inter', sans-serif; font-style: italic; line-height: 1.5; "
+              "letter-spacing: 2px; word-spacing: 4px; text-transform: uppercase; "
+              "white-space: nowrap; text-indent: 8px; direction: rtl }"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+    const ElementIndex index = StyledElement(document);
+    ROBO_CHECK(index != NoElement);
+
+    const CompiledStyle& style = document.styles[document.elements[index].styleIndex];
+
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagFontFamily));
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagFontStyle));
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagLineHeight));
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagLetterSpacing));
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagWordSpacing));
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagTextTransform));
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagWhiteSpace));
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagTextIndent));
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagDirection));
+
+    ROBO_CHECK(std::string(StringAt(document, style.fontFamily)) == "Inter, sans-serif");
+    ROBO_CHECK(style.fontStyle == FontSlantKind::Italic);
+    ROBO_CHECK(style.lineHeight >= 1.49f && style.lineHeight <= 1.51f);
+    ROBO_CHECK(style.letterSpacing == 2.0f);
+    ROBO_CHECK(style.wordSpacing == 4.0f);
+    ROBO_CHECK(style.textTransform == TextTransformKind::Uppercase);
+    ROBO_CHECK(style.whiteSpace == WhiteSpaceKind::NoWrap);
+    ROBO_CHECK(style.textIndent == 8.0f);
+    ROBO_CHECK(style.direction == TextDirectionKind::RightToLeft);
+}
+
 ROBO_TEST(CssPipeline, IdenticalComputedStylesAreDeduplicated)
 {
     RoboTools::CompiledApplication application;

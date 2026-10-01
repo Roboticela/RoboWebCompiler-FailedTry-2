@@ -295,7 +295,8 @@ namespace RoboRenderer
                          std::uint32_t endByte,
                          float fontSize,
                          FontWeightKind weight,
-                         const Color& color);
+                         const Color& color,
+                         const TextRunStyle* runStyle = nullptr);
 
         const CompiledDocument& document;
         const LayoutEngine& layout;

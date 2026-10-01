@@ -227,7 +227,8 @@ The behaviours worth naming, because each one is a decision:
 
 Text is measured, broken, shaped and painted from **real font files**. `SfntFont`
 parses the sfnt container — `head`, `hhea`, `hmtx`, `maxp`, `cmap`, `glyf`/`loca`,
-`OS/2`, `name`, `kern`, `vhea`/`vmtx`/`VORG`, the layout tables `GSUB`/`GPOS`/`GDEF`,
+the `CFF `/`CFF2` Type 2 charstrings of an `OTTO` face, `OS/2`, `name`, `kern`,
+`vhea`/`vmtx`/`VORG`, the layout tables `GSUB`/`GPOS`/`GDEF`,
 the variation tables `fvar`/`avar`/`gvar`/`HVAR`/`MVAR`, and the colour tables
 `COLR`/`CPAL`/`CBDT`/`CBLC`/`sbix`/`SVG ` — and resolves a code point to a glyph
 and a glyph to filled contours (composite glyphs included). `FontRegistry` loads
@@ -276,7 +277,17 @@ smaller predicates the paint run reorderer asks: `IsRtlCodepoint`, `IsLtrCodepoi
 
 **Direction.** A run's direction is decided by its first strong character; the run
 is shaped in logical order and then a right-to-left run is reversed for display, so
-the letters were joined in the order they were written.
+the letters were joined in the order they were written. A CSS `direction` on the
+element overrides that heuristic — an `rtl` paragraph paints its first character at
+the right edge however Latin the text is.
+
+**Italics.** `font-style: italic` selects an italic sibling of the chosen family
+when the host installs one and otherwise shears the upright design synthetically
+(`Glyph::slant`, applied by the rasterizer). A shear changes no advance, so
+measurement is identical and only the painted outline leans. `TextRunStyle` carries
+the family, slant and direction a run was measured and painted with, and
+`FontRegistry::Face`/`FaceFor` take the slant, so layout and paint always resolve
+the same face.
 
 * `Measure(text, size, weight)` — the width of a UTF-8 string.
 * `MeasurePrefix` — the width of the first *n* bytes, which is what caret

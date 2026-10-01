@@ -41,9 +41,13 @@ namespace RoboHTMLCompiler
         using RoboRenderer::StyleFlagDisplay;
         using RoboRenderer::StyleFlagFontSize;
         using RoboRenderer::StyleFlagFontWeight;
+        using RoboRenderer::StyleFlagDirection;
+        using RoboRenderer::StyleFlagFontFamily;
+        using RoboRenderer::StyleFlagFontStyle;
         using RoboRenderer::StyleFlagForeground;
         using RoboRenderer::StyleFlagHeight;
         using RoboRenderer::StyleFlagLetterSpacing;
+        using RoboRenderer::StyleFlagLineHeight;
         using RoboRenderer::StyleFlagMarginBottom;
         using RoboRenderer::StyleFlagMarginLeft;
         using RoboRenderer::StyleFlagMarginRight;
@@ -57,7 +61,11 @@ namespace RoboHTMLCompiler
         using RoboRenderer::StyleFlagPaddingRight;
         using RoboRenderer::StyleFlagPaddingTop;
         using RoboRenderer::StyleFlagTextAlign;
+        using RoboRenderer::StyleFlagTextIndent;
+        using RoboRenderer::StyleFlagTextTransform;
+        using RoboRenderer::StyleFlagWhiteSpace;
         using RoboRenderer::StyleFlagWidth;
+        using RoboRenderer::StyleFlagWordSpacing;
         using RoboRenderer::TextAlignKind;
 
         std::string LowerCase(std::string value)
@@ -454,10 +462,12 @@ namespace RoboHTMLCompiler
             /// which means the element keeps the native default for its category.
             bool Lower(const CSSComputedStyle& computed,
                        const SourceLocation& location,
-                       CompiledStyle& out)
+                       CompiledStyle& out,
+                       std::string& fontFamily)
             {
                 out = CompiledStyle{};
                 out.specified = 0u;
+                fontFamily.clear();
 
                 const float elementFontSize = FontSizeOf(&computed, context.rootFontSize);
 
@@ -495,7 +505,7 @@ namespace RoboHTMLCompiler
 
                 LowerBorders(computed, location, elementFontSize, out);
                 LowerBackground(computed, location, out);
-                LowerText(computed, location, elementFontSize, out);
+                LowerText(computed, location, elementFontSize, out, fontFamily);
                 LowerOverflow(computed, location, out);
 
                 return out.specified != 0u;
@@ -903,7 +913,8 @@ namespace RoboHTMLCompiler
             void LowerText(const CSSComputedStyle& computed,
                            const SourceLocation& location,
                            float elementFontSize,
-                           CompiledStyle& out)
+                           CompiledStyle& out,
+                           std::string& fontFamily)
             {
                 const CSSValue* color = Value(computed, CSSPropertyId::Color);
 
@@ -998,17 +1009,218 @@ namespace RoboHTMLCompiler
                     out.specified |= StyleFlagTextAlign;
                 }
 
-                // `line-height` is reported rather than compiled: the text engine
-                // derives a line's height from the font's metrics and the compiled
-                // style has no field that overrides it. Compiling the value into a
-                // field nothing reads would be support in name only.
-                if (Value(computed, CSSPropertyId::LineHeight) != nullptr)
+                LowerFontFamily(computed, out, fontFamily);
+                LowerFontStyle(computed, out);
+                LowerLineHeight(computed, location, elementFontSize, out);
+                LowerWordSpacing(computed, location, elementFontSize, out);
+                LowerTextIndent(computed, location, elementFontSize, out);
+                LowerTextTransform(computed, out);
+                LowerWhiteSpace(computed, out);
+                LowerDirection(computed, out);
+            }
+
+            void LowerFontFamily(const CSSComputedStyle& computed, CompiledStyle& out, std::string& fontFamily)
+            {
+                const CSSValue* family = Value(computed, CSSPropertyId::FontFamily);
+
+                if (family == nullptr || family->kind != CSSValueKind::CommaList || family->items.empty())
                 {
-                    ReportNotLowered(computed, CSSPropertyId::LineHeight, location,
-                                     "the native text engine derives line height from the font's metrics, and the "
-                                     "compiled style has no field that overrides it",
-                                     "Set the font size instead, or remove the declaration.");
+                    return;
                 }
+
+                fontFamily.clear();
+                for (const CSSValue& item : family->items)
+                {
+                    if (!fontFamily.empty())
+                    {
+                        fontFamily += ", ";
+                    }
+                    fontFamily += item.text;
+                }
+
+                if (!fontFamily.empty())
+                {
+                    out.specified |= StyleFlagFontFamily;
+                }
+            }
+
+            void LowerFontStyle(const CSSComputedStyle& computed, CompiledStyle& out)
+            {
+                const CSSValue* style = Value(computed, CSSPropertyId::FontStyle);
+
+                if (style == nullptr || style->kind != CSSValueKind::Keyword)
+                {
+                    return;
+                }
+
+                out.fontStyle = style->text == "italic" ? RoboRenderer::FontSlantKind::Italic
+                                                         : RoboRenderer::FontSlantKind::Upright;
+                out.specified |= StyleFlagFontStyle;
+            }
+
+            void LowerLineHeight(const CSSComputedStyle& computed,
+                                 const SourceLocation& location,
+                                 float elementFontSize,
+                                 CompiledStyle& out)
+            {
+                const CSSValue* height = Value(computed, CSSPropertyId::LineHeight);
+
+                if (height == nullptr)
+                {
+                    return;
+                }
+
+                if (height->kind == CSSValueKind::Keyword && height->text == "normal")
+                {
+                    out.lineHeight = 0.0f;
+                    out.specified |= StyleFlagLineHeight;
+                    return;
+                }
+
+                if (height->kind == CSSValueKind::Number)
+                {
+                    out.lineHeight = static_cast<float>(height->number);
+                    out.specified |= StyleFlagLineHeight;
+                    return;
+                }
+
+                // A length is absolute once resolved; the runtime stores a
+                // multiple of the font size, so the resolution is done here.
+                const LengthResolution resolved =
+                    ResolveLength(*height, context, elementFontSize, "line-height", diagnostics, location);
+
+                if (resolved.value >= 0.0f && elementFontSize > 0.0f)
+                {
+                    out.lineHeight = resolved.value / elementFontSize;
+                    out.specified |= StyleFlagLineHeight;
+                }
+            }
+
+            void LowerWordSpacing(const CSSComputedStyle& computed,
+                                  const SourceLocation& location,
+                                  float elementFontSize,
+                                  CompiledStyle& out)
+            {
+                const CSSValue* spacing = Value(computed, CSSPropertyId::WordSpacing);
+
+                if (spacing == nullptr)
+                {
+                    return;
+                }
+
+                if (spacing->kind == CSSValueKind::Keyword && spacing->text == "normal")
+                {
+                    out.wordSpacing = 0.0f;
+                    out.specified |= StyleFlagWordSpacing;
+                    return;
+                }
+
+                const LengthResolution resolved =
+                    ResolveLength(*spacing, context, elementFontSize, "word-spacing", diagnostics, location);
+
+                if (resolved.value != -1.0f)
+                {
+                    out.wordSpacing = resolved.value;
+                    out.specified |= StyleFlagWordSpacing;
+                }
+            }
+
+            void LowerTextIndent(const CSSComputedStyle& computed,
+                                 const SourceLocation& location,
+                                 float elementFontSize,
+                                 CompiledStyle& out)
+            {
+                const CSSValue* indent = Value(computed, CSSPropertyId::TextIndent);
+
+                if (indent == nullptr)
+                {
+                    return;
+                }
+
+                const LengthResolution resolved =
+                    ResolveLength(*indent, context, elementFontSize, "text-indent", diagnostics, location);
+
+                if (resolved.value != -1.0f)
+                {
+                    out.textIndent = resolved.value;
+                    out.specified |= StyleFlagTextIndent;
+                }
+            }
+
+            void LowerTextTransform(const CSSComputedStyle& computed, CompiledStyle& out)
+            {
+                const CSSValue* transform = Value(computed, CSSPropertyId::TextTransform);
+
+                if (transform == nullptr || transform->kind != CSSValueKind::Keyword)
+                {
+                    return;
+                }
+
+                if (transform->text == "uppercase")
+                {
+                    out.textTransform = RoboRenderer::TextTransformKind::Uppercase;
+                }
+                else if (transform->text == "lowercase")
+                {
+                    out.textTransform = RoboRenderer::TextTransformKind::Lowercase;
+                }
+                else if (transform->text == "capitalize")
+                {
+                    out.textTransform = RoboRenderer::TextTransformKind::Capitalize;
+                }
+                else
+                {
+                    out.textTransform = RoboRenderer::TextTransformKind::None;
+                }
+
+                out.specified |= StyleFlagTextTransform;
+            }
+
+            void LowerWhiteSpace(const CSSComputedStyle& computed, CompiledStyle& out)
+            {
+                const CSSValue* space = Value(computed, CSSPropertyId::WhiteSpace);
+
+                if (space == nullptr || space->kind != CSSValueKind::Keyword)
+                {
+                    return;
+                }
+
+                if (space->text == "nowrap")
+                {
+                    out.whiteSpace = RoboRenderer::WhiteSpaceKind::NoWrap;
+                }
+                else if (space->text == "pre")
+                {
+                    out.whiteSpace = RoboRenderer::WhiteSpaceKind::Pre;
+                }
+                else if (space->text == "pre-wrap")
+                {
+                    out.whiteSpace = RoboRenderer::WhiteSpaceKind::PreWrap;
+                }
+                else if (space->text == "pre-line")
+                {
+                    out.whiteSpace = RoboRenderer::WhiteSpaceKind::PreLine;
+                }
+                else
+                {
+                    out.whiteSpace = RoboRenderer::WhiteSpaceKind::Normal;
+                }
+
+                out.specified |= StyleFlagWhiteSpace;
+            }
+
+            void LowerDirection(const CSSComputedStyle& computed, CompiledStyle& out)
+            {
+                const CSSValue* direction = Value(computed, CSSPropertyId::Direction);
+
+                if (direction == nullptr || direction->kind != CSSValueKind::Keyword)
+                {
+                    return;
+                }
+
+                out.direction = direction->text == "rtl" ? RoboRenderer::TextDirectionKind::RightToLeft
+                                                          : RoboRenderer::TextDirectionKind::LeftToRight;
+                out.specified |= StyleFlagDirection;
             }
 
             void LowerOverflow(const CSSComputedStyle& computed, const SourceLocation& location, CompiledStyle& out)
@@ -1131,11 +1343,13 @@ namespace RoboHTMLCompiler
                                 CssStyleTable& out)
     {
         out.styles.clear();
+        out.fontFamilies.clear();
         out.indexBySourcePosition.clear();
 
         // Index 0 stays empty: a style index of 0 is the compiled format's way of
         // saying "the native default", so the authored table starts at 1.
         out.styles.emplace_back(CompiledStyle{});
+        out.fontFamilies.emplace_back();
 
         if (document.root == nullptr || document.root->children.empty())
         {
@@ -1278,8 +1492,9 @@ namespace RoboHTMLCompiler
                                            source->second->location.offset };
 
             CompiledStyle lowered;
+            std::string fontFamily;
 
-            if (!lowerer.Lower(computed, location, lowered))
+            if (!lowerer.Lower(computed, location, lowered, fontFamily))
             {
                 continue;
             }
@@ -1287,7 +1502,12 @@ namespace RoboHTMLCompiler
             const std::uint64_t position =
                 CssStyleTable::PositionKey(source->second->location.line, source->second->location.column);
 
-            const std::string key(reinterpret_cast<const char*>(&lowered), sizeof(lowered));
+            // The family name is interned later, so it is not part of the style
+            // bytes; two styles that differ only in family must not share an
+            // entry, so the interning key carries it explicitly.
+            std::string key(reinterpret_cast<const char*>(&lowered), sizeof(lowered));
+            key += '|';
+            key += fontFamily;
             const auto existing = interned.find(key);
 
             if (existing != interned.end())
@@ -1317,6 +1537,7 @@ namespace RoboHTMLCompiler
             lowered.sourceStyleId = styleIndex;
             interned.emplace(key, styleIndex);
             out.styles.push_back(lowered);
+            out.fontFamilies.push_back(fontFamily);
             out.indexBySourcePosition[position] = styleIndex;
             ++out.styledElementCount;
         }

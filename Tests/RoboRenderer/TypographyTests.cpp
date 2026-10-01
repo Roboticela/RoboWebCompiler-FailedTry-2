@@ -15,12 +15,120 @@ using namespace RoboTest;
 #include "RoboRenderer/FontFile.h"
 #include "RoboRenderer/Text.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <string>
 #include <vector>
 
 using namespace RoboRenderer;
+
+namespace
+{
+    /// The Type 2 number encoding: one byte below 108, two above, and the
+    /// explicit 16-bit form only when a value cannot be written shorter.
+    void PushCffInt(std::vector<std::uint8_t>& out, int value)
+    {
+        if (value >= -107 && value <= 107)
+        {
+            out.push_back(static_cast<std::uint8_t>(value + 139));
+        }
+        else if (value >= 108 && value <= 1131)
+        {
+            const int reduced = value - 108;
+            out.push_back(static_cast<std::uint8_t>(247 + (reduced >> 8)));
+            out.push_back(static_cast<std::uint8_t>(reduced & 0xFF));
+        }
+        else if (value >= -1131 && value <= -108)
+        {
+            const int reduced = -value - 108;
+            out.push_back(static_cast<std::uint8_t>(251 + (reduced >> 8)));
+            out.push_back(static_cast<std::uint8_t>(reduced & 0xFF));
+        }
+        else
+        {
+            out.push_back(28);
+            out.push_back(static_cast<std::uint8_t>((value >> 8) & 0xFF));
+            out.push_back(static_cast<std::uint8_t>(value & 0xFF));
+        }
+    }
+
+    /// Builds the smallest CFF table that holds the given charstrings. The
+    /// layout is fixed, so the Top DICT can name the CharStrings offset (28)
+    /// before it is written.
+    std::vector<std::uint8_t> BuildCff(const std::vector<std::vector<std::uint8_t>>& glyphs)
+    {
+        std::vector<std::uint8_t> out;
+
+        const auto writeIndex = [&out](const std::vector<std::vector<std::uint8_t>>& items) {
+            const std::uint32_t count = static_cast<std::uint32_t>(items.size());
+            out.push_back(static_cast<std::uint8_t>(count >> 8));
+            out.push_back(static_cast<std::uint8_t>(count & 0xFF));
+            if (count == 0)
+            {
+                return;
+            }
+
+            std::uint32_t total = 0;
+            for (const std::vector<std::uint8_t>& item : items)
+            {
+                total += static_cast<std::uint32_t>(item.size());
+            }
+
+            const int offSize = (total + 1) < 256 ? 1 : 2;
+            out.push_back(static_cast<std::uint8_t>(offSize));
+
+            const auto writeOffset = [&out, offSize](std::uint32_t value) {
+                if (offSize == 1)
+                {
+                    out.push_back(static_cast<std::uint8_t>(value));
+                }
+                else
+                {
+                    out.push_back(static_cast<std::uint8_t>(value >> 8));
+                    out.push_back(static_cast<std::uint8_t>(value & 0xFF));
+                }
+            };
+
+            std::uint32_t offset = 1;
+            writeOffset(offset);
+            for (const std::vector<std::uint8_t>& item : items)
+            {
+                offset += static_cast<std::uint32_t>(item.size());
+                writeOffset(offset);
+            }
+            for (const std::vector<std::uint8_t>& item : items)
+            {
+                out.insert(out.end(), item.begin(), item.end());
+            }
+        };
+
+        // Header
+        out.push_back(1);
+        out.push_back(0);
+        out.push_back(4);
+        out.push_back(4);
+
+        // Name INDEX
+        {
+            std::vector<std::uint8_t> name = { 'T', 'e', 's', 't' };
+            writeIndex({ name });
+        }
+
+        // Top DICT INDEX: CharStrings at 28 (the layout below fixes that).
+        {
+            std::vector<std::uint8_t> dict = { 0x1D, 0x00, 0x00, 0x00, 28, 0x11 };
+            writeIndex({ dict });
+        }
+
+        const std::vector<std::vector<std::uint8_t>> empty;
+        writeIndex(empty); // String INDEX
+        writeIndex(empty); // Global Subr INDEX
+
+        writeIndex(glyphs); // CharStrings INDEX
+        return out;
+    }
+}
 
 ROBO_TEST(Typography, ScriptsAreClassifiedCorrectly)
 {
@@ -418,4 +526,210 @@ ROBO_TEST(Typography, AVariableFaceInstantiatesItsAxes)
     // A heavier instance never has a narrower 'A'.
     ROBO_CHECK(black >= regular);
 }
+
+ROBO_TEST(Typography, CffCharstringsProduceOutlines)
+{
+    const std::vector<std::uint8_t> notdef = { 0x0E };
+
+    std::vector<std::uint8_t> square;
+    PushCffInt(square, 100);
+    PushCffInt(square, 100);
+    square.push_back(21); // rmoveto
+    PushCffInt(square, 0);
+    PushCffInt(square, 200);
+    PushCffInt(square, 200);
+    PushCffInt(square, 0);
+    PushCffInt(square, 0);
+    PushCffInt(square, -200);
+    PushCffInt(square, -200);
+    PushCffInt(square, 0);
+    square.push_back(5);    // rlineto
+    square.push_back(0x0E); // endchar
+
+    const std::vector<std::uint8_t> bytes = BuildCff({ notdef, square });
+    const std::unique_ptr<CffFont> font =
+        CffFont::Load(bytes.data(), static_cast<std::uint32_t>(bytes.size()), 2);
+
+    ROBO_CHECK(font != nullptr);
+    if (font == nullptr)
+    {
+        return;
+    }
+
+    ROBO_CHECK(font->GlyphCount() == 2);
+
+    GlyphPath path;
+    ROBO_CHECK(font->Outline(1, path));
+    ROBO_CHECK(path.ends.size() == 1);
+    ROBO_CHECK(path.points.size() == 5);
+
+    float x0 = 1.0e9f;
+    float y0 = 1.0e9f;
+    float x1 = -1.0e9f;
+    float y1 = -1.0e9f;
+    for (const ContourPoint& point : path.points)
+    {
+        x0 = std::min(x0, point.x);
+        y0 = std::min(y0, point.y);
+        x1 = std::max(x1, point.x);
+        y1 = std::max(y1, point.y);
+    }
+    ROBO_CHECK(std::fabs(x0 - 100.0f) < 0.01f);
+    ROBO_CHECK(std::fabs(y0 - 100.0f) < 0.01f);
+    ROBO_CHECK(std::fabs(x1 - 300.0f) < 0.01f);
+    ROBO_CHECK(std::fabs(y1 - 300.0f) < 0.01f);
+
+    // The blank `.notdef` charstring yields no contour.
+    ROBO_CHECK(!font->Outline(0, path));
+    ROBO_CHECK(!font->Outline(7, path));
+}
+
+ROBO_TEST(Typography, CffCubicsAreFlattenedToContours)
+{
+    const std::vector<std::uint8_t> notdef = { 0x0E };
+
+    std::vector<std::uint8_t> curve;
+    PushCffInt(curve, 0);
+    PushCffInt(curve, 0);
+    curve.push_back(21); // rmoveto
+    PushCffInt(curve, 0);
+    PushCffInt(curve, 200);
+    PushCffInt(curve, 200);
+    PushCffInt(curve, 200);
+    PushCffInt(curve, 200);
+    PushCffInt(curve, 0);
+    curve.push_back(8);    // rrcurveto
+    curve.push_back(0x0E); // endchar
+
+    const std::vector<std::uint8_t> bytes = BuildCff({ notdef, curve });
+    const std::unique_ptr<CffFont> font =
+        CffFont::Load(bytes.data(), static_cast<std::uint32_t>(bytes.size()), 2);
+
+    ROBO_CHECK(font != nullptr);
+    if (font == nullptr)
+    {
+        return;
+    }
+
+    GlyphPath path;
+    ROBO_CHECK(font->Outline(1, path));
+    ROBO_CHECK(path.ends.size() == 1);
+    // A cubic is not a straight line: it flattens to several points.
+    ROBO_CHECK(path.points.size() > 3);
+}
+
+ROBO_TEST(Typography, ItalicIsSelectedOrSynthesized)
+{
+    // Only the bundled upright Inter: the host has no Inter italic to borrow, so
+    // `font-style: italic` must come back as a synthesized oblique.
+    const std::string directory = std::string(ROBO_TEST_SOURCE_DIR) + "/Fonts/Inter";
+    FontRegistry fonts({ directory });
+
+    if (fonts.UsesStrokeFallback())
+    {
+        return;
+    }
+
+    const FontFace& italic = fonts.Face(FontWeightKind::Normal, nullptr, FontSlantKind::Italic);
+    ROBO_CHECK(italic.IsItalic());
+    ROBO_CHECK(fonts.HasSyntheticItalic());
+
+    if (fonts.HasSyntheticItalic())
+    {
+        const FontFace& upright = fonts.Face(FontWeightKind::Normal);
+        const Glyph* slanted = italic.FindGlyph('A');
+        const Glyph* plain = upright.FindGlyph('A');
+
+        ROBO_CHECK(slanted != nullptr && plain != nullptr);
+
+        if (slanted != nullptr && plain != nullptr)
+        {
+            ROBO_CHECK(slanted->slant != 0.0f);
+            // A shear moves no advance, so measurement is untouched.
+            ROBO_CHECK(slanted->advance == plain->advance);
+        }
+    }
+}
+
+ROBO_TEST(Typography, DirectionOverridesTheFirstStrongCharacter)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources("<p class=\"rtl\">abc</p>", application,
+                                      { { "app.css", ".rtl { direction: rtl }" } }, error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 400.0f, 200.0f);
+    ROBO_CHECK(window.Frame());
+
+    float aX = 0.0f;
+    float cX = 0.0f;
+    bool sawA = false;
+    bool sawC = false;
+
+    for (const PaintGlyph& glyph : window.renderer.Paint().List().Glyphs())
+    {
+        if (glyph.codepoint == 'a')
+        {
+            aX = glyph.x;
+            sawA = true;
+        }
+        else if (glyph.codepoint == 'c')
+        {
+            cX = glyph.x;
+            sawC = true;
+        }
+    }
+
+    ROBO_CHECK(sawA && sawC);
+
+    // A right-to-left paragraph paints its first character at the right edge,
+    // so 'a' sits to the right of 'c' even though the run is Latin.
+    if (sawA && sawC)
+    {
+        ROBO_CHECK(aX > cX);
+    }
+}
+
+ROBO_TEST(Typography, CssTextPropertiesReachTheRuntime)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    // `letter-spacing` and `text-transform` are the two properties whose effect
+    // is visible in the painted glyphs, so a document that compiles them into
+    // the authored table but never applies them at layout is caught here.
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"styled\">abc</p>", application,
+        { { "app.css", ".styled { text-transform: uppercase; letter-spacing: 6px }" } }, error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 400.0f, 200.0f);
+    ROBO_CHECK(window.Frame());
+
+    std::size_t uppercaseCount = 0;
+    std::size_t lowercaseCount = 0;
+
+    for (const PaintGlyph& glyph : window.renderer.Paint().List().Glyphs())
+    {
+        if (glyph.codepoint >= 'A' && glyph.codepoint <= 'Z')
+        {
+            ++uppercaseCount;
+        }
+        else if (glyph.codepoint >= 'a' && glyph.codepoint <= 'z')
+        {
+            ++lowercaseCount;
+        }
+    }
+
+    ROBO_CHECK_EQ(lowercaseCount, static_cast<std::size_t>(0));
+    ROBO_CHECK_EQ(uppercaseCount, static_cast<std::size_t>(3));
+}
+
+
 

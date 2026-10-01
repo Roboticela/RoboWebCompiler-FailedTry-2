@@ -62,6 +62,15 @@ namespace RoboHTMLCompiler
         /// default", exactly as the compiled format expects.
         std::vector<RoboRenderer::CompiledStyle> styles;
 
+        /// The `font-family` list of each style, in the same order as `styles`.
+        ///
+        /// A compiled style carries a font family as a document string index,
+        /// and string interning belongs to the later build stage that owns the
+        /// string table. Keeping the names here until then is what lets the two
+        /// stages stay in their lanes: this table decides *what* family was
+        /// asked for, the builder decides *where* it is stored.
+        std::vector<std::string> fontFamilies;
+
         /// Where an element was written -> index into `styles`.
         ///
         /// The key is the source position, not an element identity, because it is

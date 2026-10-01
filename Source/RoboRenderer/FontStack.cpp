@@ -72,7 +72,7 @@ namespace RoboRenderer
             float Weight() const override { return static_cast<float>(font->WeightClass()); }
             int WeightClass() const override { return font->WeightClass(); }
             bool HasColorGlyphs() const override { return font->HasColorGlyphs(); }
-            bool UsesOutlines() const override { return font->HasOutlines(); }
+            bool UsesOutlines() const override { return font->HasOutlines() || font->HasCffOutlines(); }
 
             bool ColorLayers(std::uint16_t glyphId, std::vector<ColorLayer>& out) const override
             {
@@ -232,8 +232,8 @@ namespace RoboRenderer
 
             const std::string& Path() const { return path; }
             bool IsBold() const { return font->IsBold(); }
-            bool IsItalic() const { return font->IsItalic(); }
-            bool HasOutlines() const { return font->HasOutlines(); }
+            bool IsItalic() const override { return font->IsItalic(); }
+            bool HasOutlines() const { return font->HasOutlines() || font->HasCffOutlines(); }
             const SfntFont& Font() const { return *font; }
 
         private:
@@ -267,7 +267,7 @@ namespace RoboRenderer
                 glyph.x1 = x1;
                 glyph.y1 = y1;
                 glyph.hasInk = hasPath && !path.Empty();
-                glyph.filled = font->HasOutlines();
+                glyph.filled = font->HasOutlines() || font->HasCffOutlines();
 
                 if (hasPath && !path.Empty())
                 {
@@ -319,6 +319,7 @@ namespace RoboRenderer
             int WeightClass() const override { return 700; }
             bool HasColorGlyphs() const override { return base->HasColorGlyphs(); }
             bool UsesOutlines() const override { return base->UsesOutlines(); }
+            bool IsItalic() const override { return base->IsItalic(); }
 
             // Colour glyphs are not emboldened: their colours come from the
             // palette, not a synthetic dilation of coverage.
@@ -426,6 +427,128 @@ namespace RoboRenderer
             }
 
         private:
+            std::shared_ptr<const FontFace> base;
+            std::string family;
+            mutable std::unordered_map<std::uint32_t, Glyph> glyphs;
+            mutable std::unordered_map<std::uint16_t, Glyph> glyphsById;
+            mutable Glyph missing;
+            mutable bool missingBuilt = false;
+        };
+
+        /// An italic the host does not have, synthesized by shearing the upright
+        /// design. Advances are unchanged, so measurement is untouched and only
+        /// the painted outline leans; the rasterizer reads `Glyph::slant`.
+        class SyntheticObliqueFace final : public FontFace
+        {
+        public:
+            explicit SyntheticObliqueFace(std::shared_ptr<const FontFace> base)
+                : base(std::move(base))
+                , family(std::string(this->base->FamilyName()) + " Italic")
+            {
+            }
+
+            const char* FamilyName() const override { return family.c_str(); }
+            float UnitsPerEm() const override { return base->UnitsPerEm(); }
+            float Ascent() const override { return base->Ascent(); }
+            float Descent() const override { return base->Descent(); }
+            float LineGap() const override { return base->LineGap(); }
+            float Weight() const override { return base->Weight(); }
+            int WeightClass() const override { return base->WeightClass(); }
+            bool HasColorGlyphs() const override { return base->HasColorGlyphs(); }
+            bool UsesOutlines() const override { return base->UsesOutlines(); }
+            bool IsItalic() const override { return true; }
+            bool IsSyntheticItalic() const override { return true; }
+
+            bool ColorLayers(std::uint16_t glyphId, std::vector<ColorLayer>& out) const override
+            {
+                return base->ColorLayers(glyphId, out);
+            }
+
+            bool PaletteEntry(std::uint16_t index, std::uint8_t& red, std::uint8_t& green,
+                              std::uint8_t& blue, std::uint8_t& alpha) const override
+            {
+                return base->PaletteEntry(index, red, green, blue, alpha);
+            }
+
+            bool BitmapGlyph(std::uint16_t glyphId, std::uint16_t preferPpem, const std::uint8_t*& data,
+                             std::uint32_t& length, std::int32_t& bearingX,
+                             std::int32_t& bearingY) const override
+            {
+                return base->BitmapGlyph(glyphId, preferPpem, data, length, bearingX, bearingY);
+            }
+
+            const ContourPoint* ContourPoints() const override { return base->ContourPoints(); }
+            const std::uint32_t* ContourEnds() const override { return base->ContourEnds(); }
+            const StrokePoint* Points() const override { return base->Points(); }
+
+            bool Covers(std::uint32_t codepoint) const override { return base->Covers(codepoint); }
+
+            const Glyph* FindGlyph(std::uint32_t codepoint) const override
+            {
+                const Glyph* source = base->FindGlyph(codepoint);
+                if (source == nullptr)
+                {
+                    return nullptr;
+                }
+
+                const auto found = glyphs.find(codepoint);
+                if (found != glyphs.end())
+                {
+                    return &found->second;
+                }
+
+                Glyph glyph = *source;
+                glyph.slant = Slant;
+
+                const auto inserted = glyphs.emplace(codepoint, glyph);
+                return &inserted.first->second;
+            }
+
+            const Glyph& MissingGlyph() const override
+            {
+                if (!missingBuilt)
+                {
+                    missing = base->MissingGlyph();
+                    missing.slant = Slant;
+                    missingBuilt = true;
+                }
+                return missing;
+            }
+
+            const Glyph* FindGlyphById(std::uint16_t glyphId) const override
+            {
+                const Glyph* source = base->FindGlyphById(glyphId);
+                if (source == nullptr)
+                {
+                    return nullptr;
+                }
+
+                const auto found = glyphsById.find(glyphId);
+                if (found != glyphsById.end())
+                {
+                    return &found->second;
+                }
+
+                Glyph glyph = *source;
+                glyph.slant = Slant;
+
+                const auto inserted = glyphsById.emplace(glyphId, glyph);
+                return &inserted.first->second;
+            }
+
+            bool ShapeRun(const std::uint32_t* codepoints,
+                          std::size_t count,
+                          std::vector<ShapedGlyph>& out) const override
+            {
+                // A shear changes no advance, so the shaped metrics are the
+                // upright ones and only painting leans.
+                return base->ShapeRun(codepoints, count, out);
+            }
+
+        private:
+            /// tan(11.75 degrees), the oblique angle a browser uses.
+            static constexpr float Slant = 0.2079f;
+
             std::shared_ptr<const FontFace> base;
             std::string family;
             mutable std::unordered_map<std::uint32_t, Glyph> glyphs;
@@ -768,9 +891,12 @@ namespace RoboRenderer
         {
             faceRegular = &strokeRegular;
             faceBold = &strokeBold;
-            chain = { faceRegular, faceBold };
+            faceItalic = &strokeRegular;
+            faceBoldItalic = &strokeBold;
+            chain = { faceRegular, faceBold, faceItalic, faceBoldItalic };
             primaryFamily = "Robo Stroke";
             syntheticBold = false;
+            syntheticItalic = false;
             usesStrokeFallback = true;
             return;
         }
@@ -793,6 +919,14 @@ namespace RoboRenderer
                     continue;
                 }
                 if (face->WeightClass() < 100)
+                {
+                    continue;
+                }
+
+                // An italic request takes only italic faces and an upright one
+                // only upright faces, so a host with both never answers the
+                // wrong style for a plain weight.
+                if (face->IsItalic() != wantItalic)
                 {
                     continue;
                 }
@@ -821,7 +955,6 @@ namespace RoboRenderer
                 }
             }
 
-            (void)wantItalic;
             return best;
         };
 
@@ -859,9 +992,12 @@ namespace RoboRenderer
         {
             faceRegular = &strokeRegular;
             faceBold = &strokeBold;
-            chain = { faceRegular, faceBold };
+            faceItalic = &strokeRegular;
+            faceBoldItalic = &strokeBold;
+            chain = { faceRegular, faceBold, faceItalic, faceBoldItalic };
             primaryFamily = "Robo Stroke";
             syntheticBold = false;
+            syntheticItalic = false;
             usesStrokeFallback = true;
             return;
         }
@@ -881,6 +1017,36 @@ namespace RoboRenderer
             }
         }
 
+        // An italic sibling must belong to the family the primary face came
+        // from: an italic Inter is wanted, not whatever italic the host happens
+        // to install first. A missing one is synthesized below.
+        const auto findSibling = [&](bool wantBold, bool wantItalic) -> const FontFace* {
+            for (const std::shared_ptr<FontFace>& face : owned)
+            {
+                if (!face->UsesOutlines() || face->WeightClass() < 100)
+                {
+                    continue;
+                }
+                if (std::strcmp(face->FamilyName(), faceRegular->FamilyName()) != 0)
+                {
+                    continue;
+                }
+                if ((face->WeightClass() >= 600) != wantBold)
+                {
+                    continue;
+                }
+                if (face->IsItalic() != wantItalic)
+                {
+                    continue;
+                }
+                return face.get();
+            }
+            return nullptr;
+        };
+
+        const FontFace* italicFace = findSibling(false, true);
+        const FontFace* boldItalicFace = findSibling(true, true);
+
         if (boldFace != nullptr)
         {
             faceBold = boldFace;
@@ -894,12 +1060,50 @@ namespace RoboRenderer
             syntheticBold = true;
         }
 
-        // Build the fallback order. The primary pair is first; everything else
+        // The italic siblings. A real italic file wins; when the host has none,
+        // the upright design is sheared so `font-style: italic` never resolves
+        // to nothing. A shared_ptr for the bold face lets the shear wrap it too.
+        std::shared_ptr<const FontFace> boldShared;
+        for (const std::shared_ptr<FontFace>& face : owned)
+        {
+            if (face.get() == faceBold)
+            {
+                boldShared = face;
+                break;
+            }
+        }
+
+        if (italicFace != nullptr)
+        {
+            faceItalic = italicFace;
+        }
+        else
+        {
+            auto synthetic = std::make_shared<SyntheticObliqueFace>(regularShared);
+            faceItalic = synthetic.get();
+            owned.push_back(synthetic);
+            syntheticItalic = true;
+        }
+
+        if (boldItalicFace != nullptr)
+        {
+            faceBoldItalic = boldItalicFace;
+        }
+        else
+        {
+            auto synthetic = std::make_shared<SyntheticObliqueFace>(boldShared);
+            faceBoldItalic = synthetic.get();
+            owned.push_back(synthetic);
+            syntheticItalic = true;
+        }
+
+        // Build the fallback order. The primary four are first; everything else
         // follows by family preference, outlines before colour-only faces.
         std::vector<const FontFace*> fallbacks;
         for (const std::shared_ptr<FontFace>& face : owned)
         {
-            if (face.get() == faceRegular || face.get() == faceBold)
+            if (face.get() == faceRegular || face.get() == faceBold || face.get() == faceItalic ||
+                face.get() == faceBoldItalic)
             {
                 continue;
             }
@@ -919,15 +1123,177 @@ namespace RoboRenderer
         chain.clear();
         chain.push_back(faceRegular);
         chain.push_back(faceBold);
+        chain.push_back(faceItalic);
+        chain.push_back(faceBoldItalic);
         for (const FontFace* face : fallbacks)
         {
             chain.push_back(face);
         }
     }
 
+    namespace
+    {
+        /// Case-insensitive family comparison, with the requested name trimmed.
+        bool FamilyEquals(const char* faceFamily, const std::string& requested)
+        {
+            std::size_t begin = 0;
+            std::size_t end = requested.size();
+            while (begin < end && std::isspace(static_cast<unsigned char>(requested[begin])) != 0)
+            {
+                ++begin;
+            }
+            while (end > begin && std::isspace(static_cast<unsigned char>(requested[end - 1])) != 0)
+            {
+                --end;
+            }
+
+            if (begin == end)
+            {
+                return false;
+            }
+
+            std::size_t index = 0;
+            for (; index < end - begin; ++index)
+            {
+                const char actual = faceFamily[index];
+                if (actual == '\0')
+                {
+                    return false;
+                }
+                if (std::tolower(static_cast<unsigned char>(actual)) !=
+                    std::tolower(static_cast<unsigned char>(requested[begin + index])))
+                {
+                    return false;
+                }
+            }
+
+            return faceFamily[index] == '\0';
+        }
+
+        /// True for a CSS generic family, which names a *kind* of face rather
+        /// than a family the host may or may not have.
+        bool IsGenericFamily(const std::string& name)
+        {
+            return name == "serif" || name == "sans-serif" || name == "monospace" || name == "cursive" ||
+                   name == "fantasy" || name == "system-ui" || name == "ui-serif" ||
+                   name == "ui-sans-serif" || name == "ui-monospace" || name == "ui-rounded" ||
+                   name == "emoji" || name == "math" || name == "fangsong";
+        }
+    }
+
     const FontFace& FontRegistry::Face(FontWeightKind weight) const
     {
         return weight == FontWeightKind::Bold ? *faceBold : *faceRegular;
+    }
+
+    const FontFace& FontRegistry::Face(FontWeightKind weight, const char* family,
+                                       FontSlantKind slant) const
+    {
+        const bool wantBold = weight == FontWeightKind::Bold;
+        const bool wantItalic = slant == FontSlantKind::Italic;
+
+        const FontFace* primary =
+            wantItalic ? (wantBold ? faceBoldItalic : faceItalic) : (wantBold ? faceBold : faceRegular);
+
+        if (family == nullptr || family[0] == '\0')
+        {
+            return *primary;
+        }
+
+        const char* cursor = family;
+        while (*cursor != '\0')
+        {
+            std::string name;
+            while (*cursor != '\0' && *cursor != ',')
+            {
+                name += *cursor;
+                ++cursor;
+            }
+            if (*cursor == ',')
+            {
+                ++cursor;
+            }
+
+            if (IsGenericFamily(name))
+            {
+                continue;
+            }
+
+            for (const FontFace* face : chain)
+            {
+                if (face == nullptr || !FamilyEquals(face->FamilyName(), name))
+                {
+                    continue;
+                }
+
+                const bool bold = face->WeightClass() >= 600;
+                if (bold == wantBold && face->IsItalic() == wantItalic)
+                {
+                    return *face;
+                }
+            }
+        }
+
+        return *primary;
+    }
+
+    const FontFace& FontRegistry::FaceFor(std::uint32_t codepoint,
+                                          FontWeightKind weight,
+                                          const char* family,
+                                          FontSlantKind slant) const
+    {
+        const bool wantBold = weight == FontWeightKind::Bold;
+        const bool wantItalic = slant == FontSlantKind::Italic;
+
+        if (family == nullptr || family[0] == '\0')
+        {
+            // No named family: the italic sibling when one covers the code
+            // point, otherwise the ordinary fallback chain.
+            if (wantItalic)
+            {
+                const FontFace& italic = wantBold ? *faceBoldItalic : *faceItalic;
+                if (italic.Covers(codepoint))
+                {
+                    return italic;
+                }
+            }
+
+            return FaceFor(codepoint, weight);
+        }
+
+        const char* cursor = family;
+        while (*cursor != '\0')
+        {
+            std::string name;
+            while (*cursor != '\0' && *cursor != ',')
+            {
+                name += *cursor;
+                ++cursor;
+            }
+            if (*cursor == ',')
+            {
+                ++cursor;
+            }
+
+            if (IsGenericFamily(name))
+            {
+                continue;
+            }
+
+            for (const FontFace* face : chain)
+            {
+                if (face != nullptr && FamilyEquals(face->FamilyName(), name) &&
+                    face->IsItalic() == wantItalic && face->Covers(codepoint))
+                {
+                    return *face;
+                }
+            }
+        }
+
+        // No installed family covers the code point; the ordinary fallback chain
+        // draws it, which is exactly what a browser does for a glyph the chosen
+        // family does not have.
+        return FaceFor(codepoint, weight);
     }
 
     std::uint32_t FontRegistry::IndexOf(const FontFace& face) const

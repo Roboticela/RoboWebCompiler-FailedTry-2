@@ -184,6 +184,7 @@ namespace RoboRenderer
         result.lines.clear();
         result.elementLines.clear();
         result.laidOutCount = 0;
+        transformedText.clear();
 
         const float viewportWidth = viewport.logicalWidth > 0.0f ? viewport.logicalWidth : 800.0f;
         const float viewportHeight = viewport.logicalHeight > 0.0f ? viewport.logicalHeight : 600.0f;
@@ -521,8 +522,45 @@ namespace RoboRenderer
 
         const CompiledStyle& style = stylesCache[index];
         const RenderCategory category = CategoryFor(node->kind);
-        const FontFace& face = fonts.Face(style.fontWeight);
+
+        // `text-transform` rewrites the run before it is measured, so the width
+        // and the painted glyphs describe the same text.
+        const TextTransformKind transform = IsSpecified(style.specified, StyleFlagTextTransform)
+                                                ? style.textTransform
+                                                : TextTransformKind::None;
+
+        if (transform != TextTransformKind::None)
+        {
+            transformedText.push_back(ApplyTextTransform(text, transform));
+            text = transformedText.back().c_str();
+        }
+
+        const char* family = nullptr;
+        if (IsSpecified(style.specified, StyleFlagFontFamily) && style.fontFamily != 0)
+        {
+            family = StringAt(document, style.fontFamily);
+        }
+
+        const FontSlantKind slant = IsSpecified(style.specified, StyleFlagFontStyle) ? style.fontStyle
+                                                                                    : FontSlantKind::Upright;
+        const TextDirectionKind direction =
+            IsSpecified(style.specified, StyleFlagDirection) ? style.direction : TextDirectionKind::Auto;
+
+        TextRunStyle runStyle;
+        runStyle.letterSpacing = IsSpecified(style.specified, StyleFlagLetterSpacing) ? style.letterSpacing : 0.0f;
+        runStyle.wordSpacing = IsSpecified(style.specified, StyleFlagWordSpacing) ? style.wordSpacing : 0.0f;
+        runStyle.fontFamily = family;
+        runStyle.slant = slant;
+        runStyle.direction = direction;
+
+        const FontFace& face = fonts.Face(style.fontWeight, family, slant);
         const float scale = style.fontSize / face.UnitsPerEm();
+
+        const bool preserved = node->HasFlag(ElementFlagPreserveWhitespace) ||
+                               (IsSpecified(style.specified, StyleFlagWhiteSpace) &&
+                                (style.whiteSpace == WhiteSpaceKind::Pre ||
+                                 style.whiteSpace == WhiteSpaceKind::PreWrap ||
+                                 style.whiteSpace == WhiteSpaceKind::PreLine));
 
         InlineItem item;
         item.element = index;
@@ -530,14 +568,22 @@ namespace RoboRenderer
         item.isText = true;
         item.fontSize = style.fontSize;
         item.weight = style.fontWeight;
-        item.width = textLayout.Measure(text, style.fontSize, style.fontWeight);
+        item.width = textLayout.Measure(text, style.fontSize, style.fontWeight, &runStyle);
         item.ascent = face.Ascent() * scale;
         item.descent = face.Descent() * scale;
         item.height = item.ascent + item.descent;
         item.placeholder = isPlaceholder;
         item.controlValue = isControlValue;
         item.underline = category == RenderCategory::Link;
-        item.preserveWhitespace = node->HasFlag(ElementFlagPreserveWhitespace);
+        item.preserveWhitespace = preserved;
+        item.letterSpacing = runStyle.letterSpacing;
+        item.wordSpacing = runStyle.wordSpacing;
+        item.fontFamily = family;
+        item.fontStyle = slant;
+        item.direction = direction;
+        item.lineHeightScale = IsSpecified(style.specified, StyleFlagLineHeight) ? style.lineHeight : 0.0f;
+        item.noWrap = IsSpecified(style.specified, StyleFlagWhiteSpace) &&
+                      style.whiteSpace == WhiteSpaceKind::NoWrap;
         item.yOffset = category == RenderCategory::RubyText ? -style.fontSize * 0.55f : 0.0f;
         items.push_back(item);
         return true;
@@ -733,10 +779,15 @@ namespace RoboRenderer
         std::vector<AtomicBox> atomics;
         std::vector<TextLine> wrappedLines;
 
+        // `text-indent` shifts the first line of the block only.
+        const float indent = IsSpecified(style.specified, StyleFlagTextIndent) ? style.textIndent : 0.0f;
+
         float lineTop = y;
-        float penX = x;
+        float currentIndent = indent;
+        float penX = x + indent;
         float maxAscent = 0.0f;
         float maxDescent = 0.0f;
+        float specifiedLineHeight = 0.0f;
         float usedHeight = 0.0f;
         float widestLine = 0.0f;
 
@@ -746,9 +797,12 @@ namespace RoboRenderer
                 return;
             }
 
-            const float lineHeight = maxAscent + maxDescent;
+            // A specified `line-height` can widen a line box beyond what the
+            // font's own metrics ask for; it never narrows it, so a tall glyph
+            // still fits and the line boxes do not overlap.
+            const float lineHeight = std::max(maxAscent + maxDescent, specifiedLineHeight);
             const float baseline = lineTop + maxAscent;
-            const float used = penX - x;
+            const float used = penX - x - currentIndent;
             widestLine = std::max(widestLine, used);
 
             const float offset = AlignmentOffset(style.textAlign, availableWidth, used);
@@ -771,7 +825,7 @@ namespace RoboRenderer
                     LineLayout line;
                     line.element = fragment.item->element;
                     line.container = container;
-                    line.x = x + offset + fragment.x;
+                    line.x = x + offset + currentIndent + fragment.x;
                     line.width = fragment.width;
                     line.baseline = baseline;
                     line.lineTop = lineTop;
@@ -779,6 +833,11 @@ namespace RoboRenderer
                     line.lineWidth = used;
                     line.fontSize = fragment.item->fontSize;
                     line.weight = fragment.item->weight;
+                    line.letterSpacing = fragment.item->letterSpacing;
+                    line.wordSpacing = fragment.item->wordSpacing;
+                    line.fontFamily = fragment.item->fontFamily;
+                    line.fontStyle = fragment.item->fontStyle;
+                    line.direction = fragment.item->direction;
                     line.startByte = fragment.startByte;
                     line.endByte = fragment.endByte;
                     line.placeholder = fragment.item->placeholder;
@@ -792,8 +851,10 @@ namespace RoboRenderer
             lineTop += lineHeight;
             usedHeight = lineTop - y;
             penX = x;
+            currentIndent = 0.0f;
             maxAscent = 0.0f;
             maxDescent = 0.0f;
+            specifiedLineHeight = 0.0f;
             fragments.clear();
             atomics.clear();
         };
@@ -818,7 +879,7 @@ namespace RoboRenderer
                     flushLine();
                 }
 
-                atomics.push_back(AtomicBox{ &item, penX - x });
+                atomics.push_back(AtomicBox{ &item, penX - x - currentIndent });
                 penX += item.width;
                 maxAscent = std::max(maxAscent, item.ascent);
                 maxDescent = std::max(maxDescent, item.descent);
@@ -834,9 +895,16 @@ namespace RoboRenderer
                                         ? (wrap ? std::max(1.0f, availableWidth - (penX - x)) : 0.0f)
                                         : (wrap ? availableWidth : 0.0f);
 
+                TextRunStyle runStyle;
+                runStyle.letterSpacing = item.letterSpacing;
+                runStyle.wordSpacing = item.wordSpacing;
+                runStyle.fontFamily = item.fontFamily;
+                runStyle.slant = item.fontStyle;
+                runStyle.direction = item.direction;
+
                 wrappedLines.clear();
-                textLayout.Wrap(item.text + offset, item.fontSize, item.weight, limit,
-                                item.preserveWhitespace, wrappedLines);
+                textLayout.Wrap(item.text + offset, item.fontSize, item.weight,
+                                item.noWrap ? 0.0f : limit, item.preserveWhitespace, wrappedLines, &runStyle);
 
                 if (wrappedLines.empty())
                 {
@@ -853,11 +921,16 @@ namespace RoboRenderer
                     continue;
                 }
 
-                fragments.push_back(Fragment{ &item, penX - x, head.width,
+                fragments.push_back(Fragment{ &item, penX - x - currentIndent, head.width,
                                               offset + head.startByte, offset + head.endByte });
                 penX += head.width;
                 maxAscent = std::max(maxAscent, item.ascent);
                 maxDescent = std::max(maxDescent, item.descent);
+                if (item.lineHeightScale > 0.0f)
+                {
+                    specifiedLineHeight =
+                        std::max(specifiedLineHeight, item.lineHeightScale * item.fontSize);
+                }
 
                 if (wrappedLines.size() == 1)
                 {

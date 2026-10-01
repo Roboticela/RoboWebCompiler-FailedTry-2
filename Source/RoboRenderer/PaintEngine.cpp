@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <string>
 
 namespace RoboRenderer
 {
@@ -800,7 +801,8 @@ namespace RoboRenderer
                                   std::uint32_t endByte,
                                   float fontSize,
                                   FontWeightKind weight,
-                                  const Color& color)
+                                  const Color& color,
+                                  const TextRunStyle* runStyle)
     {
         if (text == nullptr || fontSize <= 0.0f || startByte >= endByte)
         {
@@ -814,27 +816,35 @@ namespace RoboRenderer
         // comes back one glyph per code point, and a fallback chain introduces a
         // new run every time the covering face changes.
         std::vector<PositionedGlyph> glyphs;
-        textLayout.ShapeRun(text, startByte, endByte, fontSize, weight, glyphs);
+        textLayout.ShapeRun(text, startByte, endByte, fontSize, weight, glyphs, runStyle);
 
         if (glyphs.empty())
         {
             return;
         }
 
-        // The first strong character decides the run's direction. A right-to-left
-        // run is reversed for display after shaping, so the letters were still
-        // shaped in the order they were written.
+        // A stated `direction` wins; otherwise the first strong character
+        // decides. A right-to-left run is reversed for display after shaping, so
+        // the letters were still shaped in the order they were written.
         bool rightToLeft = false;
-        for (const PositionedGlyph& glyph : glyphs)
+
+        if (runStyle != nullptr && runStyle->direction == TextDirectionKind::RightToLeft)
         {
-            if (IsRtlCodepoint(glyph.codepoint))
+            rightToLeft = true;
+        }
+        else if (runStyle == nullptr || runStyle->direction == TextDirectionKind::Auto)
+        {
+            for (const PositionedGlyph& glyph : glyphs)
             {
-                rightToLeft = true;
-                break;
-            }
-            if (IsLtrCodepoint(glyph.codepoint))
-            {
-                break;
+                if (IsRtlCodepoint(glyph.codepoint))
+                {
+                    rightToLeft = true;
+                    break;
+                }
+                if (IsLtrCodepoint(glyph.codepoint))
+                {
+                    break;
+                }
             }
         }
 
@@ -908,6 +918,16 @@ namespace RoboRenderer
             return;
         }
 
+        // The same transform the layout pass applied, so the byte offsets the
+        // line recorded still name the same characters here.
+        std::string transformed;
+        if (IsSpecified(style.specified, StyleFlagTextTransform) &&
+            style.textTransform != TextTransformKind::None)
+        {
+            transformed = ApplyTextTransform(text, style.textTransform);
+            text = transformed.c_str();
+        }
+
         Color color = TextColor;
 
         if (elementState.HasFlag(RuntimeFlagDisabled))
@@ -936,6 +956,13 @@ namespace RoboRenderer
             const float baseline = line.baseline + originY + line.yOffset;
             const float top = line.lineTop + originY + line.yOffset;
 
+            TextRunStyle runStyle;
+            runStyle.letterSpacing = line.letterSpacing;
+            runStyle.wordSpacing = line.wordSpacing;
+            runStyle.fontFamily = line.fontFamily;
+            runStyle.slant = line.fontStyle;
+            runStyle.direction = line.direction;
+
             // A selection paints under the glyphs; a caret paints over them.
             if (field != nullptr && focused && field->HasSelection() && line.controlValue)
             {
@@ -945,9 +972,11 @@ namespace RoboRenderer
                 if (endByte > startByte)
                 {
                     const float selectionX =
-                        lineX + layout.Text().MeasurePrefix(text, startByte, line.fontSize, line.weight);
+                        lineX +
+                        layout.Text().MeasurePrefix(text, startByte, line.fontSize, line.weight, &runStyle);
                     const float selectionEnd =
-                        lineX + layout.Text().MeasurePrefix(text, endByte, line.fontSize, line.weight);
+                        lineX +
+                        layout.Text().MeasurePrefix(text, endByte, line.fontSize, line.weight, &runStyle);
 
                     list.Add(PaintCommandType::FillRect,
                              Rect{ selectionX, top, selectionEnd - selectionX, line.lineHeight },
@@ -956,7 +985,8 @@ namespace RoboRenderer
                 }
             }
 
-            EmitTextRun(index, lineX, baseline, text, line.startByte, line.endByte, line.fontSize, line.weight, color);
+            EmitTextRun(index, lineX, baseline, text, line.startByte, line.endByte, line.fontSize, line.weight,
+                        color, &runStyle);
 
             if (line.underline)
             {
@@ -971,7 +1001,8 @@ namespace RoboRenderer
             {
                 const std::uint32_t caretByte = TextLayout::ByteOffsetForCodepoint(text, field->caret);
                 const float caretX =
-                    lineX + layout.Text().MeasurePrefix(text, caretByte, line.fontSize, line.weight);
+                    lineX +
+                    layout.Text().MeasurePrefix(text, caretByte, line.fontSize, line.weight, &runStyle);
 
                 list.Add(PaintCommandType::FillRect, Rect{ caretX, top, 1.0f, line.lineHeight }, index).color =
                     TextColor;

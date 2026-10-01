@@ -164,6 +164,14 @@ namespace RoboRenderer
         float fontSize = 0.0f;
         FontWeightKind weight = FontWeightKind::Normal;
 
+        /// The CSS text options the fragment was measured with, so painting
+        /// measures the same run the same way. See `TextRunStyle`.
+        float letterSpacing = 0.0f;
+        float wordSpacing = 0.0f;
+        const char* fontFamily = nullptr;
+        FontSlantKind fontStyle = FontSlantKind::Upright;
+        TextDirectionKind direction = TextDirectionKind::Auto;
+
         std::uint32_t startByte = 0;
         std::uint32_t endByte = 0;
 
@@ -290,6 +298,17 @@ namespace RoboRenderer
             bool underline = false;
             bool preserveWhitespace = false;
             float yOffset = 0.0f;
+
+            /// The CSS text options this item is measured and painted with.
+            float letterSpacing = 0.0f;
+            float wordSpacing = 0.0f;
+            const char* fontFamily = nullptr;
+            FontSlantKind fontStyle = FontSlantKind::Upright;
+            TextDirectionKind direction = TextDirectionKind::Auto;
+            /// `line-height` as a multiple of the font size, 0 for "normal".
+            float lineHeightScale = 0.0f;
+            /// `white-space: nowrap`: the run never wraps, however wide it is.
+            bool noWrap = false;
         };
 
         void ResolveStyles();
@@ -387,5 +406,10 @@ namespace RoboRenderer
         ElementLayout measureBox;
         float lastInlineWidth = 0.0f;
         std::vector<float> columnScratch;
+
+        /// Owns the strings a `text-transform` produced. An inline item's text
+        /// points at document storage today, so a transformed run needs somewhere
+        /// to live for as long as the item does; the pass that built it does.
+        std::vector<std::string> transformedText;
     };
 }

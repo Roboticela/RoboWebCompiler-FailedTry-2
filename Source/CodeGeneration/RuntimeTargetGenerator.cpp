@@ -111,11 +111,11 @@ namespace RoboHTMLCompiler
 
         /// A `specified` mask as named flags, which is what makes the generated
         /// table readable: the bits *are* the documentation.
-        std::string StyleFlagsExpression(std::uint32_t specified)
+        std::string StyleFlagsExpression(std::uint64_t specified)
         {
-            if (specified == 0u)
+            if (specified == 0ull)
             {
-                return "0u";
+                return "0ull";
             }
 
             struct NamedStyleFlag
@@ -151,14 +151,22 @@ namespace RoboHTMLCompiler
                 { StyleFlagTextAlign, "StyleFlagTextAlign" },
                 { StyleFlagDisplay, "StyleFlagDisplay" },
                 { StyleFlagOverflowX, "StyleFlagOverflowX" },
-                { StyleFlagOverflowY, "StyleFlagOverflowY" }
+                { StyleFlagOverflowY, "StyleFlagOverflowY" },
+                { StyleFlagLineHeight, "StyleFlagLineHeight" },
+                { StyleFlagWordSpacing, "StyleFlagWordSpacing" },
+                { StyleFlagTextIndent, "StyleFlagTextIndent" },
+                { StyleFlagWhiteSpace, "StyleFlagWhiteSpace" },
+                { StyleFlagTextTransform, "StyleFlagTextTransform" },
+                { StyleFlagDirection, "StyleFlagDirection" },
+                { StyleFlagFontStyle, "StyleFlagFontStyle" },
+                { StyleFlagFontFamily, "StyleFlagFontFamily" }
             };
 
             std::string expression;
 
             for (const NamedStyleFlag& entry : named)
             {
-                if ((specified & static_cast<std::uint32_t>(entry.flag)) == 0u)
+                if ((specified & static_cast<std::uint64_t>(entry.flag)) == 0ull)
                 {
                     continue;
                 }
@@ -172,7 +180,7 @@ namespace RoboHTMLCompiler
                 expression += entry.name;
             }
 
-            return expression.empty() ? std::string("0u") : expression;
+            return expression.empty() ? std::string("0ull") : expression;
         }
 
         /// A float as a C++ literal. `8` is an integer constant and `8f` is not a
@@ -264,6 +272,50 @@ namespace RoboHTMLCompiler
             return "Visible";
         }
 
+        const char* FontSlantName(FontSlantKind slant)
+        {
+            return slant == FontSlantKind::Italic ? "Italic" : "Upright";
+        }
+
+        const char* WhiteSpaceName(WhiteSpaceKind space)
+        {
+            switch (space)
+            {
+            case WhiteSpaceKind::Normal: return "Normal";
+            case WhiteSpaceKind::NoWrap: return "NoWrap";
+            case WhiteSpaceKind::Pre: return "Pre";
+            case WhiteSpaceKind::PreWrap: return "PreWrap";
+            case WhiteSpaceKind::PreLine: return "PreLine";
+            }
+
+            return "Normal";
+        }
+
+        const char* TextTransformName(TextTransformKind transform)
+        {
+            switch (transform)
+            {
+            case TextTransformKind::None: return "None";
+            case TextTransformKind::Uppercase: return "Uppercase";
+            case TextTransformKind::Lowercase: return "Lowercase";
+            case TextTransformKind::Capitalize: return "Capitalize";
+            }
+
+            return "None";
+        }
+
+        const char* DirectionName(TextDirectionKind direction)
+        {
+            switch (direction)
+            {
+            case TextDirectionKind::Auto: return "Auto";
+            case TextDirectionKind::LeftToRight: return "LeftToRight";
+            case TextDirectionKind::RightToLeft: return "RightToLeft";
+            }
+
+            return "Auto";
+        }
+
         /// Emits only the edges a style specified. An unspecified edge keeps the
         /// native default, which is what makes `margin-top: 8px` mean what it says.
         void EmitEdge(std::ostringstream& source,
@@ -273,7 +325,7 @@ namespace RoboHTMLCompiler
                       StyleFlags right,
                       StyleFlags bottom,
                       StyleFlags left,
-                      std::uint32_t specified,
+                      std::uint64_t specified,
                       const Edges& edges)
         {
             struct Edge
@@ -801,6 +853,50 @@ namespace RoboHTMLCompiler
                 {
                     source << "            tables.styles[" << index << "].textAlign = RoboRenderer::TextAlignKind::"
                            << TextAlignName(style.textAlign) << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagLineHeight))
+                {
+                    source << "            tables.styles[" << index
+                           << "].lineHeight = " << FloatLiteral(style.lineHeight) << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagWordSpacing))
+                {
+                    source << "            tables.styles[" << index
+                           << "].wordSpacing = " << FloatLiteral(style.wordSpacing) << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagTextIndent))
+                {
+                    source << "            tables.styles[" << index
+                           << "].textIndent = " << FloatLiteral(style.textIndent) << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagWhiteSpace))
+                {
+                    source << "            tables.styles[" << index
+                           << "].whiteSpace = RoboRenderer::WhiteSpaceKind::" << WhiteSpaceName(style.whiteSpace)
+                           << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagTextTransform))
+                {
+                    source << "            tables.styles[" << index
+                           << "].textTransform = RoboRenderer::TextTransformKind::"
+                           << TextTransformName(style.textTransform) << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagDirection))
+                {
+                    source << "            tables.styles[" << index
+                           << "].direction = RoboRenderer::TextDirectionKind::"
+                           << DirectionName(style.direction) << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagFontStyle))
+                {
+                    source << "            tables.styles[" << index
+                           << "].fontStyle = RoboRenderer::FontSlantKind::" << FontSlantName(style.fontStyle)
+                           << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagFontFamily))
+                {
+                    source << "            tables.styles[" << index
+                           << "].fontFamily = " << style.fontFamily << ";\n";
                 }
                 if (IsSpecified(style.specified, StyleFlagDisplay))
                 {

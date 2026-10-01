@@ -17,7 +17,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <functional>
+#include <string>
 
 namespace RoboRenderer
 {
@@ -1043,13 +1045,13 @@ namespace RoboRenderer
                             const float y0 = state.y;
                             const float c1x = state.x + at(0);
                             const float c2x = c1x + at(1);
-                            const float c2y = state.y + at(2);
+                            const float c2y = y0 + at(2);
                             const float ex = c2x + at(3);
-                            curveTo(c1x, state.y, c2x, c2y, ex, c2y);
+                            curveTo(c1x, y0, c2x, c2y, ex, c2y);
 
                             const float d1x = ex + at(4);
                             const float d2x = d1x + at(5);
-                            curveTo(d1x, state.y, d2x, state.y - at(2), state.x + at(6), y0);
+                            curveTo(d1x, y0, d2x, y0 - at(2), d2x + at(6), y0);
                             state.stack.clear();
                             break;
                         }
@@ -1153,7 +1155,22 @@ namespace RoboRenderer
                                 case 11: { const float b = pop(); const float a = pop(); state.stack.push_back(a - b); break; }
                                 case 12: { const float b = pop(); const float a = pop(); state.stack.push_back(b != 0.0f ? a / b : 0.0f); break; }
                                 case 14: { state.stack.push_back(-pop()); break; }
-                                case 15: { const float b = pop(); const float a = pop(); state.stack.push_back(a == b ? 1.0f : 0.0f); break; }
+                                case 15:
+                                    // CFF1 spells `eq` here; CFF2 reassigns the
+                                    // opcode to `vsindex`, whose operand is
+                                    // simply dropped (the default instance is
+                                    // what this renderer draws).
+                                    if (cff2)
+                                    {
+                                        pop();
+                                    }
+                                    else
+                                    {
+                                        const float b = pop();
+                                        const float a = pop();
+                                        state.stack.push_back(a == b ? 1.0f : 0.0f);
+                                    }
+                                    break;
                                 case 18: { pop(); break; }
                                 case 20:
                                 {
@@ -1250,10 +1267,6 @@ namespace RoboRenderer
                             state.stack.assign(defaults.begin(), defaults.end());
                             break;
                         }
-
-                        case 15: // CFF2 vsindex
-                            if (!state.stack.empty()) { state.stack.pop_back(); }
-                            break;
 
                         default: break;
                     }

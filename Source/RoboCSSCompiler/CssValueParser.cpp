@@ -2065,6 +2065,94 @@ namespace RoboCSSCompiler
 
             return true;
         }
+
+        /// `font-family`: a comma separated list of names, each of which is a
+        /// run of identifiers (`Segoe UI`) or one quoted string (`"Times New
+        /// Roman"`). The generic families are ordinary identifiers, so they need
+        /// no special case here; the runtime is what decides that `monospace`
+        /// means the family it has.
+        bool ParseFontFamilyValue(const std::vector<CSSComponentValue>& components,
+                                  CSSValue& out,
+                                  const CSSSourceLocation& location,
+                                  CSSDiagnosticSink& diagnostics)
+        {
+            // The separators *are* the value here, so the commas survive: this is
+            // the one parser that cannot use `Significant`, which drops them.
+            std::vector<const CSSComponentValue*> values;
+
+            for (const CSSComponentValue& component : components)
+            {
+                if (component.token.type != CSSTokenType::Whitespace &&
+                    component.token.type != CSSTokenType::EndOfFile)
+                {
+                    values.push_back(&component);
+                }
+            }
+
+            if (values.empty())
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidGrammar, location,
+                                  "Expected a font family name.", ComponentsToText(components),
+                                  "Write a family name, or a comma separated list of them.", "font-family");
+                return false;
+            }
+
+            std::vector<CSSValue> families;
+            std::string current;
+            bool pending = false;
+
+            for (const CSSComponentValue* value : values)
+            {
+                if (value->token.type == CSSTokenType::Comma)
+                {
+                    if (!pending)
+                    {
+                        diagnostics.Error(CSSDiagnosticCode::InvalidGrammar, location,
+                                          "Empty font family in the list.", ComponentsToText(components),
+                                          "Remove the doubled comma.", "font-family");
+                        return false;
+                    }
+
+                    families.push_back(CSSValue::MakeIdent(current));
+                    current.clear();
+                    pending = false;
+                    continue;
+                }
+
+                if (value->token.type == CSSTokenType::Ident ||
+                    value->token.type == CSSTokenType::QuotedString)
+                {
+                    if (pending)
+                    {
+                        current += ' ';
+                    }
+                    current += value->token.text;
+                    pending = true;
+                    continue;
+                }
+
+                diagnostics.Error(CSSDiagnosticCode::InvalidGrammar, location,
+                                  "Expected a font family name.", ComponentsToText(components),
+                                  "Write a family name, or a comma separated list of them.", "font-family");
+                return false;
+            }
+
+            if (!pending)
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidGrammar, location,
+                                  "Expected a font family name.", ComponentsToText(components),
+                                  "Write a family name, or a comma separated list of them.", "font-family");
+                return false;
+            }
+
+            families.push_back(CSSValue::MakeIdent(current));
+
+            out = CSSValue();
+            out.kind = CSSValueKind::CommaList;
+            out.location = location;
+            out.items = std::move(families);
+            return true;
+        }
     }
 
     bool ParsePropertyValue(const CSSPropertyDefinition& definition,
@@ -2075,6 +2163,9 @@ namespace RoboCSSCompiler
     {
         switch (definition.grammar)
         {
+        case CSSValueGrammar::FontFamily:
+            return ParseFontFamilyValue(components, out, location, diagnostics);
+
         case CSSValueGrammar::Size:
             return ParseSizeValue(components, out, location, diagnostics);
 

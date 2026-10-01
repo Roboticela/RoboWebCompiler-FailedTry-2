@@ -187,9 +187,16 @@ namespace RoboCSSCompiler
 
             { Id::FontSize, "font-size", Cat::Font, true, "medium", Grammar::FontSize, nullptr, true, true, true, true, true, "css-fonts-3" },
             { Id::FontWeight, "font-weight", Cat::Font, true, "normal", Grammar::FontWeight, nullptr, true, true, true, true, true, "css-fonts-3" },
+            { Id::FontFamily, "font-family", Cat::Font, true, "serif", Grammar::FontFamily, nullptr, true, true, true, true, true, "css-fonts-3" },
+            { Id::FontStyle, "font-style", Cat::Font, true, "normal", Grammar::Keyword, "normal italic", true, true, true, true, true, "css-fonts-3" },
             { Id::LineHeight, "line-height", Cat::Font, true, "normal", Grammar::LineHeight, nullptr, true, true, true, true, true, "css-inline-3" },
             { Id::LetterSpacing, "letter-spacing", Cat::Text, true, "normal", Grammar::LengthOrNormal, nullptr, true, true, true, true, true, "css-text-3" },
+            { Id::WordSpacing, "word-spacing", Cat::Text, true, "normal", Grammar::LengthOrNormal, nullptr, true, true, true, true, true, "css-text-3" },
             { Id::TextAlign, "text-align", Cat::Text, true, "start", Grammar::TextAlign, nullptr, false, true, true, false, true, "css-text-3" },
+            { Id::TextIndent, "text-indent", Cat::Text, true, "0", Grammar::LengthPercentage, nullptr, true, true, true, true, true, "css-text-3" },
+            { Id::TextTransform, "text-transform", Cat::Text, true, "none", Grammar::Keyword, "none uppercase lowercase capitalize", false, true, true, false, true, "css-text-3" },
+            { Id::WhiteSpace, "white-space", Cat::Text, true, "normal", Grammar::Keyword, "normal nowrap pre pre-wrap pre-line", true, true, true, true, true, "css-text-3" },
+            { Id::Direction, "direction", Cat::Text, true, "ltr", Grammar::Keyword, "ltr rtl", false, true, true, true, true, "css-writing-modes-3" },
 
             { Id::OverflowX, "overflow-x", Cat::Overflow, false, "visible", Grammar::Overflow, nullptr, true, true, false, true, true, "css-overflow-3" },
             { Id::OverflowY, "overflow-y", Cat::Overflow, false, "visible", Grammar::Overflow, nullptr, true, true, false, true, true, "css-overflow-3" }

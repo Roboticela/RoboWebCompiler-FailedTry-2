@@ -786,6 +786,18 @@ namespace RoboHTMLCompiler
         if (authoredStyles != nullptr)
         {
             storage.styles = authoredStyles->styles;
+
+            // A `font-family` list lives in the string table, not in the style
+            // record, so the family names the CSS lowering collected are interned
+            // here, where the table exists, and each style is pointed at its own.
+            const std::size_t count = std::min(storage.styles.size(), authoredStyles->fontFamilies.size());
+            for (std::size_t index = 0; index < count; ++index)
+            {
+                if (!authoredStyles->fontFamilies[index].empty())
+                {
+                    storage.styles[index].fontFamily = interner.Intern(authoredStyles->fontFamilies[index]);
+                }
+            }
         }
 
         storage.Finalize();

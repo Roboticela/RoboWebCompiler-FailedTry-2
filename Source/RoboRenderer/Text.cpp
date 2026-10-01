@@ -193,7 +193,9 @@ namespace RoboRenderer
                 for (const Vec2& point : raw)
                 {
                     Vec2 device;
-                    device.x = point.x * scale - originX;
+                    // A synthetic oblique shears x with height, which is what an
+                    // italic design does: the top of a stem leans right.
+                    device.x = (point.x + glyph.slant * point.y) * scale - originX;
                     device.y = -point.y * scale - originY;
                     transformed.push_back(device);
                 }
@@ -620,7 +622,8 @@ namespace RoboRenderer
                               std::uint32_t endByte,
                               float fontSize,
                               FontWeightKind weight,
-                              std::vector<PositionedGlyph>& out) const
+                              std::vector<PositionedGlyph>& out,
+                              const TextRunStyle* runStyle) const
     {
         out.clear();
 
@@ -628,6 +631,11 @@ namespace RoboRenderer
         {
             return;
         }
+
+        const float letterSpacing = runStyle != nullptr ? runStyle->letterSpacing : 0.0f;
+        const float wordSpacing = runStyle != nullptr ? runStyle->wordSpacing : 0.0f;
+        const char* family = runStyle != nullptr ? runStyle->fontFamily : nullptr;
+        const FontSlantKind slant = runStyle != nullptr ? runStyle->slant : FontSlantKind::Upright;
 
         // Decode the run once, remembering each code point's byte offset and
         // which face in the fallback chain covers it. Runs are grouped by face
@@ -650,7 +658,7 @@ namespace RoboRenderer
 
             codepoints.push_back(codepoint);
             byteOffsets.push_back(start);
-            faces.push_back(&registry.FaceFor(codepoint, weight));
+            faces.push_back(&registry.FaceFor(codepoint, weight, family, slant));
         }
 
         const std::size_t count = codepoints.size();
@@ -731,9 +739,32 @@ namespace RoboRenderer
 
             index = runEnd;
         }
+
+        // Spacing is applied after shaping so that it is added exactly once and
+        // in the same place whether the run was shaped or mapped one glyph per
+        // code point. A tab is a fixed stop and takes no letter spacing.
+        if (letterSpacing != 0.0f || wordSpacing != 0.0f)
+        {
+            for (PositionedGlyph& glyph : out)
+            {
+                if (glyph.codepoint == '\t')
+                {
+                    continue;
+                }
+
+                glyph.advance += letterSpacing;
+                if (glyph.codepoint == ' ')
+                {
+                    glyph.advance += wordSpacing;
+                }
+            }
+        }
     }
 
-    float TextLayout::Measure(const char* text, float fontSize, FontWeightKind weight) const
+    float TextLayout::Measure(const char* text,
+                              float fontSize,
+                              FontWeightKind weight,
+                              const TextRunStyle* runStyle) const
     {
         if (text == nullptr || text[0] == '\0')
         {
@@ -747,7 +778,7 @@ namespace RoboRenderer
         }
 
         std::vector<PositionedGlyph> glyphs;
-        ShapeRun(text, 0, length, fontSize, weight, glyphs);
+        ShapeRun(text, 0, length, fontSize, weight, glyphs, runStyle);
 
         float width = 0.0f;
         for (const PositionedGlyph& glyph : glyphs)
@@ -761,7 +792,8 @@ namespace RoboRenderer
     float TextLayout::MeasurePrefix(const char* text,
                                     std::uint32_t byteCount,
                                     float fontSize,
-                                    FontWeightKind weight) const
+                                    FontWeightKind weight,
+                                    const TextRunStyle* runStyle) const
     {
         if (text == nullptr || byteCount == 0)
         {
@@ -780,7 +812,7 @@ namespace RoboRenderer
         }
 
         std::vector<PositionedGlyph> glyphs;
-        ShapeRun(text, 0, length, fontSize, weight, glyphs);
+        ShapeRun(text, 0, length, fontSize, weight, glyphs, runStyle);
 
         float width = 0.0f;
         for (const PositionedGlyph& glyph : glyphs)
@@ -804,16 +836,32 @@ namespace RoboRenderer
         return (face.Ascent() + face.Descent() + face.LineGap()) * scale;
     }
 
-    float TextLayout::Advance(std::uint32_t codepoint, float fontSize, FontWeightKind weight) const
+    float TextLayout::Advance(std::uint32_t codepoint,
+                              float fontSize,
+                              FontWeightKind weight,
+                              const TextRunStyle* runStyle) const
     {
-        const FontFace& face = registry.FaceFor(codepoint, weight);
+        const FontFace& face = registry.FaceFor(codepoint, weight,
+                                                runStyle != nullptr ? runStyle->fontFamily : nullptr,
+                                                runStyle != nullptr ? runStyle->slant : FontSlantKind::Upright);
         const Glyph* glyph = face.FindGlyph(codepoint);
         if (glyph == nullptr)
         {
             glyph = &face.MissingGlyph();
         }
 
-        return glyph->advance * (fontSize / face.UnitsPerEm());
+        float advance = glyph->advance * (fontSize / face.UnitsPerEm());
+
+        if (runStyle != nullptr && codepoint != '\t')
+        {
+            advance += runStyle->letterSpacing;
+            if (codepoint == ' ')
+            {
+                advance += runStyle->wordSpacing;
+            }
+        }
+
+        return advance;
     }
 
     void TextLayout::Wrap(const char* text,
@@ -821,7 +869,8 @@ namespace RoboRenderer
                           FontWeightKind weight,
                           float availableWidth,
                           bool preserveWhitespace,
-                          std::vector<TextLine>& lines) const
+                          std::vector<TextLine>& lines,
+                          const TextRunStyle* runStyle) const
     {
         lines.clear();
 
@@ -831,15 +880,30 @@ namespace RoboRenderer
         }
 
         const float lineHeight = LineHeight(fontSize, weight);
+        const char* family = runStyle != nullptr ? runStyle->fontFamily : nullptr;
 
-        const auto advanceOf = [this, fontSize, weight](std::uint32_t codepoint) {
-            const FontFace& face = registry.FaceFor(codepoint, weight);
+        const FontSlantKind slant = runStyle != nullptr ? runStyle->slant : FontSlantKind::Upright;
+
+        const auto advanceOf = [this, fontSize, weight, runStyle, family, slant](std::uint32_t codepoint) {
+            const FontFace& face = registry.FaceFor(codepoint, weight, family, slant);
             const Glyph* glyph = face.FindGlyph(codepoint);
             if (glyph == nullptr)
             {
                 glyph = &face.MissingGlyph();
             }
-            return glyph->advance * (fontSize / face.UnitsPerEm());
+
+            float advance = glyph->advance * (fontSize / face.UnitsPerEm());
+
+            if (runStyle != nullptr && codepoint != '\t')
+            {
+                advance += runStyle->letterSpacing;
+                if (codepoint == ' ')
+                {
+                    advance += runStyle->wordSpacing;
+                }
+            }
+
+            return advance;
         };
 
         std::uint32_t length = 0;
@@ -1271,8 +1335,23 @@ namespace RoboRenderer
         const float embolden = glyph->embolden * scale;
         const float pad = embolden + 1.0f;
 
-        const float left = glyph->x0 * scale - pad;
-        const float right = glyph->x1 * scale + pad;
+        // A synthetic oblique shifts each point right by `slant * y`, so the
+        // horizontal extent is the sheared box, not the upright one.
+        const float slant = glyph->slant;
+        float minX = glyph->x0;
+        float maxX = glyph->x1;
+        if (slant != 0.0f)
+        {
+            const float a = glyph->x0 + slant * glyph->y0;
+            const float b = glyph->x0 + slant * glyph->y1;
+            const float c = glyph->x1 + slant * glyph->y0;
+            const float d = glyph->x1 + slant * glyph->y1;
+            minX = std::min(std::min(a, b), std::min(c, d));
+            maxX = std::max(std::max(a, b), std::max(c, d));
+        }
+
+        const float left = minX * scale - pad;
+        const float right = maxX * scale + pad;
         const float top = glyph->y1 * scale + pad;
         const float bottom = glyph->y0 * scale - pad;
 
@@ -1421,7 +1500,8 @@ namespace RoboRenderer
     std::uint32_t TextLayout::HitTestOffset(const char* text,
                                            float localX,
                                            float fontSize,
-                                           FontWeightKind weight) const
+                                           FontWeightKind weight,
+                                           const TextRunStyle* runStyle) const
     {
         if (text == nullptr)
         {
@@ -1441,7 +1521,7 @@ namespace RoboRenderer
         }
 
         std::vector<PositionedGlyph> glyphs;
-        ShapeRun(text, 0, length, fontSize, weight, glyphs);
+        ShapeRun(text, 0, length, fontSize, weight, glyphs, runStyle);
 
         float x = 0.0f;
         std::uint32_t best = 0;

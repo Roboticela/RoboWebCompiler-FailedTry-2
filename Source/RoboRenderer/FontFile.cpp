@@ -932,7 +932,40 @@ namespace RoboRenderer
     {
         x0 = y0 = x1 = y1 = 0.0f;
 
-        if (!hasGlyf || glyph >= glyphCount || locaOffsets.size() <= glyph + 1)
+        if (glyph >= glyphCount)
+        {
+            return;
+        }
+
+        if (!hasGlyf)
+        {
+            // A CFF face has no `glyf` bounds to read, so the box is measured
+            // from the flattened charstring itself.
+            const CffFont* cffFont = Cff();
+            if (cffFont == nullptr)
+            {
+                return;
+            }
+
+            GlyphPath path;
+            if (!cffFont->Outline(glyph, path) || path.points.empty())
+            {
+                return;
+            }
+
+            x0 = x1 = path.points[0].x;
+            y0 = y1 = path.points[0].y;
+            for (const ContourPoint& point : path.points)
+            {
+                x0 = std::min(x0, point.x);
+                y0 = std::min(y0, point.y);
+                x1 = std::max(x1, point.x);
+                y1 = std::max(y1, point.y);
+            }
+            return;
+        }
+
+        if (locaOffsets.size() <= glyph + 1)
         {
             return;
         }
@@ -967,14 +1000,39 @@ namespace RoboRenderer
         return found == kernPairs.end() ? 0 : found->second;
     }
 
+    const CffFont* SfntFont::Cff() const
+    {
+        if (!cffAttempted)
+        {
+            cffAttempted = true;
+
+            if (hasCff && cff.present && cff.offset < bytes.size())
+            {
+                const std::uint32_t available =
+                    static_cast<std::uint32_t>(bytes.size()) - cff.offset;
+                cffOutline = CffFont::Load(bytes.data() + cff.offset,
+                                           std::min(cff.length, available),
+                                           glyphCount);
+            }
+        }
+
+        return cffOutline.get();
+    }
+
     bool SfntFont::Outline(std::uint16_t glyph, GlyphPath& out) const
     {
         out.points.clear();
         out.ends.clear();
 
-        if (!hasGlyf || glyph >= glyphCount)
+        if (glyph >= glyphCount)
         {
             return false;
+        }
+
+        if (!hasGlyf)
+        {
+            const CffFont* cffFont = Cff();
+            return cffFont != nullptr && cffFont->Outline(glyph, out);
         }
 
         if (!ReadGlyf(glyph, out, 0))

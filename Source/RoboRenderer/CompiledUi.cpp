@@ -12,6 +12,69 @@ namespace RoboRenderer
         ElementKindNameFunction elementKindNames = nullptr;
     }
 
+    std::string ApplyTextTransform(const char* text, TextTransformKind transform)
+    {
+        if (text == nullptr || transform == TextTransformKind::None)
+        {
+            return std::string(text != nullptr ? text : "");
+        }
+
+        std::string result(text);
+        bool atWordStart = true;
+
+        for (char& character : result)
+        {
+            const unsigned char value = static_cast<unsigned char>(character);
+
+            if (value >= 0x80u)
+            {
+                // A non-ASCII byte: leave it, so the transform never changes the
+                // string's byte length and a line's offsets stay valid.
+                continue;
+            }
+
+            const bool isSpace = value == ' ' || value == '\t' || value == '\n' || value == '\r' ||
+                                 value == '\f' || value == '\v';
+
+            if (transform == TextTransformKind::Uppercase)
+            {
+                if (value >= 'a' && value <= 'z')
+                {
+                    character = static_cast<char>(value - 32);
+                }
+            }
+            else if (transform == TextTransformKind::Lowercase)
+            {
+                if (value >= 'A' && value <= 'Z')
+                {
+                    character = static_cast<char>(value + 32);
+                }
+            }
+            else if (transform == TextTransformKind::Capitalize)
+            {
+                if (atWordStart)
+                {
+                    if (value >= 'a' && value <= 'z')
+                    {
+                        character = static_cast<char>(value - 32);
+                    }
+                    atWordStart = false;
+                }
+                else if (value >= 'A' && value <= 'Z')
+                {
+                    character = static_cast<char>(value + 32);
+                }
+            }
+
+            if (isSpace)
+            {
+                atWordStart = true;
+            }
+        }
+
+        return result;
+    }
+
     // -----------------------------------------------------------------------
     // Accessors
     // -----------------------------------------------------------------------

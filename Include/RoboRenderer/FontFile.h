@@ -4,8 +4,9 @@
 // A real text stack has to read the fonts the host already has. This is the
 // smallest honest OpenType/TrueType reader that can do it: the sfnt container,
 // the metrics tables the layout needs, `cmap` so a code point resolves to a
-// glyph, `glyf`/`loca` so a glyph resolves to a filled outline, `name` so a
-// family can be chosen by name, and `kern` so a pair can be tightened.
+// glyph, `glyf`/`loca` or the `CFF `/`CFF2` Type 2 charstrings so a glyph
+// resolves to a filled outline, `name` so a family can be chosen by name, and
+// `kern` so a pair can be tightened.
 //
 // On top of the geometry sit the tables that make text *type* rather than a row
 // of shapes: `GSUB`/`GPOS`/`GDEF` (see `OtLayout`) so a run shapes, `fvar`/
@@ -13,8 +14,6 @@
 // (`COLR`/`CPAL`, `CBDT`/`CBLC`) so an emoji draws in colour.
 //
 // What it still does not do:
-//   - CFF/Type 2 charstrings (an `OTTO` face reports no outlines rather than
-//     guessing),
 //   - the full `COLR` v1 paint graph (transforms and gradients are flattened to
 //     the layers beneath them rather than composited exactly),
 //   - `sbix` and `SVG ` colour glyphs beyond reporting that the tables exist.

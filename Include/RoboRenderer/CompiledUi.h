@@ -29,6 +29,7 @@
 #include "RoboHTMLCompiler/GeneratedEnums.h"
 
 #include <cstdint>
+#include <string>
 
 namespace RoboRenderer
 {
@@ -192,6 +193,47 @@ namespace RoboRenderer
         Bold = 1
     };
 
+    /// `font-style`. A real italic face is preferred; when none is installed the
+    /// runtime shears the upright outline, which is what a browser does too.
+    enum class FontSlantKind : std::uint8_t
+    {
+        Upright = 0,
+        Italic = 1
+    };
+
+    /// `white-space`: whether whitespace collapses and whether the line wraps.
+    enum class WhiteSpaceKind : std::uint8_t
+    {
+        /// collapse spaces, wrap at break opportunities.
+        Normal = 0,
+        /// collapse spaces, never wrap.
+        NoWrap = 1,
+        /// keep spaces and explicit newlines, never wrap.
+        Pre = 2,
+        /// keep spaces, wrap at break opportunities.
+        PreWrap = 3,
+        /// collapse runs of spaces, honour explicit newlines, wrap.
+        PreLine = 4
+    };
+
+    /// `text-transform`, applied to a text run before it is measured.
+    enum class TextTransformKind : std::uint8_t
+    {
+        None = 0,
+        Uppercase = 1,
+        Lowercase = 2,
+        Capitalize = 3
+    };
+
+    /// `direction`. `Auto` keeps the runtime's rule (the first strong character
+    /// decides); the other two state the base direction outright.
+    enum class TextDirectionKind : std::uint8_t
+    {
+        Auto = 0,
+        LeftToRight = 1,
+        RightToLeft = 2
+    };
+
     /// What activating a button does. Resolved at compile time from the button's
     /// `type` attribute so the runtime never reads an attribute.
     enum class ButtonBehavior : std::uint8_t
@@ -241,49 +283,55 @@ namespace RoboRenderer
     /// stylesheet that sets only a colour must not erase the native look of a
     /// control: an unspecified field means "the native default still applies",
     /// which is exactly what a user-agent stylesheet means in a browser.
-    enum StyleFlags : std::uint32_t
+    enum StyleFlags : std::uint64_t
     {
-        StyleFlagNone = 0u,
+        StyleFlagNone = 0ull,
 
-        StyleFlagWidth = 1u << 0,
-        StyleFlagHeight = 1u << 1,
-        StyleFlagMinimumWidth = 1u << 2,
-        StyleFlagMinimumHeight = 1u << 3,
+        StyleFlagWidth = 1ull << 0,
+        StyleFlagHeight = 1ull << 1,
+        StyleFlagMinimumWidth = 1ull << 2,
+        StyleFlagMinimumHeight = 1ull << 3,
 
-        StyleFlagMarginTop = 1u << 4,
-        StyleFlagMarginRight = 1u << 5,
-        StyleFlagMarginBottom = 1u << 6,
-        StyleFlagMarginLeft = 1u << 7,
+        StyleFlagMarginTop = 1ull << 4,
+        StyleFlagMarginRight = 1ull << 5,
+        StyleFlagMarginBottom = 1ull << 6,
+        StyleFlagMarginLeft = 1ull << 7,
 
-        StyleFlagPaddingTop = 1u << 8,
-        StyleFlagPaddingRight = 1u << 9,
-        StyleFlagPaddingBottom = 1u << 10,
-        StyleFlagPaddingLeft = 1u << 11,
+        StyleFlagPaddingTop = 1ull << 8,
+        StyleFlagPaddingRight = 1ull << 9,
+        StyleFlagPaddingBottom = 1ull << 10,
+        StyleFlagPaddingLeft = 1ull << 11,
 
-        StyleFlagBorderTopWidth = 1u << 12,
-        StyleFlagBorderRightWidth = 1u << 13,
-        StyleFlagBorderBottomWidth = 1u << 14,
-        StyleFlagBorderLeftWidth = 1u << 15,
-        StyleFlagBorderRadius = 1u << 16,
+        StyleFlagBorderTopWidth = 1ull << 12,
+        StyleFlagBorderRightWidth = 1ull << 13,
+        StyleFlagBorderBottomWidth = 1ull << 14,
+        StyleFlagBorderLeftWidth = 1ull << 15,
+        StyleFlagBorderRadius = 1ull << 16,
 
-        StyleFlagBackground = 1u << 17,
-        StyleFlagForeground = 1u << 18,
-        StyleFlagBorderColor = 1u << 19,
+        StyleFlagBackground = 1ull << 17,
+        StyleFlagForeground = 1ull << 18,
+        StyleFlagBorderColor = 1ull << 19,
 
-        StyleFlagFontSize = 1u << 20,
-        StyleFlagFontWeight = 1u << 21,
-        StyleFlagLetterSpacing = 1u << 22,
-        StyleFlagTextAlign = 1u << 23,
+        StyleFlagFontSize = 1ull << 20,
+        StyleFlagFontWeight = 1ull << 21,
+        StyleFlagLetterSpacing = 1ull << 22,
+        StyleFlagTextAlign = 1ull << 23,
 
-        StyleFlagDisplay = 1u << 24,
-        StyleFlagOverflowX = 1u << 25,
-        StyleFlagOverflowY = 1u << 26,
+        StyleFlagDisplay = 1ull << 24,
+        StyleFlagOverflowX = 1ull << 25,
+        StyleFlagOverflowY = 1ull << 26,
 
-        // `line-height` is deliberately absent: the text engine derives a line's
-        // height from the font's metrics, and there is no compiled field that
-        // overrides it. A format slot nothing reads would be a promise the
-        // runtime does not keep, so the compiler reports `line-height` as an
-        // unimplemented feature instead of compiling a value into a void.
+        // The text and font properties the runtime lays text out with. Each is
+        // opt-in: an unspecified flag means "the derived default applies", so a
+        // document that never sets `line-height` is laid out exactly as before.
+        StyleFlagLineHeight = 1ull << 27,
+        StyleFlagWordSpacing = 1ull << 28,
+        StyleFlagTextIndent = 1ull << 29,
+        StyleFlagWhiteSpace = 1ull << 30,
+        StyleFlagTextTransform = 1ull << 31,
+        StyleFlagDirection = 1ull << 32,
+        StyleFlagFontStyle = 1ull << 33,
+        StyleFlagFontFamily = 1ull << 34,
 
         /// Every margin edge, for a shorthand that set all four.
         StyleFlagMargin = StyleFlagMarginTop | StyleFlagMarginRight | StyleFlagMarginBottom | StyleFlagMarginLeft,
@@ -298,9 +346,9 @@ namespace RoboRenderer
     };
 
     /// True when a flag is set in a specified mask.
-    inline bool IsSpecified(std::uint32_t specified, StyleFlags flag)
+    inline bool IsSpecified(std::uint64_t specified, StyleFlags flag)
     {
-        return (specified & static_cast<std::uint32_t>(flag)) != 0u;
+        return (specified & static_cast<std::uint64_t>(flag)) != 0ull;
     }
 
     /// A fully resolved native style. Not CSS: this is the small set of
@@ -311,7 +359,7 @@ namespace RoboRenderer
     struct CompiledStyle
     {
         /// Which fields below are specified. Zero means "nothing here applies".
-        std::uint32_t specified;
+        std::uint64_t specified;
         LayoutValue width;
         LayoutValue height;
         LayoutValue minimumWidth;
@@ -328,14 +376,28 @@ namespace RoboRenderer
         Color borderColor;
 
         float fontSize;
+        /// `line-height` as a multiple of the font size. Zero means "normal":
+        /// the runtime derives the line box from the font's metrics.
         float lineHeight;
         float letterSpacing;
+        /// `word-spacing`, in logical pixels, added to every space.
+        float wordSpacing = 0.0f;
+        /// `text-indent`, in logical pixels, applied to the first line of a block.
+        float textIndent = 0.0f;
 
         DisplayKind display;
         OverflowKind overflowX;
         OverflowKind overflowY;
         TextAlignKind textAlign;
         FontWeightKind fontWeight;
+        FontSlantKind fontStyle = FontSlantKind::Upright;
+        WhiteSpaceKind whiteSpace = WhiteSpaceKind::Normal;
+        TextTransformKind textTransform = TextTransformKind::None;
+        TextDirectionKind direction = TextDirectionKind::Auto;
+
+        /// `font-family`, as an index into the document's strings. 0 means "the
+        /// primary family", so an unstyled element needs no entry.
+        StringIndex fontFamily = 0;
 
         /// True when the color fields carry a value rather than a default that
         /// the category default should fill in. Kept beside `specified` because
@@ -538,6 +600,15 @@ namespace RoboRenderer
     /// Safe element access; returns nullptr for NoElement or an out-of-range
     /// index.
     const CompiledElement* ElementAt(const CompiledDocument& document, ElementIndex index);
+
+    /// `text-transform` for a UTF-8 run.
+    ///
+    /// The mapping is deliberately length preserving: only ASCII letters are
+    /// rewritten, so a code point whose case mapping would change the byte
+    /// length (the German 'ß', say) is left as it is. The runtime slices a line
+    /// by byte offset, and a transform that moved the offsets would have to be
+    /// applied before those offsets were recorded, not after.
+    std::string ApplyTextTransform(const char* text, TextTransformKind transform);
 
     /// Resolves an element by its `id` attribute. Returns NoElement when there
     /// is no such identifier. Binary search over the sorted identifier table.

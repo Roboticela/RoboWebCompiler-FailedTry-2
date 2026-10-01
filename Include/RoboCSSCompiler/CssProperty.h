@@ -68,9 +68,16 @@ namespace RoboCSSCompiler
         // --- text and fonts -------------------------------------------------
         FontSize,
         FontWeight,
+        FontFamily,
+        FontStyle,
         LineHeight,
         LetterSpacing,
+        WordSpacing,
         TextAlign,
+        TextIndent,
+        TextTransform,
+        WhiteSpace,
+        Direction,
 
         // --- overflow -------------------------------------------------------
         OverflowX,
@@ -162,6 +169,8 @@ namespace RoboCSSCompiler
         Overflow,
         /// `start | end | left | right | center | justify`
         TextAlign,
+        /// A comma separated list of family names, quoted or not.
+        FontFamily,
         /// `normal | bold | bolder | lighter | 1..1000`
         FontWeight,
         /// `xx-small ... xxx-large | smaller | larger | <length-percentage>`

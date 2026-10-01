@@ -181,10 +181,19 @@ called for width, height, minimum width and minimum height.
 Implemented end to end (compiled, lowered, applied, tested): `display`, `width`,
 `height`, `min-width`, `min-height`, the four margins and paddings, the four
 border widths, `border-style`, the four border colours, `border-radius`,
-`background-color`, `color`, `font-size`, `font-weight`, `letter-spacing`,
-`text-align`, `overflow-x`/`overflow-y`, `all`, and the `margin`, `padding`,
-`border-width`, `border-style`, `border-color`, `border`, `border-<side>`,
-`border-radius`, `overflow`, `background` and `font` shorthands.
+`background-color`, `color`, `font-size`, `font-weight`, `font-family`,
+`font-style`, `line-height`, `letter-spacing`, `word-spacing`, `text-align`,
+`text-indent`, `text-transform`, `white-space`, `direction`, `overflow-x`/
+`overflow-y`, `all`, and the `margin`, `padding`, `border-width`, `border-style`,
+`border-color`, `border`, `border-<side>`, `border-radius`, `overflow`,
+`background` and `font` shorthands.
+
+The text and font properties are the ones that reach the runtime's own text
+engine rather than only the style table. `font-family` and `font-style` select a
+face (a real italic when the host has one, a synthesized oblique otherwise);
+`line-height`, `letter-spacing`, `word-spacing`, `text-indent`, `white-space`,
+`text-transform` and `direction` are laid out and painted by the engine, so the
+text a document marks up wraps, spaces, leans and orders exactly as stated.
 
 `all` is the one property that is about the other properties rather than about
 the element: it takes a CSS-wide keyword and hands it to every property at once.
@@ -202,9 +211,6 @@ Reported rather than pretended, each with the reason:
   state-variant table is not compiled yet. Structural pseudo-classes
   (`:first-child`, `:nth-child`, `:not`, attribute selectors) are resolved during
   compilation and work.
-- **`line-height`**: the text engine derives a line's height from the font's
-  metrics and the compiled style has no field that overrides it. Compiling the
-  value into a field nothing reads would be support in name only.
 - **`max-width`/`max-height`**: the native box model carries a minimum and no
   maximum.
 - **Percentages and viewport units in margin, padding, border width and
