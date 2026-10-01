@@ -182,13 +182,18 @@ Implemented end to end (compiled, lowered, applied, tested): `display`, `width`,
 `height`, `min-width`, `min-height`, the four margins and paddings, the four
 border widths, `border-style`, the four border colours, `border-radius`,
 `background-color`, `color`, `font-size`, `font-weight`, `font-family`,
-`font-style`, `font-kerning`, `font-feature-settings`, `line-height`,
-`letter-spacing`, `word-spacing`, `text-align`, `text-indent`,
-`text-decoration-line`, `text-decoration-color`, `text-transform`,
-`white-space`, `direction`, `overflow-x`/`overflow-y`, `all`, and the `margin`,
-`padding`, `border-width`, `border-style`, `border-color`, `border`,
-`border-<side>`, `border-radius`, `overflow`, `background`, `font` and
-`text-decoration` shorthands.
+`font-style`, `font-kerning`, `font-feature-settings`,
+`font-variant-ligatures`, `font-variant-caps`, `font-variant-numeric`,
+`font-variant-position`, `font-variant-east-asian`, `line-height`,
+`letter-spacing`, `word-spacing`, `text-align`, `text-align-last`,
+`text-justify`, `text-indent`, `text-decoration-line`, `text-decoration-color`,
+`text-decoration-style`, `text-decoration-thickness`, `text-underline-offset`,
+`text-transform`, `hyphens`, `overflow-wrap`, `word-break`, `line-break`,
+`tab-size`, `white-space`, `direction`, `writing-mode`, `text-orientation`,
+`overflow-x`/`overflow-y`, `all`, and the `margin`, `padding`, `border-width`,
+`border-style`, `border-color`, `border`, `border-<side>`, `border-radius`,
+`overflow`, `background`, `font`, `font-variant` and `text-decoration`
+shorthands.
 
 The text and font properties are the ones that reach the runtime's own text
 engine rather than only the style table. `font-family` and `font-style` select a
@@ -198,9 +203,26 @@ face (a real italic when the host has one, a synthesized oblique otherwise);
 text a document marks up wraps, spaces, leans and orders exactly as stated.
 `font-kerning` and `font-feature-settings` are handed to the OpenType shaper, so
 a document can ask for a discretionary feature (`"dlig" 1`) or turn a default one
-off (`font-kerning: none`, `"liga" 0`), and `text-decoration-line` and
-`text-decoration-color` are drawn by the painter as an underline, an overline, a
-strikethrough, or any combination of the three.
+off (`font-kerning: none`, `"liga" 0`). The five `font-variant-*` longhands lower
+to the same channel: each keyword they allow maps to a feature tag, so
+`font-variant-caps: all-small-caps` becomes `"smcp" 1; "c2sc" 1` without the
+lowering knowing anything about small capitals. An explicit
+`font-feature-settings` declaration wins for the tags it names, so the two can be
+combined. `text-decoration-line`, `text-decoration-color`,
+`text-decoration-style`, `text-decoration-thickness` and `text-underline-offset`
+are drawn by the painter: an underline, an overline, a strikethrough, or any
+combination, in a solid, double, dotted, dashed or wavy line, at the stated width
+and offset.
+
+The line-breaking family reaches the wrapper rather than the style table alone.
+`hyphens`, `overflow-wrap`, `word-break` and `line-break` decide where a break
+opportunity exists (`break-all`, `anywhere` and `keep-all` each change the answer),
+`tab-size` sets the width of a tab stop, and `text-align: justify` stretches every
+line but the last by growing the gaps it already has, with `text-align-last` and
+`text-justify` deciding the exception. `writing-mode` selects a vertical flow, in
+which a run walks down a column and the columns advance right to left
+(`vertical-rl`) or left to right (`vertical-lr`); `text-orientation` records how
+the glyphs stand in that column.
 
 `all` is the one property that is about the other properties rather than about
 the element: it takes a CSS-wide keyword and hands it to every property at once.
@@ -303,9 +325,9 @@ two identifiers. A carried property is given an id at or above
 without a compiled slot to index; its value grammar is `Dynamic`, the one grammar
 that judges nothing.
 
-The **63 compiled names** are the 48 longhand definitions and 15 shorthands the
+The **81 compiled names** are the 65 longhand definitions and 16 shorthands the
 renderer can actually draw — the box, border, background, colour, font, text and
-overflow families. The **658 carried names** are everything else, and carrying is
+overflow families. The **640 carried names** are everything else, and carrying is
 not dropping: `opacity: 0.5` and `animation-name: fade` are valid CSS, so they are
 accepted, kept, inherited where the specification says they inherit, and printed
 back by the coverage report, instead of being refused. A compiler that models a
@@ -324,7 +346,7 @@ becomes a list of the four tokens in order, because the order is part of the
 value and a later stage that learns the shorthand has to be able to read it. The
 parser refuses exactly one thing: an empty value, which is not a value of any
 property. `all: initial` resets the compiled properties and does not materialise
-an initial value for each of the 658 carried ones — nothing lowers them, and
+an initial value for each of the 640 carried ones — nothing lowers them, and
 putting them on every element would bloat every interned style for no effect, so a
 carried property is present on a computed style when a declaration put it there
 and absent otherwise.

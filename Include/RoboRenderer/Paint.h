@@ -296,7 +296,8 @@ namespace RoboRenderer
                          float fontSize,
                          FontWeightKind weight,
                          const Color& color,
-                         const TextRunStyle* runStyle = nullptr);
+                         const TextRunStyle* runStyle = nullptr,
+                         bool vertical = false);
 
         const CompiledDocument& document;
         const LayoutEngine& layout;

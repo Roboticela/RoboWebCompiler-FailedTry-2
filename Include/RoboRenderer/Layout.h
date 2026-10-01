@@ -192,8 +192,22 @@ namespace RoboRenderer
         /// leaves the colour at `currentColor`.
         Color decorationColor = Color::Rgba(0, 0, 0, 255);
         bool hasDecorationColor = false;
+        /// `text-decoration-style`, and the thickness the line is drawn at.
+        TextDecorationStyleKind decorationStyle = TextDecorationStyleKind::Solid;
+        TextDecorationThicknessKind decorationThicknessKind = TextDecorationThicknessKind::Auto;
+        float decorationThickness = 0.0f;
+        /// `text-underline-offset`, and where the underline sits relative to the
+        /// baseline: positive moves it down, negative up.
+        TextUnderlineOffsetKind underlineOffsetKind = TextUnderlineOffsetKind::Auto;
+        float underlineOffset = 0.0f;
         /// Vertical offset for ruby annotations.
         float yOffset = 0.0f;
+
+        /// True when the line runs down a column rather than along a baseline,
+        /// which is what `writing-mode: vertical-*` asks for. The run then starts
+        /// at `lineTop` and walks down `lineHeight`, with `x` as the column's
+        /// cross-axis position and `width` its cross-axis size.
+        bool vertical = false;
     };
 
     /// The geometry of one layout pass.
@@ -315,6 +329,11 @@ namespace RoboRenderer
             std::uint8_t decoration = TextDecorationNone;
             Color decorationColor = Color::Rgba(0, 0, 0, 255);
             bool hasDecorationColor = false;
+            TextDecorationStyleKind decorationStyle = TextDecorationStyleKind::Solid;
+            TextDecorationThicknessKind decorationThicknessKind = TextDecorationThicknessKind::Auto;
+            float decorationThickness = 0.0f;
+            TextUnderlineOffsetKind underlineOffsetKind = TextUnderlineOffsetKind::Auto;
+            float underlineOffset = 0.0f;
 
             /// The CSS text options this item is measured and painted with.
             float letterSpacing = 0.0f;
@@ -325,6 +344,16 @@ namespace RoboRenderer
             /// `font-kerning` and `font-feature-settings`, passed to the shaper.
             bool kerning = true;
             const char* fontFeatures = nullptr;
+
+            /// The line-breaking family, passed to the wrapper with the run.
+            HyphensKind hyphens = HyphensKind::Manual;
+            OverflowWrapKind overflowWrap = OverflowWrapKind::Normal;
+            WordBreakKind wordBreak = WordBreakKind::Normal;
+            LineBreakKind lineBreak = LineBreakKind::Auto;
+            /// `tab-size`: a count of space advances, or a length in logical
+            /// pixels when `tabSizeLength` is non-zero.
+            float tabSize = 0.0f;
+            float tabSizeLength = 0.0f;
             /// `line-height` as a multiple of the font size, 0 for "normal".
             float lineHeightScale = 0.0f;
             /// `white-space: nowrap`: the run never wraps, however wide it is.
@@ -383,6 +412,18 @@ namespace RoboRenderer
                                std::uint32_t depth,
                                const std::vector<ElementIndex>* restriction,
                                bool measureOnly);
+
+        /// Flows inline content down a column instead of along a baseline: the
+        /// vertical-writing-mode sibling of `ArrangeInlineRun`. The block has one
+        /// column, so the cross axis is as wide as the tallest line box.
+        float ArrangeVerticalInlineRun(ElementIndex container,
+                                       const CompiledStyle& style,
+                                       const std::vector<InlineItem>& items,
+                                       float x,
+                                       float y,
+                                       float availableWidth,
+                                       std::uint32_t depth,
+                                       bool measureOnly);
 
         void GatherInlineItems(ElementIndex parent, std::vector<InlineItem>& items);
 

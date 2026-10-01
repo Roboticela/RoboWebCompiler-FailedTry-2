@@ -265,7 +265,11 @@ one place the two meet: it starts from the defaults, drops what the document
 turned off and appends what it asked for, in the order a shaper applies them.
 `TextRunStyle` carries both, and `TextLayout::ShapeRun` — which measurement and
 painting both go through — hands them to every face the run is shaped in, so a
-mixed-script string is shaped by one rule.
+mixed-script string is shaped by one rule. The `font-variant-*` longhands feed the
+same channel rather than a parallel one: the compiler lowers each keyword to the
+OpenType tag it means, so `font-variant-numeric: tabular-nums slashed-zero` reaches
+the shaper as `"tnum" 1; "zero" 1` and `EffectiveFeatures` applies it with
+everything else.
 
 **Inter is the default family.** It is loaded from `Fonts/Inter/` as a variable
 font; `SetInstance` resolves `fvar` axes (applying `avar` remapping), interpolates
@@ -321,7 +325,37 @@ overline and a strikethrough can be asked for at once — and the painter draws 
 requested line as a filled rectangle a fraction of the font size tall. The colour
 is the element's own text colour unless `text-decoration-color` names one, which is
 what `currentColor` means; a link's underline sets the same bit, so one field
-decides every decoration.
+decides every decoration. `text-decoration-style` picks the line's shape — a solid
+bar, two bars, a run of dots, a run of dashes, or a staircase that stands in for a
+wave — `text-decoration-thickness` sets how thick it is (a length, or the derived
+default that `auto` and `from-font` use), and `text-underline-offset` moves the
+underline away from the baseline. Each is composed from the backend's rectangle
+command, which is the only primitive the paint list offers.
+
+**Line breaking and justification.** `TextRunStyle::breakPolicy` carries the four
+properties that decide where a break opportunity exists — `overflow-wrap`,
+`word-break`, `line-break` and `hyphens` — and `TextLayout::Wrap` reads it rather
+than the CSS names. A space and a literal hyphen are opportunities as before;
+`break-all`, `anywhere` and `keep-all` change that answer, so a line rewinds to the
+last character that fit rather than to the last space. A word with no opportunity
+still breaks inside rather than overflowing. `tab-size` sets the width of a tab
+stop (a count of space advances, or a length as written). `text-align: justify`
+stretches every line but the last: the slack is divided between the spaces inside
+each fragment and the seams between fragments, and handed to the paint engine as
+word spacing so the painted glyphs and the measurement that positioned them agree.
+`text-align-last` decides what the last line does instead, and `text-justify: none`
+turns the stretching off.
+
+**Vertical writing modes.** `writing-mode: vertical-rl`/`vertical-lr` inverts the
+flow: the inline direction runs down a column and the block direction runs across
+columns. `ArrangeVerticalInlineRun` lays the same items out down the column, each
+run's own measured advance becoming its extent, and emits a `LineLayout` with
+`vertical` set. The paint engine walks its pen down the column instead of along the
+baseline, so a glyph keeps its orientation — which is what `text-orientation:
+upright` asks for — and the columns advance right to left (`vertical-rl`, the
+initial vertical direction) or left to right (`vertical-lr`). Selection, caret and
+decoration boxes are horizontal primitives and are left undrawn on a vertical run
+rather than drawn wrong; sideways glyph rotation is not modelled.
 
 **Italics.** `font-style: italic` selects an italic sibling of the chosen family
 when the host installs one and otherwise shears the upright design synthetically
@@ -334,7 +368,8 @@ the same face.
 * `Measure(text, size, weight)` — the width of a UTF-8 string.
 * `MeasurePrefix` — the width of the first *n* bytes, which is what caret
   positioning and hit testing inside a text field need.
-* `LineHeight`, `Advance`, `TabAdvance` — a tab stop is four spaces.
+* `LineHeight`, `Advance`, `TabAdvance` — a tab stop is four spaces unless the run
+  sets `tab-size`.
 * `ShapeRun(text, start, end, size, weight, glyphs)` — the single source of truth
   for advances: it groups the run by covering face, shapes each group with that
   face's `GSUB`/`GPOS`, and returns positioned glyphs. `Measure`, `MeasurePrefix`,

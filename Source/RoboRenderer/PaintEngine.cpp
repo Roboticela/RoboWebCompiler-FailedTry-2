@@ -802,7 +802,8 @@ namespace RoboRenderer
                                   float fontSize,
                                   FontWeightKind weight,
                                   const Color& color,
-                                  const TextRunStyle* runStyle)
+                                  const TextRunStyle* runStyle,
+                                  bool vertical)
     {
         if (text == nullptr || fontSize <= 0.0f || startByte >= endByte)
         {
@@ -853,7 +854,10 @@ namespace RoboRenderer
             std::reverse(glyphs.begin(), glyphs.end());
         }
 
-        float pen = x;
+        // A vertical line walks the pen down the column instead of along the
+        // baseline; each glyph keeps its orientation, which is what
+        // `text-orientation: upright` asks for.
+        float pen = vertical ? baseline : x;
         const std::uint32_t firstGlyph = static_cast<std::uint32_t>(list.GlyphCount());
         std::uint32_t glyphCount = 0;
 
@@ -863,8 +867,18 @@ namespace RoboRenderer
                 positioned.codepoint != '\t')
             {
                 PaintGlyph glyph;
-                glyph.x = pen + positioned.xOffset;
-                glyph.y = baseline - positioned.yOffset;
+
+                if (vertical)
+                {
+                    glyph.x = x + positioned.xOffset;
+                    glyph.y = pen + positioned.yOffset + fontSize * 0.75f;
+                }
+                else
+                {
+                    glyph.x = pen + positioned.xOffset;
+                    glyph.y = baseline - positioned.yOffset;
+                }
+
                 glyph.codepoint = positioned.codepoint;
                 glyph.faceId = positioned.faceIndex;
                 glyph.glyphId = positioned.glyphId;
@@ -880,7 +894,9 @@ namespace RoboRenderer
             return;
         }
 
-        PaintCommand& command = list.Add(PaintCommandType::DrawText, Rect{ x, baseline, pen - x, fontSize }, index);
+        const Rect commandBounds = vertical ? Rect{ x, baseline, fontSize, pen - baseline }
+                                            : Rect{ x, baseline, pen - x, fontSize };
+        PaintCommand& command = list.Add(PaintCommandType::DrawText, commandBounds, index);
         command.color = color;
         command.fontSize = fontSize;
         command.weight = weight;
@@ -965,8 +981,9 @@ namespace RoboRenderer
             runStyle.kerning = line.kerning;
             runStyle.fontFeatures = line.fontFeatures;
 
-            // A selection paints under the glyphs; a caret paints over them.
-            if (field != nullptr && focused && field->HasSelection() && line.controlValue)
+            // A selection paints under the glyphs; a caret paints over them. A
+            // vertical line skips both: the boxes they need are horizontal.
+            if (!line.vertical && field != nullptr && focused && field->HasSelection() && line.controlValue)
             {
                 const std::uint32_t startByte = TextLayout::ByteOffsetForCodepoint(text, field->SelectionStart());
                 const std::uint32_t endByte = TextLayout::ByteOffsetForCodepoint(text, field->SelectionEnd());
@@ -987,8 +1004,8 @@ namespace RoboRenderer
                 }
             }
 
-            EmitTextRun(index, lineX, baseline, text, line.startByte, line.endByte, line.fontSize, line.weight,
-                        color, &runStyle);
+            EmitTextRun(index, lineX, line.vertical ? top : baseline, text, line.startByte, line.endByte,
+                        line.fontSize, line.weight, color, &runStyle, line.vertical);
 
             // The decoration colour is the element's own colour unless the
             // document named one: that is what `currentColor` means, and the
@@ -1000,38 +1017,117 @@ namespace RoboRenderer
                 decoration |= TextDecorationUnderline;
             }
 
-            if (decoration != 0u)
+            if (!line.vertical && decoration != 0u)
             {
                 const Color decorationColor = line.hasDecorationColor ? line.decorationColor : color;
-                const float thickness = std::max(1.0f, line.fontSize * 0.07f);
+
+                float thickness = std::max(1.0f, line.fontSize * 0.07f);
+
+                if (line.decorationThicknessKind == TextDecorationThicknessKind::Length &&
+                    line.decorationThickness > 0.0f)
+                {
+                    thickness = line.decorationThickness;
+                }
+
+                // `from-font` asks for the font's own underline thickness, which
+                // the font reader does not expose, so it keeps the derived
+                // default `auto` uses. The line is still drawn, at the width a
+                // reader expects.
+                const TextDecorationStyleKind decorationStyle = line.decorationStyle;
                 const float decorationWidth = std::max(line.width, 1.0f);
+
+                const auto drawDecoration = [&](float x, float y, float width, float strokeThickness) {
+                    switch (decorationStyle)
+                    {
+                    case TextDecorationStyleKind::Solid:
+                        list.Add(PaintCommandType::FillRect, Rect{ x, y, width, strokeThickness }, index).color =
+                            decorationColor;
+                        break;
+
+                    case TextDecorationStyleKind::Double:
+                    {
+                        // Two thin lines with a gap between them.
+                        const float line = std::max(1.0f, strokeThickness * 0.4f);
+                        const float gap = std::max(1.0f, strokeThickness * 0.4f);
+                        list.Add(PaintCommandType::FillRect, Rect{ x, y, width, line }, index).color =
+                            decorationColor;
+                        list.Add(PaintCommandType::FillRect, Rect{ x, y + line + gap, width, line }, index).color =
+                            decorationColor;
+                        break;
+                    }
+
+                    case TextDecorationStyleKind::Dotted:
+                    {
+                        const float dot = std::max(1.0f, strokeThickness);
+                        const float step = dot * 2.0f;
+
+                        for (float offset = 0.0f; offset < width; offset += step)
+                        {
+                            const float dotWidth = std::min(dot, width - offset);
+                            list.Add(PaintCommandType::FillRect, Rect{ x + offset, y, dotWidth, dot }, index).color =
+                                decorationColor;
+                        }
+                        break;
+                    }
+
+                    case TextDecorationStyleKind::Dashed:
+                    {
+                        const float dash = std::max(2.0f, strokeThickness * 3.0f);
+                        const float step = dash * 2.0f;
+
+                        for (float offset = 0.0f; offset < width; offset += step)
+                        {
+                            const float dashWidth = std::min(dash, width - offset);
+                            list.Add(PaintCommandType::FillRect,
+                                     Rect{ x + offset, y, dashWidth, strokeThickness }, index)
+                                .color = decorationColor;
+                        }
+                        break;
+                    }
+
+                    case TextDecorationStyleKind::Wavy:
+                    {
+                        // A staircase stands in for the wave: each quarter
+                        // wavelength steps up or down, which reads as a wave at
+                        // the size a text decoration is drawn at.
+                        const float amplitude = std::max(1.0f, strokeThickness);
+                        const float quarter = std::max(2.0f, strokeThickness * 2.0f);
+                        int phase = 0;
+
+                        for (float offset = 0.0f; offset < width; offset += quarter, ++phase)
+                        {
+                            const float level = ((phase / 2) % 2 == 0) ? 0.0f : amplitude;
+                            const float piece = std::min(quarter, width - offset);
+                            list.Add(PaintCommandType::FillRect,
+                                     Rect{ x + offset, y + level, piece, strokeThickness }, index)
+                                .color = decorationColor;
+                        }
+                        break;
+                    }
+                    }
+                };
 
                 if ((decoration & TextDecorationUnderline) != 0u)
                 {
-                    const float underlineY = baseline + std::max(1.0f, line.fontSize * 0.12f);
-                    list.Add(PaintCommandType::FillRect,
-                             Rect{ lineX, underlineY, decorationWidth, thickness }, index)
-                        .color = decorationColor;
+                    const float defaultOffset = std::max(1.0f, line.fontSize * 0.12f);
+                    const float underlineY = baseline + (line.underlineOffsetKind == TextUnderlineOffsetKind::Length
+                                                             ? line.underlineOffset
+                                                             : defaultOffset);
+                    drawDecoration(lineX, underlineY, decorationWidth, thickness);
                 }
 
                 if ((decoration & TextDecorationOverline) != 0u)
                 {
-                    const float overlineY = top;
-                    list.Add(PaintCommandType::FillRect,
-                             Rect{ lineX, overlineY, decorationWidth, thickness }, index)
-                        .color = decorationColor;
+                    drawDecoration(lineX, top, decorationWidth, thickness);
                 }
 
                 if ((decoration & TextDecorationLineThrough) != 0u)
                 {
-                    const float strikeY = baseline - line.fontSize * 0.28f;
-                    list.Add(PaintCommandType::FillRect,
-                             Rect{ lineX, strikeY, decorationWidth, thickness }, index)
-                        .color = decorationColor;
+                    drawDecoration(lineX, baseline - line.fontSize * 0.28f, decorationWidth, thickness);
                 }
             }
 
-            if (field != nullptr && focused && caretVisible && !field->HasSelection())
+            if (!line.vertical && field != nullptr && focused && caretVisible && !field->HasSelection())
             {
                 const std::uint32_t caretByte = TextLayout::ByteOffsetForCodepoint(text, field->caret);
                 const float caretX =

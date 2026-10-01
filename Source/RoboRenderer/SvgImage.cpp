@@ -4,15 +4,14 @@
 
 #include <algorithm>
 #include <cmath>
-#include <string>
 #include <vector>
 
 namespace RoboRenderer
 {
     namespace
     {
-        constexpr int SamplesPerAxis = 4;
-        constexpr int SamplesPerPixel = SamplesPerAxis * SamplesPerAxis;
+        constexpr int SubSamples = 4;
+        constexpr int MaxCoverage = SubSamples * SubSamples;
         constexpr float MaxRasterSize = 2048.0f;
         constexpr float MinRasterSize = 1.0f;
 
@@ -104,118 +103,6 @@ namespace RoboRenderer
             return colour;
         }
 
-        /// Nonzero winding number of the point against every contour.
-        int WindingNumber(const std::vector<std::vector<SvgPoint>>& contours, float x, float y)
-        {
-            int winding = 0;
-
-            for (const std::vector<SvgPoint>& contour : contours)
-            {
-                if (contour.size() < 3)
-                {
-                    continue;
-                }
-
-                for (std::size_t index = 0; index < contour.size(); ++index)
-                {
-                    const SvgPoint& a = contour[index];
-                    const SvgPoint& b = contour[(index + 1) % contour.size()];
-
-                    if (a.y <= y)
-                    {
-                        if (b.y > y && (b.x - a.x) * (y - a.y) - (x - a.x) * (b.y - a.y) > 0.0f)
-                        {
-                            ++winding;
-                        }
-                    }
-                    else if (b.y <= y && (b.x - a.x) * (y - a.y) - (x - a.x) * (b.y - a.y) < 0.0f)
-                    {
-                        --winding;
-                    }
-                }
-            }
-
-            return winding;
-        }
-
-        /// Even-odd rule: inside when an odd number of edges is crossed to the
-        /// left of the point. The two rules agree unless contours overlap.
-        bool EvenOddInside(const std::vector<std::vector<SvgPoint>>& contours, float x, float y)
-        {
-            int crossings = 0;
-
-            for (const std::vector<SvgPoint>& contour : contours)
-            {
-                if (contour.size() < 3)
-                {
-                    continue;
-                }
-
-                for (std::size_t index = 0; index < contour.size(); ++index)
-                {
-                    const SvgPoint& a = contour[index];
-                    const SvgPoint& b = contour[(index + 1) % contour.size()];
-
-                    if ((a.y <= y) == (b.y <= y))
-                    {
-                        continue;
-                    }
-
-                    const float t = (y - a.y) / (b.y - a.y);
-                    if (x < a.x + t * (b.x - a.x))
-                    {
-                        ++crossings;
-                    }
-                }
-            }
-
-            return (crossings & 1) != 0;
-        }
-
-        float DistanceToSegment(float px, float py, float ax, float ay, float bx, float by)
-        {
-            const float dx = bx - ax;
-            const float dy = by - ay;
-            const float lengthSquared = dx * dx + dy * dy;
-
-            float t = 0.0f;
-            if (lengthSquared > 0.0f)
-            {
-                t = ((px - ax) * dx + (py - ay) * dy) / lengthSquared;
-                t = std::min(1.0f, std::max(0.0f, t));
-            }
-
-            const float cx = ax + dx * t;
-            const float cy = ay + dy * t;
-            const float ex = px - cx;
-            const float ey = py - cy;
-            return std::sqrt(ex * ex + ey * ey);
-        }
-
-        /// Distance from the point to the nearest edge of any contour.
-        float DistanceToContours(const std::vector<std::vector<SvgPoint>>& contours, float x, float y)
-        {
-            float best = 1.0e30f;
-
-            for (const std::vector<SvgPoint>& contour : contours)
-            {
-                if (contour.size() < 2)
-                {
-                    continue;
-                }
-
-                const std::size_t segments = contour.size() >= 3 ? contour.size() : contour.size() - 1;
-                for (std::size_t index = 0; index < segments; ++index)
-                {
-                    const SvgPoint& a = contour[index];
-                    const SvgPoint& b = contour[(index + 1) % contour.size()];
-                    best = std::min(best, DistanceToSegment(x, y, a.x, a.y, b.x, b.y));
-                }
-            }
-
-            return best;
-        }
-
         void ComputeBounds(const std::vector<std::vector<SvgPoint>>& contours,
                            float& x0,
                            float& y0,
@@ -245,6 +132,193 @@ namespace RoboRenderer
                           return left.offset < right.offset;
                       });
             return stops;
+        }
+
+        /// Opaque or not, a colour whose alpha is zero is not worth a pass.
+        bool Paints(const SvgPaint& paint)
+        {
+            if (!(paint.alpha > 0.0f))
+            {
+                return false;
+            }
+            if (paint.kind != SvgPaint::Kind::Solid && !paint.stops.empty())
+            {
+                for (const SvgPaint::Stop& stop : paint.stops)
+                {
+                    if (stop.alpha > 0.0f)
+                    {
+                        return true;
+                    }
+                }
+            }
+            return true;
+        }
+
+        /// Scanline coverage of a fill. `polygons` are in device pixels already.
+        /// Every polygon is treated as closed, which is what SVG's fill does to
+        /// an open subpath too.
+        void RasterizeFill(const std::vector<std::vector<SvgPoint>>& polygons,
+                           bool evenOdd,
+                           int width,
+                           int rowBegin,
+                           int rowEnd,
+                           std::vector<std::uint8_t>& coverage)
+        {
+            std::vector<float> crossings;
+            std::vector<int> directions;
+            std::vector<int> accumulator(static_cast<std::size_t>(width), 0);
+
+            for (int row = rowBegin; row < rowEnd; ++row)
+            {
+                std::fill(accumulator.begin(), accumulator.end(), 0);
+
+                for (int sub = 0; sub < SubSamples; ++sub)
+                {
+                    const float sampleY =
+                        static_cast<float>(row) + (static_cast<float>(sub) + 0.5f) / SubSamples;
+
+                    crossings.clear();
+                    directions.clear();
+
+                    for (const std::vector<SvgPoint>& polygon : polygons)
+                    {
+                        const std::size_t count = polygon.size();
+                        if (count < 2)
+                        {
+                            continue;
+                        }
+
+                        for (std::size_t index = 0; index < count; ++index)
+                        {
+                            const SvgPoint& a = polygon[index];
+                            const SvgPoint& b = polygon[(index + 1) % count];
+
+                            const bool aBelow = a.y <= sampleY;
+                            const bool bBelow = b.y <= sampleY;
+                            if (aBelow == bBelow)
+                            {
+                                continue;
+                            }
+
+                            const float t = (sampleY - a.y) / (b.y - a.y);
+                            crossings.push_back(a.x + t * (b.x - a.x));
+                            // Even-odd counts crossings, so every edge contributes
+                            // one; nonzero carries the edge's direction instead.
+                            directions.push_back(evenOdd ? 1 : (b.y > a.y ? 1 : -1));
+                        }
+                    }
+
+                    // Crossing counts are small, so an insertion sort beats
+                    // anything cleverer.
+                    for (std::size_t index = 1; index < crossings.size(); ++index)
+                    {
+                        const float x = crossings[index];
+                        const int direction = directions[index];
+                        std::size_t position = index;
+
+                        while (position > 0 && crossings[position - 1] > x)
+                        {
+                            crossings[position] = crossings[position - 1];
+                            directions[position] = directions[position - 1];
+                            --position;
+                        }
+
+                        crossings[position] = x;
+                        directions[position] = direction;
+                    }
+
+                    int winding = 0;
+                    for (std::size_t index = 0; index < crossings.size(); ++index)
+                    {
+                        // Even-odd counts crossings, so an odd count is inside;
+                        // nonzero tests the signed winding number itself.
+                        const bool inside = evenOdd ? ((winding & 1) != 0) : (winding != 0);
+
+                        if (inside && index > 0)
+                        {
+                            const float from = crossings[index - 1];
+                            const float to = crossings[index];
+
+                            if (to > from)
+                            {
+                                const int firstPixel = std::max(0, static_cast<int>(std::floor(from)));
+                                const int lastPixel = std::min(width - 1, static_cast<int>(std::ceil(to)) - 1);
+
+                                for (int pixel = firstPixel; pixel <= lastPixel; ++pixel)
+                                {
+                                    for (int sample = 0; sample < SubSamples; ++sample)
+                                    {
+                                        const float sampleX =
+                                            static_cast<float>(pixel) +
+                                            (static_cast<float>(sample) + 0.5f) / SubSamples;
+                                        if (sampleX >= from && sampleX < to)
+                                        {
+                                            accumulator[static_cast<std::size_t>(pixel)] += 1;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        winding += directions[index];
+                    }
+                }
+
+                std::uint8_t* rowOutput =
+                    coverage.data() + static_cast<std::size_t>(row) * static_cast<std::size_t>(width);
+
+                for (int x = 0; x < width; ++x)
+                {
+                    const int value = accumulator[static_cast<std::size_t>(x)];
+                    rowOutput[x] = static_cast<std::uint8_t>(value * 255 / MaxCoverage);
+                }
+            }
+        }
+
+        /// Turns a contour into the quads one stroke of it covers: a rectangle
+        /// per segment, plus a small square at each vertex so joins do not leave
+        /// a notch. Square caps are a deliberate approximation of the round and
+        /// butt caps SVG offers.
+        void AppendStrokePolygons(const std::vector<SvgPoint>& contour,
+                                  float halfWidth,
+                                  std::vector<std::vector<SvgPoint>>& out)
+        {
+            const std::size_t count = contour.size();
+            if (count < 2 || halfWidth <= 0.0f)
+            {
+                return;
+            }
+
+            const bool closed = count >= 3;
+            const std::size_t segments = closed ? count : count - 1;
+
+            for (std::size_t index = 0; index < segments; ++index)
+            {
+                const SvgPoint& a = contour[index];
+                const SvgPoint& b = contour[(index + 1) % count];
+
+                const float dx = b.x - a.x;
+                const float dy = b.y - a.y;
+                const float length = std::sqrt(dx * dx + dy * dy);
+                if (length <= 0.0f)
+                {
+                    continue;
+                }
+
+                const float nx = -dy / length * halfWidth;
+                const float ny = dx / length * halfWidth;
+
+                out.push_back({ SvgPoint{ a.x + nx, a.y + ny }, SvgPoint{ b.x + nx, b.y + ny },
+                                SvgPoint{ b.x - nx, b.y - ny }, SvgPoint{ a.x - nx, a.y - ny } });
+            }
+
+            for (const SvgPoint& point : contour)
+            {
+                out.push_back({ SvgPoint{ point.x - halfWidth, point.y - halfWidth },
+                                SvgPoint{ point.x + halfWidth, point.y - halfWidth },
+                                SvgPoint{ point.x + halfWidth, point.y + halfWidth },
+                                SvgPoint{ point.x - halfWidth, point.y + halfWidth } });
+            }
         }
 
         /// Source-over composite of one non-premultiplied sample.
@@ -338,7 +412,6 @@ namespace RoboRenderer
         {
             rasterWidth = metrics.viewWidth;
             rasterHeight = metrics.viewHeight;
-            haveSize = true;
         }
 
         if (rasterWidth <= 0.0f || rasterHeight <= 0.0f)
@@ -376,7 +449,12 @@ namespace RoboRenderer
 
         out.Allocate(width, height, PixelFormat::Rgba8);
 
-        const float sampleStep = 1.0f / static_cast<float>(SamplesPerAxis);
+        const int imageWidth = static_cast<int>(width);
+        std::vector<std::uint8_t> fillCoverage(static_cast<std::size_t>(width) * height, 0);
+        std::vector<std::uint8_t> strokeCoverage(static_cast<std::size_t>(width) * height, 0);
+
+        std::vector<std::vector<SvgPoint>> fillPolygons;
+        std::vector<std::vector<SvgPoint>> strokePolygons;
 
         for (SvgShape& shape : shapes)
         {
@@ -389,84 +467,175 @@ namespace RoboRenderer
             {
                 shape.paint.stops = SortedStops(shape.paint);
             }
+            if (shape.hasStroke && shape.stroke.kind != SvgPaint::Kind::Solid && !shape.stroke.stops.empty())
+            {
+                shape.stroke.stops = SortedStops(shape.stroke);
+            }
+
+            if (shape.hasFill && !Paints(shape.paint))
+            {
+                shape.hasFill = false;
+            }
+            if (shape.hasStroke && (shape.strokeWidth <= 0.0f || !Paints(shape.stroke)))
+            {
+                shape.hasStroke = false;
+            }
+
+            if (!shape.hasFill && !shape.hasStroke)
+            {
+                continue;
+            }
+
+            // To device pixels once, then rasterize the whole shape in one pass.
+            const auto toDevice = [&](const std::vector<SvgPoint>& contour) {
+                std::vector<SvgPoint> device;
+                device.reserve(contour.size());
+                for (const SvgPoint& point : contour)
+                {
+                    device.push_back(SvgPoint{ offsetX + point.x * scale, offsetY + point.y * scale });
+                }
+                return device;
+            };
+
+            fillPolygons.clear();
+            strokePolygons.clear();
+
+            if (shape.hasFill)
+            {
+                for (const std::vector<SvgPoint>& contour : shape.contours)
+                {
+                    if (contour.size() >= 3)
+                    {
+                        fillPolygons.push_back(toDevice(contour));
+                    }
+                }
+                shape.hasFill = !fillPolygons.empty();
+            }
+
+            if (shape.hasStroke)
+            {
+                const float halfWidth = std::max(0.5f, shape.strokeWidth * 0.5f);
+                for (const std::vector<SvgPoint>& contour : shape.contours)
+                {
+                    std::vector<SvgPoint> device = toDevice(contour);
+                    if (device.size() >= 2)
+                    {
+                        AppendStrokePolygons(device, halfWidth, strokePolygons);
+                    }
+                }
+                shape.hasStroke = !strokePolygons.empty();
+            }
+
+            if (!shape.hasFill && !shape.hasStroke)
+            {
+                continue;
+            }
 
             float bx0 = 0.0f;
             float by0 = 0.0f;
             float bx1 = 0.0f;
             float by1 = 0.0f;
-            ComputeBounds(shape.contours, bx0, by0, bx1, by1);
+            bool haveBounds = false;
 
-            const float strokePad = shape.hasStroke ? shape.strokeWidth * 0.5f + 1.0f : 1.0f;
-
-            const float left = (offsetX + bx0 * scale) - strokePad;
-            const float top = (offsetY + by0 * scale) - strokePad;
-            const float right = (offsetX + bx1 * scale) + strokePad;
-            const float bottom = (offsetY + by1 * scale) + strokePad;
-
-            const std::int32_t beginX = std::max<std::int32_t>(0, static_cast<std::int32_t>(std::floor(left)));
-            const std::int32_t beginY = std::max<std::int32_t>(0, static_cast<std::int32_t>(std::floor(top)));
-            const std::int32_t endX =
-                std::min<std::int32_t>(static_cast<std::int32_t>(width), static_cast<std::int32_t>(std::ceil(right)));
-            const std::int32_t endY =
-                std::min<std::int32_t>(static_cast<std::int32_t>(height), static_cast<std::int32_t>(std::ceil(bottom)));
-
-            const float strokeHalf = shape.strokeWidth * 0.5f;
-
-            for (std::int32_t py = beginY; py < endY; ++py)
-            {
-                for (std::int32_t px = beginX; px < endX; ++px)
+            const auto includeBounds = [&](const std::vector<std::vector<SvgPoint>>& polygons) {
+                for (const std::vector<SvgPoint>& polygon : polygons)
                 {
-                    float accumulatedRed = 0.0f;
-                    float accumulatedGreen = 0.0f;
-                    float accumulatedBlue = 0.0f;
-                    float accumulatedAlpha = 0.0f;
-
-                    for (int sy = 0; sy < SamplesPerAxis; ++sy)
+                    for (const SvgPoint& point : polygon)
                     {
-                        for (int sx = 0; sx < SamplesPerAxis; ++sx)
+                        if (!haveBounds)
                         {
-                            const float deviceX =
-                                static_cast<float>(px) + (static_cast<float>(sx) + 0.5f) * sampleStep;
-                            const float deviceY =
-                                static_cast<float>(py) + (static_cast<float>(sy) + 0.5f) * sampleStep;
-                            const float ux = (deviceX - offsetX) / scale;
-                            const float uy = (deviceY - offsetY) / scale;
-
-                            const bool stroked =
-                                shape.hasStroke && DistanceToContours(shape.contours, ux, uy) <= strokeHalf;
-                            const bool filled =
-                                shape.hasFill && !stroked &&
-                                (shape.evenOdd ? EvenOddInside(shape.contours, ux, uy)
-                                               : WindingNumber(shape.contours, ux, uy) != 0);
-
-                            if (!stroked && !filled)
-                            {
-                                continue;
-                            }
-
-                            const Colour colour = stroked
-                                                      ? ShadePaint(shape.stroke, ux, uy)
-                                                      : ShadePaint(shape.paint, ux, uy);
-
-                            accumulatedRed += colour.red * colour.alpha;
-                            accumulatedGreen += colour.green * colour.alpha;
-                            accumulatedBlue += colour.blue * colour.alpha;
-                            accumulatedAlpha += colour.alpha;
+                            bx0 = bx1 = point.x;
+                            by0 = by1 = point.y;
+                            haveBounds = true;
+                            continue;
                         }
+                        bx0 = std::min(bx0, point.x);
+                        by0 = std::min(by0, point.y);
+                        bx1 = std::max(bx1, point.x);
+                        by1 = std::max(by1, point.y);
                     }
+                }
+            };
 
-                    if (accumulatedAlpha <= 0.0f)
+            includeBounds(fillPolygons);
+            includeBounds(strokePolygons);
+
+            if (!haveBounds)
+            {
+                continue;
+            }
+
+            const int rowBegin = std::max(0, static_cast<int>(std::floor(by0)));
+            const int rowEnd = std::min(static_cast<int>(height), static_cast<int>(std::ceil(by1)) + 1);
+            const int columnBegin = std::max(0, static_cast<int>(std::floor(bx0)));
+            const int columnEnd =
+                std::min(static_cast<int>(width), static_cast<int>(std::ceil(bx1)) + 1);
+
+            if (rowBegin >= rowEnd || columnBegin >= columnEnd)
+            {
+                continue;
+            }
+
+            // Coverage is only meaningful inside the shape's own box, and clearing
+            // exactly that box keeps a big document from paying for the whole
+            // surface once per shape.
+            const auto clearBand = [&](std::vector<std::uint8_t>& buffer) {
+                for (int row = rowBegin; row < rowEnd; ++row)
+                {
+                    std::uint8_t* rowStart =
+                        buffer.data() + static_cast<std::size_t>(row) * static_cast<std::size_t>(width);
+                    std::fill(rowStart + columnBegin, rowStart + columnEnd, std::uint8_t(0));
+                }
+            };
+
+            if (shape.hasFill)
+            {
+                clearBand(fillCoverage);
+                RasterizeFill(fillPolygons, shape.evenOdd, imageWidth, rowBegin, rowEnd, fillCoverage);
+            }
+            if (shape.hasStroke)
+            {
+                clearBand(strokeCoverage);
+                RasterizeFill(strokePolygons, false, imageWidth, rowBegin, rowEnd, strokeCoverage);
+            }
+
+            for (int row = rowBegin; row < rowEnd; ++row)
+            {
+                for (int column = columnBegin; column < columnEnd; ++column)
+                {
+                    const std::size_t offset =
+                        static_cast<std::size_t>(row) * static_cast<std::size_t>(width) +
+                        static_cast<std::size_t>(column);
+
+                    const float fillAmount =
+                        shape.hasFill ? static_cast<float>(fillCoverage[offset]) / 255.0f : 0.0f;
+                    const float strokeAmount =
+                        shape.hasStroke ? static_cast<float>(strokeCoverage[offset]) / 255.0f : 0.0f;
+
+                    if (fillAmount <= 0.0f && strokeAmount <= 0.0f)
                     {
                         continue;
                     }
 
-                    Colour sample;
-                    sample.red = accumulatedRed / accumulatedAlpha;
-                    sample.green = accumulatedGreen / accumulatedAlpha;
-                    sample.blue = accumulatedBlue / accumulatedAlpha;
-                    sample.alpha = accumulatedAlpha / static_cast<float>(SamplesPerPixel);
+                    const float userPixelX = (static_cast<float>(column) + 0.5f - offsetX) / scale;
+                    const float userPixelY = (static_cast<float>(row) + 0.5f - offsetY) / scale;
 
-                    BlendPixel(out, static_cast<std::uint32_t>(px), static_cast<std::uint32_t>(py), sample, 1.0f);
+                    // SVG paints the fill and then the stroke over it.
+                    if (fillAmount > 0.0f)
+                    {
+                        Colour fill = ShadePaint(shape.paint, userPixelX, userPixelY);
+                        fill.alpha *= fillAmount;
+                        BlendPixel(out, static_cast<std::uint32_t>(column),
+                                   static_cast<std::uint32_t>(row), fill, 1.0f);
+                    }
+
+                    if (strokeAmount > 0.0f)
+                    {
+                        Colour stroke = ShadePaint(shape.stroke, userPixelX, userPixelY);
+                        stroke.alpha *= strokeAmount;
+                        BlendPixel(out, static_cast<std::uint32_t>(column),
+                                   static_cast<std::uint32_t>(row), stroke, 1.0f);
+                    }
                 }
             }
         }

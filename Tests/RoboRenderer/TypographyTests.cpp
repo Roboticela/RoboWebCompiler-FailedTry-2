@@ -940,6 +940,454 @@ ROBO_TEST(Typography, CssKerningFeaturesAndDecorationReachTheRuntime)
     ROBO_CHECK(decoratedRects > filledRects(undecorated.renderer));
 }
 
+ROBO_TEST(Typography, FontVariantLonghandsBecomeOpenTypeFeatures)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"caps\">Caps</p><p class=\"nums\">123</p><p class=\"none\">ffi</p>"
+        "<p class=\"short\">Short</p>",
+        application,
+        { { "app.css",
+            ".caps { font-variant-caps: all-small-caps }\n"
+            ".nums { font-variant-numeric: tabular-nums slashed-zero }\n"
+            ".none { font-variant-ligatures: none }\n"
+            ".short { font-variant: small-caps tabular-nums }\n" } },
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    const auto featuresForText = [&](const char* text) {
+        for (std::uint32_t index = 0; index < document.styleCount; ++index)
+        {
+            const CompiledStyle& style = document.styles[index];
+            if (!IsSpecified(style.specified, StyleFlagFontFeatures) || style.fontFeatures == 0)
+            {
+                continue;
+            }
+            const std::string written = StringAt(document, style.fontFeatures);
+            if (written.find(text) != std::string::npos)
+            {
+                return written;
+            }
+        }
+        return std::string();
+    };
+
+    // `all-small-caps` needs both the lower-case and the upper-case small caps.
+    const std::string caps = featuresForText("smcp");
+    ROBO_CHECK(caps.find("\"smcp\" 1") != std::string::npos);
+    ROBO_CHECK(caps.find("\"c2sc\" 1") != std::string::npos);
+
+    const std::string nums = featuresForText("tnum");
+    ROBO_CHECK(nums.find("\"tnum\" 1") != std::string::npos);
+    ROBO_CHECK(nums.find("\"zero\" 1") != std::string::npos);
+
+    // `font-variant-ligatures: none` is the shaper's `liga` off, and it reaches
+    // the same channel `font-feature-settings` does.
+    const std::string off = featuresForText("liga");
+    ROBO_CHECK(off.find("\"liga\" 0") != std::string::npos);
+    ROBO_CHECK(off.find("\"calt\" 0") != std::string::npos);
+
+    // The `font-variant` shorthand routes each keyword to the longhand that
+    // owns it, so one declaration reaches two different feature families. Note
+    // it is `small-caps`, not `all-small-caps`, so no `c2sc` is written.
+    bool sawShorthand = false;
+    for (std::uint32_t index = 0; index < document.styleCount; ++index)
+    {
+        const CompiledStyle& style = document.styles[index];
+        if (!IsSpecified(style.specified, StyleFlagFontFeatures) || style.fontFeatures == 0)
+        {
+            continue;
+        }
+        const std::string written = StringAt(document, style.fontFeatures);
+        if (written.find("\"smcp\" 1") != std::string::npos &&
+            written.find("\"tnum\" 1") != std::string::npos &&
+            written.find("c2sc") == std::string::npos)
+        {
+            sawShorthand = true;
+        }
+    }
+    ROBO_CHECK(sawShorthand);
+}
+
+ROBO_TEST(Typography, AnExplicitFeatureSettingBeatsAFontVariantLonghand)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"styled\">AV</p>", application,
+        { { "app.css", ".styled { font-variant-ligatures: none; font-feature-settings: \"liga\" 1 }" } },
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    for (std::uint32_t index = 0; index < document.styleCount; ++index)
+    {
+        const CompiledStyle& style = document.styles[index];
+        if (!IsSpecified(style.specified, StyleFlagFontFeatures) || style.fontFeatures == 0)
+        {
+            continue;
+        }
+
+        const std::string written = StringAt(document, style.fontFeatures);
+
+        // The explicit declaration owns `liga`, so the longhand's `liga 0` is not
+        // written a second time; the longhand still contributes its other tags.
+        ROBO_CHECK(written.find("\"liga\" 1") != std::string::npos);
+        ROBO_CHECK(written.find("\"liga\" 0") == std::string::npos);
+        ROBO_CHECK(written.find("\"calt\" 0") != std::string::npos);
+        return;
+    }
+
+    ROBO_CHECK(false);
+}
+
+ROBO_TEST(Typography, TextDecorationDetailReachesTheRuntime)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"styled\">underlined</p>", application,
+        { { "app.css", ".styled { text-decoration: underline dotted 3px #123456; "
+                        "text-underline-offset: 5px }" } },
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    bool sawStyle = false;
+    bool sawThickness = false;
+    bool sawOffset = false;
+
+    for (std::uint32_t index = 0; index < document.styleCount; ++index)
+    {
+        const CompiledStyle& style = document.styles[index];
+
+        if (IsSpecified(style.specified, StyleFlagTextDecorationStyle) &&
+            style.textDecorationStyle == TextDecorationStyleKind::Dotted)
+        {
+            sawStyle = true;
+        }
+
+        if (IsSpecified(style.specified, StyleFlagTextDecorationThickness) &&
+            style.textDecorationThicknessKind == TextDecorationThicknessKind::Length &&
+            style.textDecorationThickness == 3.0f)
+        {
+            sawThickness = true;
+        }
+
+        if (IsSpecified(style.specified, StyleFlagTextUnderlineOffset) &&
+            style.textUnderlineOffsetKind == TextUnderlineOffsetKind::Length &&
+            style.textUnderlineOffset == 5.0f)
+        {
+            sawOffset = true;
+        }
+    }
+
+    ROBO_CHECK(sawStyle);
+    ROBO_CHECK(sawThickness);
+    ROBO_CHECK(sawOffset);
+}
+
+ROBO_TEST(Typography, TheDecorationShorthandRoutesEachPartToItsLonghand)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"styled\">text</p>", application,
+        { { "app.css", ".styled { text-decoration: overline wavy from-font }" } }, error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    bool sawLine = false;
+    bool sawStyle = false;
+    bool sawThickness = false;
+
+    for (std::uint32_t index = 0; index < document.styleCount; ++index)
+    {
+        const CompiledStyle& style = document.styles[index];
+
+        if (IsSpecified(style.specified, StyleFlagTextDecoration) &&
+            style.textDecoration == TextDecorationOverline)
+        {
+            sawLine = true;
+        }
+
+        if (IsSpecified(style.specified, StyleFlagTextDecorationStyle) &&
+            style.textDecorationStyle == TextDecorationStyleKind::Wavy)
+        {
+            sawStyle = true;
+        }
+
+        if (IsSpecified(style.specified, StyleFlagTextDecorationThickness) &&
+            style.textDecorationThicknessKind == TextDecorationThicknessKind::FromFont)
+        {
+            sawThickness = true;
+        }
+    }
+
+    ROBO_CHECK(sawLine);
+    ROBO_CHECK(sawStyle);
+    ROBO_CHECK(sawThickness);
+}
+
+ROBO_TEST(Typography, ADottedDecorationPaintsMorePiecesThanASolidOne)
+{
+    const auto rectangleCount = [](RoboTools::CompiledApplication& application, float x, float y) {
+        TestRenderer renderer(application.Document(), x, y);
+        if (!renderer.Frame())
+        {
+            return std::size_t(0);
+        }
+
+        std::size_t count = 0;
+        for (const PaintCommand& command : renderer.renderer.Paint().List().Commands())
+        {
+            if (command.type == PaintCommandType::FillRect)
+            {
+                ++count;
+            }
+        }
+        return count;
+    };
+
+    std::string error;
+
+    RoboTools::CompiledApplication solid;
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"styled\">underlined text</p>", solid,
+        { { "app.css", ".styled { text-decoration: underline solid }" } }, error));
+    const std::size_t solidRects = rectangleCount(solid, 400.0f, 200.0f);
+
+    RoboTools::CompiledApplication dotted;
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"styled\">underlined text</p>", dotted,
+        { { "app.css", ".styled { text-decoration: underline dotted }" } }, error));
+    const std::size_t dottedRects = rectangleCount(dotted, 400.0f, 200.0f);
+
+    // A dotted underline is a run of dots, so it takes more rectangles than the
+    // single rectangle a solid underline draws.
+    ROBO_CHECK(dottedRects > solidRects);
+}
+
+ROBO_TEST(Typography, LineBreakingAndJustificationPropertiesReachTheRuntime)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"styled\">alpha beta gamma</p>", application,
+        { { "app.css", ".styled { hyphens: none; overflow-wrap: anywhere; word-break: break-all; "
+                        "line-break: strict; tab-size: 4; text-align: justify; "
+                        "text-justify: inter-word; text-align-last: center }" } },
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    bool sawHyphens = false;
+    bool sawOverflowWrap = false;
+    bool sawWordBreak = false;
+    bool sawLineBreak = false;
+    bool sawTabSize = false;
+    bool sawJustify = false;
+    bool sawJustifyKind = false;
+    bool sawAlignLast = false;
+
+    for (std::uint32_t index = 0; index < document.styleCount; ++index)
+    {
+        const CompiledStyle& style = document.styles[index];
+
+        if (IsSpecified(style.specified, StyleFlagHyphens) && style.hyphens == HyphensKind::None)
+        {
+            sawHyphens = true;
+        }
+        if (IsSpecified(style.specified, StyleFlagOverflowWrap) &&
+            style.overflowWrap == OverflowWrapKind::Anywhere)
+        {
+            sawOverflowWrap = true;
+        }
+        if (IsSpecified(style.specified, StyleFlagWordBreak) && style.wordBreak == WordBreakKind::BreakAll)
+        {
+            sawWordBreak = true;
+        }
+        if (IsSpecified(style.specified, StyleFlagLineBreak) && style.lineBreak == LineBreakKind::Strict)
+        {
+            sawLineBreak = true;
+        }
+        if (IsSpecified(style.specified, StyleFlagTabSize) && style.tabSize == 4.0f)
+        {
+            sawTabSize = true;
+        }
+        if (IsSpecified(style.specified, StyleFlagTextAlign) && style.textAlign == TextAlignKind::Justify)
+        {
+            sawJustify = true;
+        }
+        if (IsSpecified(style.specified, StyleFlagTextJustify) &&
+            style.textJustify == TextJustifyKind::InterWord)
+        {
+            sawJustifyKind = true;
+        }
+        if (IsSpecified(style.specified, StyleFlagTextAlignLast) && style.hasTextAlignLast &&
+            style.textAlignLast == TextAlignKind::Center)
+        {
+            sawAlignLast = true;
+        }
+    }
+
+    ROBO_CHECK(sawHyphens);
+    ROBO_CHECK(sawOverflowWrap);
+    ROBO_CHECK(sawWordBreak);
+    ROBO_CHECK(sawLineBreak);
+    ROBO_CHECK(sawTabSize);
+    ROBO_CHECK(sawJustify);
+    ROBO_CHECK(sawJustifyKind);
+    ROBO_CHECK(sawAlignLast);
+}
+
+ROBO_TEST(Typography, JustifyStretchesEveryLineButTheLast)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p id=\"para\">alpha beta gamma delta epsilon zeta eta theta</p>", application,
+        { { "app.css", "#para { width: 120px; text-align: justify }" } }, error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 200.0f, 400.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex paragraph = FindElementById(document, "para");
+    ROBO_CHECK(paragraph != NoElement);
+
+    float widestWordSpacing = 0.0f;
+    float lastLineWordSpacing = -1.0f;
+    std::size_t lineCount = 0;
+
+    window.renderer.Layout().Result().ForEachLine(paragraph, [&](const LineLayout& line) {
+        widestWordSpacing = std::max(widestWordSpacing, line.wordSpacing);
+        lastLineWordSpacing = line.wordSpacing;
+        ++lineCount;
+    });
+
+    // The paragraph must actually wrap, or there is no non-final line to justify.
+    ROBO_CHECK(lineCount >= 2);
+    ROBO_CHECK(widestWordSpacing > 0.0f);
+
+    // The last line keeps its spaces at their natural width.
+    ROBO_CHECK(lastLineWordSpacing == 0.0f);
+}
+
+ROBO_TEST(Typography, TabSizeScalesTheTabStop)
+{
+    FontRegistry fonts;
+    TextLayout layout(fonts);
+
+    TextRunStyle eight;
+    eight.tabSize = 8.0f;
+
+    TextRunStyle length;
+    length.tabSizeLength = 40.0f;
+
+    const float fourSpace = layout.TabAdvance(16.0f, FontWeightKind::Normal);
+    const float eightSpace = layout.TabAdvance(16.0f, FontWeightKind::Normal, &eight);
+    const float lengthStop = layout.TabAdvance(16.0f, FontWeightKind::Normal, &length);
+
+    ROBO_CHECK(std::abs(eightSpace - fourSpace * 2.0f) < 0.001f);
+    ROBO_CHECK(std::abs(lengthStop - 40.0f) < 0.001f);
+}
+
+ROBO_TEST(Typography, WritingModeAndOrientationReachTheRuntime)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"styled\">vertical</p>", application,
+        { { "app.css", ".styled { writing-mode: vertical-rl; text-orientation: upright }" } }, error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    bool sawWritingMode = false;
+    bool sawOrientation = false;
+
+    for (std::uint32_t index = 0; index < document.styleCount; ++index)
+    {
+        const CompiledStyle& style = document.styles[index];
+
+        if (IsSpecified(style.specified, StyleFlagWritingMode) &&
+            style.writingMode == WritingModeKind::VerticalRl)
+        {
+            sawWritingMode = true;
+        }
+
+        if (IsSpecified(style.specified, StyleFlagTextOrientation) &&
+            style.textOrientation == TextOrientationKind::Upright)
+        {
+            sawOrientation = true;
+        }
+    }
+
+    ROBO_CHECK(sawWritingMode);
+    ROBO_CHECK(sawOrientation);
+
+    ROBO_CHECK(IsVerticalWritingMode(WritingModeKind::VerticalRl));
+    ROBO_CHECK(IsRightToLeftColumnWritingMode(WritingModeKind::VerticalRl));
+    ROBO_CHECK(!IsVerticalWritingMode(WritingModeKind::HorizontalTb));
+}
+
+ROBO_TEST(Typography, VerticalWritingModeLaysTextDownAColumn)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p id=\"vertical\">abcde</p>", application,
+        { { "app.css", "#vertical { writing-mode: vertical-rl }" } }, error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 200.0f, 400.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex paragraph = FindElementById(document, "vertical");
+    ROBO_CHECK(paragraph != NoElement);
+
+    bool sawVerticalLine = false;
+
+    window.renderer.Layout().Result().ForEachLine(paragraph, [&](const LineLayout& line) {
+        // The run walks down its column, so its extent is taller than the
+        // column is wide.
+        if (line.vertical && line.lineHeight > line.width)
+        {
+            sawVerticalLine = true;
+        }
+    });
+
+    ROBO_CHECK(sawVerticalLine);
+
+    const PaintCommand* textCommand = FindCommand(window.renderer, PaintCommandType::DrawText, paragraph);
+    ROBO_CHECK(textCommand != nullptr);
+
+    if (textCommand != nullptr)
+    {
+        ROBO_CHECK(textCommand->bounds.height > textCommand->bounds.width);
+    }
+}
+
 
 
 

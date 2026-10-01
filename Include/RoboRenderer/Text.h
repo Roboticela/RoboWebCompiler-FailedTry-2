@@ -612,6 +612,33 @@ namespace RoboRenderer
     /// opt-in: a null `TextRunStyle` means exactly the behaviour an unstyled
     /// document had, so the CSS text properties cannot change a document that
     /// does not use them.
+    /// The four properties that decide where a line may break: `overflow-wrap`,
+    /// `word-break`, `line-break` and `hyphens`. The wrapper reads this rather
+    /// than the CSS names, so the text engine stays CSS-unaware.
+    struct TextBreakPolicy
+    {
+        OverflowWrapKind overflowWrap = OverflowWrapKind::Normal;
+        WordBreakKind wordBreak = WordBreakKind::Normal;
+        LineBreakKind lineBreak = LineBreakKind::Auto;
+        HyphensKind hyphens = HyphensKind::Manual;
+
+        /// True when a break is allowed between any two characters, which is
+        /// what `word-break: break-all`, `line-break: anywhere` and
+        /// `overflow-wrap: anywhere` each ask for.
+        bool BreaksAnywhere() const
+        {
+            return wordBreak == WordBreakKind::BreakAll || lineBreak == LineBreakKind::Anywhere ||
+                   overflowWrap == OverflowWrapKind::Anywhere;
+        }
+
+        /// True when a break opportunity after a literal hyphen is allowed.
+        /// `keep-all` and `hyphens: none` both suppress it.
+        bool BreaksAfterHyphen() const
+        {
+            return wordBreak != WordBreakKind::KeepAll && hyphens != HyphensKind::None;
+        }
+    };
+
     struct TextRunStyle
     {
         /// `letter-spacing`, in logical units, added after every glyph.
@@ -633,6 +660,13 @@ namespace RoboRenderer
         /// defaults. Parsed on the way to the shaper rather than stored typed,
         /// because the shaper is the only consumer.
         const char* fontFeatures = nullptr;
+        /// `tab-size` as a count of space advances; zero means the default,
+        /// which is eight spaces.
+        float tabSize = 0.0f;
+        /// `tab-size` as a logical pixel width; zero means the count applies.
+        float tabSizeLength = 0.0f;
+        /// Where the line may break.
+        TextBreakPolicy breakPolicy;
     };
 
     /// Text measurement and line breaking.
@@ -700,6 +734,24 @@ namespace RoboRenderer
         float TabAdvance(float fontSize, FontWeightKind weight) const
         {
             return Advance(' ', fontSize, weight) * 4.0f;
+        }
+
+        /// Horizontal advance of a tab stop honouring `tab-size`. A count is a
+        /// multiple of the space advance; a length is used as written.
+        float TabAdvance(float fontSize, FontWeightKind weight, const TextRunStyle* runStyle) const
+        {
+            if (runStyle == nullptr)
+            {
+                return TabAdvance(fontSize, weight);
+            }
+
+            if (runStyle->tabSizeLength > 0.0f)
+            {
+                return runStyle->tabSizeLength;
+            }
+
+            const float count = runStyle->tabSize > 0.0f ? runStyle->tabSize : 4.0f;
+            return Advance(' ', fontSize, weight) * count;
         }
 
         /// Breaks a string into lines that fit `availableWidth`.

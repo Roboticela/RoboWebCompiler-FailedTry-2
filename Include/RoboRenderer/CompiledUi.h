@@ -188,8 +188,86 @@ namespace RoboRenderer
     {
         Start = 0,
         Center = 1,
-        End = 2
+        End = 2,
+        /// `justify`: the line is stretched to fill its container by growing the
+        /// spaces between words. The last line of a block stays start-aligned
+        /// unless `text-align-last` says otherwise.
+        Justify = 3
     };
+
+    /// `hyphens`: whether words may break with a hyphen.
+    enum class HyphensKind : std::uint8_t
+    {
+        None = 0,
+        Manual = 1,
+        Auto = 2
+    };
+
+    /// `overflow-wrap` and `word-break`: where a line may break inside a word.
+    enum class OverflowWrapKind : std::uint8_t
+    {
+        Normal = 0,
+        BreakWord = 1,
+        Anywhere = 2
+    };
+
+    enum class WordBreakKind : std::uint8_t
+    {
+        Normal = 0,
+        BreakAll = 1,
+        KeepAll = 2
+    };
+
+    /// `line-break`. `Anywhere` permits a break between any two characters, the
+    /// rest only relax or tighten the script rules the breaker already applies.
+    enum class LineBreakKind : std::uint8_t
+    {
+        Auto = 0,
+        Loose = 1,
+        Normal = 2,
+        Strict = 3,
+        Anywhere = 4
+    };
+
+    /// `text-justify`: which gaps justification grows.
+    enum class TextJustifyKind : std::uint8_t
+    {
+        Auto = 0,
+        None = 1,
+        InterWord = 2,
+        InterCharacter = 3
+    };
+
+    /// `writing-mode`: which axis the inline direction runs along. The sideways
+    /// modes are the vertical modes with a forced sideways orientation.
+    enum class WritingModeKind : std::uint8_t
+    {
+        HorizontalTb = 0,
+        VerticalRl = 1,
+        VerticalLr = 2,
+        SidewaysRl = 3,
+        SidewaysLr = 4
+    };
+
+    /// `text-orientation`: how a glyph stands when the writing mode is vertical.
+    enum class TextOrientationKind : std::uint8_t
+    {
+        Mixed = 0,
+        Upright = 1,
+        Sideways = 2
+    };
+
+    /// True for a writing mode whose inline direction is vertical.
+    inline bool IsVerticalWritingMode(WritingModeKind mode)
+    {
+        return mode != WritingModeKind::HorizontalTb;
+    }
+
+    /// True when the columns run right to left (`vertical-rl`, `sideways-rl`).
+    inline bool IsRightToLeftColumnWritingMode(WritingModeKind mode)
+    {
+        return mode == WritingModeKind::VerticalRl || mode == WritingModeKind::SidewaysRl;
+    }
 
     enum class FontWeightKind : std::uint8_t
     {
@@ -246,6 +324,34 @@ namespace RoboRenderer
         TextDecorationUnderline = 1u << 0,
         TextDecorationOverline = 1u << 1,
         TextDecorationLineThrough = 1u << 2
+    };
+
+    /// `text-decoration-style`. The painter draws each of these differently:
+    /// one line, two lines, a dotted line, a dashed line, or a wave.
+    enum class TextDecorationStyleKind : std::uint8_t
+    {
+        Solid = 0,
+        Double,
+        Dotted,
+        Dashed,
+        Wavy
+    };
+
+    /// `text-decoration-thickness`: derive it from the font, or use the length
+    /// stored beside this kind.
+    enum class TextDecorationThicknessKind : std::uint8_t
+    {
+        Auto = 0,
+        FromFont,
+        Length
+    };
+
+    /// `text-underline-offset`: the default offset, or the length stored beside
+    /// this kind.
+    enum class TextUnderlineOffsetKind : std::uint8_t
+    {
+        Auto = 0,
+        Length
     };
 
     /// `font-kerning`.
@@ -359,6 +465,18 @@ namespace RoboRenderer
         StyleFlagFontFeatures = 1ull << 36,
         StyleFlagTextDecoration = 1ull << 37,
         StyleFlagTextDecorationColor = 1ull << 38,
+        StyleFlagTextDecorationStyle = 1ull << 39,
+        StyleFlagTextDecorationThickness = 1ull << 40,
+        StyleFlagTextUnderlineOffset = 1ull << 41,
+        StyleFlagHyphens = 1ull << 42,
+        StyleFlagOverflowWrap = 1ull << 43,
+        StyleFlagWordBreak = 1ull << 44,
+        StyleFlagLineBreak = 1ull << 45,
+        StyleFlagTabSize = 1ull << 46,
+        StyleFlagTextAlignLast = 1ull << 47,
+        StyleFlagTextJustify = 1ull << 48,
+        StyleFlagWritingMode = 1ull << 49,
+        StyleFlagTextOrientation = 1ull << 50,
 
         /// Every margin edge, for a shorthand that set all four.
         StyleFlagMargin = StyleFlagMarginTop | StyleFlagMarginRight | StyleFlagMarginBottom | StyleFlagMarginLeft,
@@ -422,6 +540,28 @@ namespace RoboRenderer
         TextTransformKind textTransform = TextTransformKind::None;
         TextDirectionKind direction = TextDirectionKind::Auto;
 
+        /// `hyphens`. `Auto` is treated as `Manual` because the runtime carries
+        /// no hyphenation dictionary; a jump at a soft hyphen still happens.
+        HyphensKind hyphens = HyphensKind::Manual;
+        OverflowWrapKind overflowWrap = OverflowWrapKind::Normal;
+        WordBreakKind wordBreak = WordBreakKind::Normal;
+        LineBreakKind lineBreak = LineBreakKind::Auto;
+        /// `tab-size` as a count of space advances. Zero means "the default",
+        /// which is eight spaces.
+        float tabSize = 0.0f;
+        /// `tab-size` written as a length, in logical pixels. Zero means the
+        /// count above applies instead.
+        float tabSizeLength = 0.0f;
+        /// `text-align-last`; only meaningful when `textAlign` justifies.
+        TextAlignKind textAlignLast = TextAlignKind::Start;
+        bool hasTextAlignLast = false;
+        TextJustifyKind textJustify = TextJustifyKind::Auto;
+
+        /// `writing-mode` and `text-orientation`. `HorizontalTb` is the initial
+        /// value, so a document that never sets these lays out as before.
+        WritingModeKind writingMode = WritingModeKind::HorizontalTb;
+        TextOrientationKind textOrientation = TextOrientationKind::Mixed;
+
         /// `font-family`, as an index into the document's strings. 0 means "the
         /// primary family", so an unstyled element needs no entry.
         StringIndex fontFamily = 0;
@@ -442,6 +582,19 @@ namespace RoboRenderer
         /// `StyleFlagTextDecorationColor` is not set, which is CSS's
         /// `currentColor`.
         Color textDecorationColor = Color::Rgba(0, 0, 0, 255);
+
+        /// `text-decoration-style`. `Solid` draws the line in one stroke.
+        TextDecorationStyleKind textDecorationStyle = TextDecorationStyleKind::Solid;
+
+        /// `text-decoration-thickness`. The float is the length in logical
+        /// pixels and is only read when the kind is `Length`.
+        TextDecorationThicknessKind textDecorationThicknessKind = TextDecorationThicknessKind::Auto;
+        float textDecorationThickness = 0.0f;
+
+        /// `text-underline-offset`. The float is the length in logical pixels
+        /// and is only read when the kind is `Length`.
+        TextUnderlineOffsetKind textUnderlineOffsetKind = TextUnderlineOffsetKind::Auto;
+        float textUnderlineOffset = 0.0f;
 
         /// True when the color fields carry a value rather than a default that
         /// the category default should fill in. Kept beside `specified` because

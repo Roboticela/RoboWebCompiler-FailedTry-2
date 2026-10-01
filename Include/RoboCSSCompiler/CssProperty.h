@@ -80,8 +80,25 @@ namespace RoboCSSCompiler
         Direction,
         FontKerning,
         FontFeatureSettings,
+        FontVariantLigatures,
+        FontVariantCaps,
+        FontVariantNumeric,
+        FontVariantPosition,
+        FontVariantEastAsian,
         TextDecorationLine,
         TextDecorationColor,
+        TextDecorationStyle,
+        TextDecorationThickness,
+        TextUnderlineOffset,
+        Hyphens,
+        OverflowWrap,
+        WordBreak,
+        LineBreak,
+        TabSize,
+        TextAlignLast,
+        TextJustify,
+        WritingMode,
+        TextOrientation,
 
         // --- overflow -------------------------------------------------------
         OverflowX,
@@ -159,6 +176,8 @@ namespace RoboCSSCompiler
         LengthOrNormal,
         /// `normal | <number> | <length-percentage>`
         LineHeight,
+        /// `<number> | <length>`, the width of a tab stop.
+        TabSize,
         /// A color, including `currentColor` and the system colors.
         Color,
         /// One of a closed keyword set.
@@ -175,8 +194,13 @@ namespace RoboCSSCompiler
         TextAlign,
         /// `none | underline | overline | line-through` or several of them.
         TextDecorationLine,
+        /// `auto | from-font | <length-percentage>`, the decoration thickness.
+        TextDecorationThickness,
         /// `normal | <feature-tag-value>#`, the OpenType feature settings.
         FontFeatureSettings,
+        /// One or more keywords from the property's own closed set, which is how
+        /// the `font-variant-*` longhands spell their values.
+        KeywordSetList,
         /// A comma separated list of family names, quoted or not.
         FontFamily,
         /// `normal | bold | bolder | lighter | 1..1000`

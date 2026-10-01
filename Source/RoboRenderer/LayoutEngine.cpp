@@ -595,8 +595,28 @@ namespace RoboRenderer
         }
         item.hasDecorationColor = IsSpecified(style.specified, StyleFlagTextDecorationColor) != 0;
         item.decorationColor = style.textDecorationColor;
+        item.decorationStyle = IsSpecified(style.specified, StyleFlagTextDecorationStyle)
+                                  ? style.textDecorationStyle
+                                  : TextDecorationStyleKind::Solid;
+        item.decorationThicknessKind = IsSpecified(style.specified, StyleFlagTextDecorationThickness)
+                                           ? style.textDecorationThicknessKind
+                                           : TextDecorationThicknessKind::Auto;
+        item.decorationThickness = style.textDecorationThickness;
+        item.underlineOffsetKind = IsSpecified(style.specified, StyleFlagTextUnderlineOffset)
+                                       ? style.textUnderlineOffsetKind
+                                       : TextUnderlineOffsetKind::Auto;
+        item.underlineOffset = style.textUnderlineOffset;
         item.kerning = kerning;
         item.fontFeatures = fontFeatures;
+        item.hyphens = IsSpecified(style.specified, StyleFlagHyphens) ? style.hyphens : HyphensKind::Manual;
+        item.overflowWrap = IsSpecified(style.specified, StyleFlagOverflowWrap) ? style.overflowWrap
+                                                                                : OverflowWrapKind::Normal;
+        item.wordBreak = IsSpecified(style.specified, StyleFlagWordBreak) ? style.wordBreak
+                                                                           : WordBreakKind::Normal;
+        item.lineBreak = IsSpecified(style.specified, StyleFlagLineBreak) ? style.lineBreak
+                                                                           : LineBreakKind::Auto;
+        item.tabSize = style.tabSize;
+        item.tabSizeLength = style.tabSizeLength;
         item.preserveWhitespace = preserved;
         item.letterSpacing = runStyle.letterSpacing;
         item.wordSpacing = runStyle.wordSpacing;
@@ -780,6 +800,14 @@ namespace RoboRenderer
             }
         }
 
+        // A vertical writing mode reads down a column rather than along a
+        // baseline, which is a different flow entirely rather than a flag on
+        // this one, so it takes its own path over the same items.
+        if (IsVerticalWritingMode(style.writingMode))
+        {
+            return ArrangeVerticalInlineRun(container, style, items, x, y, availableWidth, depth, measureOnly);
+        }
+
         const bool wrap = availableWidth > 0.0f;
 
         struct Fragment
@@ -813,6 +841,12 @@ namespace RoboRenderer
         float usedHeight = 0.0f;
         float widestLine = 0.0f;
 
+        // The final flush is the last line of the run, which is the one
+        // justification leaves alone. `flushLine` reads this flag rather than
+        // taking a parameter because it is called from six places and only the
+        // last one is the tail.
+        bool flushingLastLine = false;
+
         const auto flushLine = [&]() {
             if (fragments.empty() && atomics.empty())
             {
@@ -827,7 +861,57 @@ namespace RoboRenderer
             const float used = penX - x - currentIndent;
             widestLine = std::max(widestLine, used);
 
-            const float offset = AlignmentOffset(style.textAlign, availableWidth, used);
+            // Justification grows the gaps a line already has: the spaces inside
+            // each fragment and the seam between two fragments. The extra is
+            // handed to the paint engine as word spacing, so a fragment's glyphs
+            // stay in step with the measurement that positioned the line.
+            const auto spaceCount = [](const Fragment& fragment) -> std::size_t {
+                const char* text = fragment.item->text;
+                std::size_t count = 0;
+
+                for (std::uint32_t byte = fragment.startByte; byte < fragment.endByte; ++byte)
+                {
+                    if (text[byte] == ' ')
+                    {
+                        ++count;
+                    }
+                }
+
+                return count;
+            };
+
+            TextAlignKind effectiveAlign = style.textAlign;
+            float justifyExtra = 0.0f;
+
+            if (style.textAlign == TextAlignKind::Justify)
+            {
+                // The last line of a block is not justified unless
+                // `text-align-last` asks for it.
+                if (flushingLastLine)
+                {
+                    effectiveAlign = style.hasTextAlignLast ? style.textAlignLast : TextAlignKind::Start;
+                }
+
+                if (effectiveAlign == TextAlignKind::Justify && !measureOnly &&
+                    style.textJustify != TextJustifyKind::None)
+                {
+                    std::size_t gaps = fragments.empty() ? 0 : fragments.size() - 1;
+
+                    for (const Fragment& fragment : fragments)
+                    {
+                        gaps += spaceCount(fragment);
+                    }
+
+                    const float slack = availableWidth - used;
+
+                    if (gaps > 0 && slack > 0.0f)
+                    {
+                        justifyExtra = slack / static_cast<float>(gaps);
+                    }
+                }
+            }
+
+            const float offset = AlignmentOffset(effectiveAlign, availableWidth, used);
 
             for (const AtomicBox& atomic : atomics)
             {
@@ -842,13 +926,19 @@ namespace RoboRenderer
 
             if (!measureOnly)
             {
-                for (const Fragment& fragment : fragments)
+                std::size_t gapsBefore = 0;
+
+                for (std::size_t fragmentIndex = 0; fragmentIndex < fragments.size(); ++fragmentIndex)
                 {
+                    const Fragment& fragment = fragments[fragmentIndex];
+                    const std::size_t spaces = spaceCount(fragment);
+
                     LineLayout line;
                     line.element = fragment.item->element;
                     line.container = container;
-                    line.x = x + offset + currentIndent + fragment.x;
-                    line.width = fragment.width;
+                    line.x = x + offset + currentIndent + fragment.x +
+                             static_cast<float>(gapsBefore) * justifyExtra;
+                    line.width = fragment.width + static_cast<float>(spaces) * justifyExtra;
                     line.baseline = baseline;
                     line.lineTop = lineTop;
                     line.lineHeight = lineHeight;
@@ -856,7 +946,7 @@ namespace RoboRenderer
                     line.fontSize = fragment.item->fontSize;
                     line.weight = fragment.item->weight;
                     line.letterSpacing = fragment.item->letterSpacing;
-                    line.wordSpacing = fragment.item->wordSpacing;
+                    line.wordSpacing = fragment.item->wordSpacing + justifyExtra;
                     line.fontFamily = fragment.item->fontFamily;
                     line.fontStyle = fragment.item->fontStyle;
                     line.direction = fragment.item->direction;
@@ -868,10 +958,22 @@ namespace RoboRenderer
                     line.decoration = fragment.item->decoration;
                     line.decorationColor = fragment.item->decorationColor;
                     line.hasDecorationColor = fragment.item->hasDecorationColor;
+                    line.decorationStyle = fragment.item->decorationStyle;
+                    line.decorationThicknessKind = fragment.item->decorationThicknessKind;
+                    line.decorationThickness = fragment.item->decorationThickness;
+                    line.underlineOffsetKind = fragment.item->underlineOffsetKind;
+                    line.underlineOffset = fragment.item->underlineOffset;
                     line.kerning = fragment.item->kerning;
                     line.fontFeatures = fragment.item->fontFeatures;
                     line.yOffset = fragment.item->yOffset;
                     result.lines.push_back(line);
+
+                    gapsBefore += spaces;
+
+                    if (fragmentIndex + 1 < fragments.size())
+                    {
+                        ++gapsBefore;
+                    }
                 }
             }
 
@@ -930,6 +1032,12 @@ namespace RoboRenderer
                 runStyle.direction = item.direction;
                 runStyle.kerning = item.kerning;
                 runStyle.fontFeatures = item.fontFeatures;
+                runStyle.tabSize = item.tabSize;
+                runStyle.tabSizeLength = item.tabSizeLength;
+                runStyle.breakPolicy.overflowWrap = item.overflowWrap;
+                runStyle.breakPolicy.wordBreak = item.wordBreak;
+                runStyle.breakPolicy.lineBreak = item.lineBreak;
+                runStyle.breakPolicy.hyphens = item.hyphens;
 
                 wrappedLines.clear();
                 textLayout.Wrap(item.text + offset, item.fontSize, item.weight,
@@ -976,10 +1084,125 @@ namespace RoboRenderer
             }
         }
 
+        flushingLastLine = true;
         flushLine();
 
         lastInlineWidth = widestLine;
         return usedHeight;
+    }
+
+    float LayoutEngine::ArrangeVerticalInlineRun(ElementIndex container,
+                                                 const CompiledStyle& style,
+                                                 const std::vector<InlineItem>& items,
+                                                 float x,
+                                                 float y,
+                                                 float availableWidth,
+                                                 std::uint32_t depth,
+                                                 bool measureOnly)
+    {
+        const bool rightToLeftColumns = IsRightToLeftColumnWritingMode(style.writingMode);
+        const float columnHeight = textLayout.LineHeight(style.fontSize, style.fontWeight);
+
+        // `vertical-rl` starts at the right edge of the container and walks
+        // left; `vertical-lr` starts at the left. A container with no width puts
+        // the column at the origin.
+        const float columnX = rightToLeftColumns
+                                  ? x + std::max(availableWidth, columnHeight) - columnHeight
+                                  : x;
+
+        float penY = y;
+        float widestColumn = 0.0f;
+
+        for (const InlineItem& item : items)
+        {
+            if (item.hardBreak)
+            {
+                penY += textLayout.LineHeight(item.fontSize, item.weight);
+                continue;
+            }
+
+            if (!item.isText)
+            {
+                if (!measureOnly)
+                {
+                    ArrangeElement(item.element, columnX, penY, item.width, Rect{}, depth, false);
+                }
+
+                penY += std::max(item.height, 0.0f);
+                widestColumn = std::max(widestColumn, item.width);
+                continue;
+            }
+
+            std::uint32_t textLength = 0;
+            while (item.text[textLength] != '\0')
+            {
+                ++textLength;
+            }
+
+            TextRunStyle runStyle;
+            runStyle.letterSpacing = item.letterSpacing;
+            runStyle.wordSpacing = item.wordSpacing;
+            runStyle.fontFamily = item.fontFamily;
+            runStyle.slant = item.fontStyle;
+            runStyle.direction = item.direction;
+            runStyle.kerning = item.kerning;
+            runStyle.fontFeatures = item.fontFeatures;
+            runStyle.tabSize = item.tabSize;
+            runStyle.tabSizeLength = item.tabSizeLength;
+            runStyle.breakPolicy.overflowWrap = item.overflowWrap;
+            runStyle.breakPolicy.wordBreak = item.wordBreak;
+            runStyle.breakPolicy.lineBreak = item.lineBreak;
+            runStyle.breakPolicy.hyphens = item.hyphens;
+
+            // The extent down the column is the run's own measured advance: the
+            // same metric the paint engine will walk, so the two cannot drift.
+            const float extent = textLayout.Measure(item.text, item.fontSize, item.weight, &runStyle);
+            const float lineHeight = textLayout.LineHeight(item.fontSize, item.weight);
+
+            if (!measureOnly && textLength > 0)
+            {
+                LineLayout line;
+                line.element = item.element;
+                line.container = container;
+                line.vertical = true;
+                line.x = columnX;
+                line.width = lineHeight;
+                line.baseline = penY;
+                line.lineTop = penY;
+                line.lineHeight = extent;
+                line.lineWidth = extent;
+                line.fontSize = item.fontSize;
+                line.weight = item.weight;
+                line.letterSpacing = item.letterSpacing;
+                line.wordSpacing = item.wordSpacing;
+                line.fontFamily = item.fontFamily;
+                line.fontStyle = item.fontStyle;
+                line.direction = item.direction;
+                line.startByte = 0;
+                line.endByte = textLength;
+                line.placeholder = item.placeholder;
+                line.controlValue = item.controlValue;
+                line.underline = item.underline;
+                line.decoration = item.decoration;
+                line.decorationColor = item.decorationColor;
+                line.hasDecorationColor = item.hasDecorationColor;
+                line.decorationStyle = item.decorationStyle;
+                line.decorationThicknessKind = item.decorationThicknessKind;
+                line.decorationThickness = item.decorationThickness;
+                line.underlineOffsetKind = item.underlineOffsetKind;
+                line.underlineOffset = item.underlineOffset;
+                line.kerning = item.kerning;
+                line.fontFeatures = item.fontFeatures;
+                line.yOffset = item.yOffset;
+                result.lines.push_back(line);
+            }
+
+            penY += extent;
+            widestColumn = std::max(widestColumn, lineHeight);
+        }
+
+        lastInlineWidth = widestColumn;
+        return penY - y;
     }
 
     // -----------------------------------------------------------------------

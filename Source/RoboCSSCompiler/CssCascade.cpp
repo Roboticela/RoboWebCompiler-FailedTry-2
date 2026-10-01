@@ -1345,10 +1345,9 @@ namespace RoboCSSCompiler
         if (rule == "text-decoration")
         {
             // `text-decoration: <line> || <style> || <thickness> || <color>`.
-            // The runtime draws a solid line in one colour, so the line keywords
-            // and the colour are lowered and the style and thickness keywords
-            // are accepted and dropped rather than refused: they are valid CSS
-            // and drawing a solid line is the honest fallback.
+            // Every part of the shorthand now has a longhand the runtime reads,
+            // so each token is routed to the longhand that owns it rather than
+            // silently dropped.
             const std::vector<const CSSComponentValue*> items = TopLevelItems(value);
 
             if (items.empty())
@@ -1366,7 +1365,27 @@ namespace RoboCSSCompiler
             bool noneGiven = false;
             bool hasColor = false;
             CSSValue color;
-            bool thicknessReported = false;
+            bool hasStyle = false;
+            std::string styleName;
+            bool hasThickness = false;
+            CSSValue thickness;
+
+            // The thickness is `auto | from-font | <length-percentage>`, which
+            // has its own longhand grammar; asking that longhand's own parser
+            // keeps the shorthand and the longhand from disagreeing.
+            const auto parseThickness = [&](const std::vector<CSSComponentValue>& components,
+                                            CSSValue& parsed) -> bool {
+                const CSSPropertyDefinition* definition =
+                    registry.Find(CSSPropertyId::TextDecorationThickness);
+
+                if (definition == nullptr)
+                {
+                    return false;
+                }
+
+                CSSDiagnosticSink probe;
+                return ParsePropertyValue(*definition, components, parsed, location, probe);
+            };
 
             for (const CSSComponentValue* item : items)
             {
@@ -1405,39 +1424,61 @@ namespace RoboCSSCompiler
 
                     if (isStyle)
                     {
+                        hasStyle = true;
+                        styleName = name;
                         continue;
                     }
 
-                    if (name == "auto")
+                    if (name == "auto" || name == "from-font")
                     {
+                        hasThickness = true;
+                        thickness = CSSValue::MakeKeyword(name);
                         continue;
                     }
                 }
 
-                // What is left is the colour or the thickness. A colour parses
-                // against the longhand's grammar; a thickness is a length, which
-                // the runtime does not model.
+                // What is left is the colour or the thickness. Both tries are
+                // silent: whichever grammar fails is the one that did not own
+                // the token, which is not an error, so only a token that fits
+                // neither is reported.
+                std::vector<CSSComponentValue> single{ *item };
+                bool matched = false;
+
                 if (!hasColor)
                 {
-                    std::vector<CSSComponentValue> single{ *item };
                     CSSValue parsed;
+                    const CSSPropertyDefinition* colorDefinition = registry.Find(shorthand.targets.right);
+                    CSSDiagnosticSink probe;
 
-                    if (parseAgainst(shorthand.targets.right, single, parsed, "the decoration colour"))
+                    if (colorDefinition != nullptr &&
+                        ParsePropertyValue(*colorDefinition, single, parsed, location, probe))
                     {
                         color = parsed;
                         hasColor = true;
-                        continue;
+                        matched = true;
                     }
                 }
 
-                if (!thicknessReported)
+                if (!matched && !hasThickness)
                 {
-                    diagnostics.Warning(CSSDiagnosticCode::UnsupportedFeature, location,
-                                        "text-decoration thickness is not implemented.",
-                                        "the native text engine draws a line of its own width",
-                                        "Use text-decoration-line and text-decoration-color.",
-                                        "text-decoration");
-                    thicknessReported = true;
+                    CSSValue parsed;
+
+                    if (parseThickness(single, parsed))
+                    {
+                        thickness = parsed;
+                        hasThickness = true;
+                        matched = true;
+                    }
+                }
+
+                if (!matched)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidShorthand, location,
+                                      "text-decoration does not understand '" + ComponentsToText(single) + "'.",
+                                      "a decoration is a line keyword, a style keyword, a colour or a thickness",
+                                      "Write 'underline dotted red' or 'underline', for example.",
+                                      "text-decoration");
+                    return false;
                 }
             }
 
@@ -1463,6 +1504,133 @@ namespace RoboCSSCompiler
             if (hasColor)
             {
                 out.emplace_back(shorthand.targets.right, color);
+            }
+
+            if (hasStyle)
+            {
+                out.emplace_back(CSSPropertyId::TextDecorationStyle, CSSValue::MakeKeyword(styleName));
+            }
+
+            if (hasThickness)
+            {
+                out.emplace_back(CSSPropertyId::TextDecorationThickness, thickness);
+            }
+
+            return true;
+        }
+
+        if (rule == "font-variant")
+        {
+            // `normal | none | [ <common-lig-values> || <discretionary-lig-values> ||
+            //   <historical-lig-values> || <contextual-alt-values> ||
+            //   <numeric-figure-values> || ... ]`
+            //
+            // Each keyword belongs to exactly one longhand, so the shorthand is
+            // expanded by asking each longhand's own keyword set whether it owns
+            // the token. That keeps the two lists from drifting apart.
+            static const CSSPropertyId kLonghands[] = {
+                CSSPropertyId::FontVariantLigatures, CSSPropertyId::FontVariantCaps,
+                CSSPropertyId::FontVariantNumeric,    CSSPropertyId::FontVariantPosition,
+                CSSPropertyId::FontVariantEastAsian,
+            };
+            constexpr int kLonghandCount = static_cast<int>(sizeof(kLonghands) / sizeof(kLonghands[0]));
+
+            const auto ownsKeyword = [](CSSPropertyId id, const std::string& keyword) {
+                const CSSPropertyDefinition* longhand = CSSPropertyRegistry::Instance().Find(id);
+                if (longhand == nullptr || longhand->keywords == nullptr)
+                {
+                    return false;
+                }
+
+                std::string set(longhand->keywords);
+                std::size_t position = 0;
+                while (position < set.size())
+                {
+                    while (position < set.size() && std::isspace(static_cast<unsigned char>(set[position])) != 0)
+                    {
+                        ++position;
+                    }
+
+                    const std::size_t begin = position;
+                    while (position < set.size() && std::isspace(static_cast<unsigned char>(set[position])) == 0)
+                    {
+                        ++position;
+                    }
+
+                    if (position > begin && set.compare(begin, position - begin, keyword) == 0)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+
+            const std::vector<const CSSComponentValue*> items = TopLevelItems(value);
+
+            if (items.empty())
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidShorthand, location,
+                                  "font-variant needs a value.", "no value given",
+                                  "Write 'small-caps' or 'common-ligatures small-caps'.", "font-variant");
+                return false;
+            }
+
+            std::vector<std::vector<CSSValue>> assigned(kLonghandCount);
+
+            for (const CSSComponentValue* item : items)
+            {
+                if (item->token.type != CSSTokenType::Ident)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidShorthand, location,
+                                      "Invalid value for 'font-variant'.",
+                                      "the grammar is a list of keywords",
+                                      "Write 'small-caps' or 'common-ligatures small-caps'.",
+                                      item->token.text);
+                    return false;
+                }
+
+                const std::string keyword = LowerCase(item->token.text);
+                bool handled = false;
+
+                for (int index = 0; index < kLonghandCount; ++index)
+                {
+                    if (ownsKeyword(kLonghands[index], keyword))
+                    {
+                        assigned[index].push_back(CSSValue::MakeKeyword(keyword));
+                        handled = true;
+                    }
+                }
+
+                if (!handled)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                      "Unknown font-variant keyword: '" + item->token.text + "'.",
+                                      "not a keyword any font-variant longhand defines",
+                                      "Write a font-variant value such as 'small-caps' or 'tabular-nums'.",
+                                      item->token.text);
+                    return false;
+                }
+            }
+
+            for (int index = 0; index < kLonghandCount; ++index)
+            {
+                if (assigned[index].empty())
+                {
+                    continue;
+                }
+
+                if (assigned[index].size() == 1)
+                {
+                    out.emplace_back(kLonghands[index], assigned[index][0]);
+                    continue;
+                }
+
+                CSSValue list;
+                list.kind = CSSValueKind::List;
+                list.items = std::move(assigned[index]);
+                list.location = location;
+                out.emplace_back(kLonghands[index], list);
             }
 
             return true;

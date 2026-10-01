@@ -204,8 +204,35 @@ namespace RoboCSSCompiler
             // has one style per element and no propagation channel, so the two
             // longhands inherit here, which is what a decorated paragraph with
             // children inside it needs to look right.
+            // The `font-variant-*` longhands are a closed keyword set each; the
+            // lowering turns them into OpenType features, which is why they can
+            // share the shaper's own `font-feature-settings` channel.
+            { Id::FontVariantLigatures, "font-variant-ligatures", Cat::Font, true, "normal", Grammar::KeywordSetList, "normal none common-ligatures no-common-ligatures discretionary-ligatures no-discretionary-ligatures historical-ligatures no-historical-ligatures contextual no-contextual", false, true, true, false, true, "css-fonts-3" },
+            { Id::FontVariantCaps, "font-variant-caps", Cat::Font, true, "normal", Grammar::KeywordSetList, "normal small-caps all-small-caps petite-caps all-petite-caps unicase titling-caps", false, true, true, false, true, "css-fonts-3" },
+            { Id::FontVariantNumeric, "font-variant-numeric", Cat::Font, true, "normal", Grammar::KeywordSetList, "normal ordinal slashed-zero lining-nums oldstyle-nums proportional-nums tabular-nums diagonal-fractions stacked-fractions", false, true, true, false, true, "css-fonts-3" },
+            { Id::FontVariantPosition, "font-variant-position", Cat::Font, true, "normal", Grammar::KeywordSetList, "normal sub super", false, true, true, false, true, "css-fonts-3" },
+            { Id::FontVariantEastAsian, "font-variant-east-asian", Cat::Font, true, "normal", Grammar::KeywordSetList, "normal jis78 jis83 jis90 jis04 simplified traditional full-width proportional-width ruby", false, true, true, false, true, "css-fonts-3" },
+
             { Id::TextDecorationLine, "text-decoration-line", Cat::Text, true, "none", Grammar::TextDecorationLine, "none underline overline line-through", false, true, true, false, true, "css-text-decor-3" },
             { Id::TextDecorationColor, "text-decoration-color", Cat::Text, true, "currentcolor", Grammar::Color, nullptr, false, true, false, false, true, "css-text-decor-3" },
+            { Id::TextDecorationStyle, "text-decoration-style", Cat::Text, true, "solid", Grammar::Keyword, "solid double dotted dashed wavy", false, true, false, false, true, "css-text-decor-3" },
+            { Id::TextDecorationThickness, "text-decoration-thickness", Cat::Text, true, "auto", Grammar::TextDecorationThickness, "auto from-font", false, true, false, false, true, "css-text-decor-3" },
+            { Id::TextUnderlineOffset, "text-underline-offset", Cat::Text, true, "auto", Grammar::LengthPercentageOrAuto, nullptr, false, true, false, false, true, "css-text-decor-3" },
+
+            // The line-breaking family: each controls where a line may break,
+            // which is a property of the text layout rather than the paint.
+            { Id::Hyphens, "hyphens", Cat::Text, true, "manual", Grammar::Keyword, "none manual auto", true, false, true, false, true, "css-text-3" },
+            { Id::OverflowWrap, "overflow-wrap", Cat::Text, true, "normal", Grammar::Keyword, "normal break-word anywhere", true, false, true, false, true, "css-text-3" },
+            { Id::WordBreak, "word-break", Cat::Text, true, "normal", Grammar::Keyword, "normal break-all keep-all break-word", true, false, true, false, true, "css-text-3" },
+            { Id::LineBreak, "line-break", Cat::Text, true, "auto", Grammar::Keyword, "auto loose normal strict anywhere", true, false, true, false, true, "css-text-3" },
+            { Id::TabSize, "tab-size", Cat::Text, true, "8", Grammar::TabSize, nullptr, true, false, true, false, true, "css-text-3" },
+            { Id::TextAlignLast, "text-align-last", Cat::Text, true, "auto", Grammar::Keyword, "auto start end left right center justify", false, true, true, false, true, "css-text-3" },
+            { Id::TextJustify, "text-justify", Cat::Text, true, "auto", Grammar::Keyword, "auto none inter-word inter-character", false, true, true, false, true, "css-text-3" },
+
+            // The writing mode decides which axis a line runs along, so both are
+            // layout properties that also affect how the text is painted.
+            { Id::WritingMode, "writing-mode", Cat::Text, true, "horizontal-tb", Grammar::Keyword, "horizontal-tb vertical-rl vertical-lr sideways-rl sideways-lr", true, true, true, true, true, "css-writing-modes-3" },
+            { Id::TextOrientation, "text-orientation", Cat::Text, true, "mixed", Grammar::Keyword, "mixed upright sideways", true, false, true, false, true, "css-writing-modes-3" },
 
             { Id::OverflowX, "overflow-x", Cat::Overflow, false, "visible", Grammar::Overflow, nullptr, true, true, false, true, true, "css-overflow-3" },
             { Id::OverflowY, "overflow-y", Cat::Overflow, false, "visible", Grammar::Overflow, nullptr, true, true, false, true, true, "css-overflow-3" }
@@ -320,6 +347,12 @@ namespace RoboCSSCompiler
         decorationTargets.top = Id::TextDecorationLine;
         decorationTargets.right = Id::TextDecorationColor;
         decorationTargets.count = 2;
+
+        // `font-variant` is a shorthand over the five `font-variant-*` longhands.
+        // The target table holds four slots, so the expansion is by rule: the
+        // cascade distributes each keyword to the longhand whose set owns it.
+        shorthands.push_back({"font-variant", Cat::Font, single(Id::FontVariantLigatures), "font-variant", true,
+                              "css-fonts-3"});
 
         shorthands.push_back({"text-decoration", Cat::Text, decorationTargets, "text-decoration", true,
                               "css-text-decor-3"});

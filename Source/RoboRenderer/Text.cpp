@@ -294,7 +294,11 @@ namespace RoboRenderer
                     int winding = 0;
                     for (std::size_t index = 0; index < crossings.size(); ++index)
                     {
-                        if (winding != 0 && index > 0)
+                        // Even-odd counts crossings, so an odd count is inside;
+                        // nonzero tests the signed winding number itself.
+                        const bool inside = evenOdd ? ((winding & 1) != 0) : (winding != 0);
+
+                        if (inside && index > 0)
                         {
                             const float from = crossings[index - 1];
                             const float to = crossings[index];
@@ -848,7 +852,8 @@ namespace RoboRenderer
             const FontFace* face = faces[index];
             const std::uint32_t faceIndex = registry.IndexOf(*face);
 
-            // A tab is a fixed four-space stop, not a shaped glyph.
+            // A tab is a fixed stop, not a shaped glyph; its width is the run's
+            // `tab-size` rather than a glyph the font would have to provide.
             if (codepoints[index] == '\t')
             {
                 PositionedGlyph glyph;
@@ -856,7 +861,7 @@ namespace RoboRenderer
                 glyph.faceIndex = faceIndex;
                 glyph.codepoint = '\t';
                 glyph.byteStart = byteOffsets[index];
-                glyph.advance = TabAdvance(fontSize, weight);
+                glyph.advance = TabAdvance(fontSize, weight, runStyle);
                 out.push_back(glyph);
                 ++index;
                 continue;
@@ -1107,6 +1112,30 @@ namespace RoboRenderer
 
         const bool wrap = !preserveWhitespace && availableWidth > 0.0f;
 
+        // The break policy decides where an opportunity exists; the default is
+        // the CSS initial values, which is the behaviour an unstyled run had
+        // before the properties existed.
+        const TextBreakPolicy policy = runStyle != nullptr ? runStyle->breakPolicy : TextBreakPolicy{};
+
+        // A tab stop: `tab-size` spaces, or the length the document wrote.
+        float tabAdvance = advanceOf(' ');
+
+        if (runStyle != nullptr)
+        {
+            if (runStyle->tabSizeLength > 0.0f)
+            {
+                tabAdvance = runStyle->tabSizeLength;
+            }
+            else
+            {
+                tabAdvance *= runStyle->tabSize > 0.0f ? runStyle->tabSize : 4.0f;
+            }
+        }
+        else
+        {
+            tabAdvance *= 4.0f;
+        }
+
         std::uint32_t offset = 0;
         std::uint32_t lineStart = 0;
         std::uint32_t breakByte = 0;
@@ -1148,8 +1177,8 @@ namespace RoboRenderer
 
             if (codepoint == '\t')
             {
-                // A tab advances to the next four-space stop.
-                lineWidth += advanceOf(' ') * 4.0f;
+                // A tab advances to the next stop, `tab-size` spaces wide.
+                lineWidth += tabAdvance;
                 continue;
             }
 
@@ -1207,8 +1236,18 @@ namespace RoboRenderer
                 lineWidth += advance;
             }
 
-            if (!preserveWhitespace && IsBreakAfter(codepoint))
+            if (!preserveWhitespace && policy.BreaksAfterHyphen() && IsBreakAfter(codepoint))
             {
+                breakByte = offset;
+                widthAtBreak = lineWidth;
+                hasBreak = true;
+            }
+            else if (!preserveWhitespace && policy.BreaksAnywhere() && !IsSpace(codepoint) &&
+                     !clusterContinuation)
+            {
+                // `break-all` and friends make every character boundary an
+                // opportunity, so the next overflow rewinds only to the last
+                // character that fit rather than to the last space.
                 breakByte = offset;
                 widthAtBreak = lineWidth;
                 hasBreak = true;

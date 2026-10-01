@@ -31,6 +31,7 @@ namespace RoboHTMLCompiler
         using RoboRenderer::LayoutValue;
         using RoboRenderer::LayoutValueType;
         using RoboRenderer::OverflowKind;
+        using RoboRenderer::StyleFlags;
         using RoboRenderer::StyleFlagBackground;
         using RoboRenderer::StyleFlagBorderBottomWidth;
         using RoboRenderer::StyleFlagBorderColor;
@@ -46,6 +47,25 @@ namespace RoboHTMLCompiler
         using RoboRenderer::StyleFlagFontWeight;
         using RoboRenderer::StyleFlagTextDecoration;
         using RoboRenderer::StyleFlagTextDecorationColor;
+        using RoboRenderer::StyleFlagTextDecorationStyle;
+        using RoboRenderer::StyleFlagTextDecorationThickness;
+        using RoboRenderer::StyleFlagTextUnderlineOffset;
+        using RoboRenderer::StyleFlagHyphens;
+        using RoboRenderer::StyleFlagOverflowWrap;
+        using RoboRenderer::StyleFlagWordBreak;
+        using RoboRenderer::StyleFlagLineBreak;
+        using RoboRenderer::StyleFlagTabSize;
+        using RoboRenderer::StyleFlagTextAlignLast;
+        using RoboRenderer::StyleFlagTextJustify;
+        using RoboRenderer::HyphensKind;
+        using RoboRenderer::OverflowWrapKind;
+        using RoboRenderer::WordBreakKind;
+        using RoboRenderer::LineBreakKind;
+        using RoboRenderer::TextJustifyKind;
+        using RoboRenderer::StyleFlagWritingMode;
+        using RoboRenderer::StyleFlagTextOrientation;
+        using RoboRenderer::WritingModeKind;
+        using RoboRenderer::TextOrientationKind;
         using RoboRenderer::StyleFlagDirection;
         using RoboRenderer::StyleFlagFontFamily;
         using RoboRenderer::StyleFlagFontStyle;
@@ -76,7 +96,10 @@ namespace RoboHTMLCompiler
         using RoboRenderer::TextDecorationLineThrough;
         using RoboRenderer::TextDecorationNone;
         using RoboRenderer::TextDecorationOverline;
+        using RoboRenderer::TextDecorationStyleKind;
+        using RoboRenderer::TextDecorationThicknessKind;
         using RoboRenderer::TextDecorationUnderline;
+        using RoboRenderer::TextUnderlineOffsetKind;
 
         std::string LowerCase(std::string value)
         {
@@ -136,6 +159,10 @@ namespace RoboHTMLCompiler
         struct LengthResolution
         {
             float value = -1.0f;
+            /// True when a length was actually resolved. `value` alone cannot say
+            /// so: -1 is a legal length, so a caller that must tell "minus one"
+            /// from "unresolved" reads this instead.
+            bool resolved = false;
             /// The unit's name, for a diagnostic that has to name what it could
             /// not resolve.
             std::string unit;
@@ -191,10 +218,12 @@ namespace RoboHTMLCompiler
                 {
                 case CSSUnit::Em:
                     result.value = static_cast<float>(value.number) * elementFontSize;
+                    result.resolved = true;
                     return result;
 
                 case CSSUnit::Rem:
                     result.value = static_cast<float>(value.number) * context.rootFontSize;
+                    result.resolved = true;
                     return result;
 
                 case CSSUnit::Ex:
@@ -242,6 +271,7 @@ namespace RoboHTMLCompiler
                     // caller stores the fraction so the runtime resolves it against
                     // the window it actually has.
                     result.value = static_cast<float>(value.number);
+                    result.resolved = true;
                     return result;
 
                 case CSSUnit::Cqw:
@@ -266,6 +296,7 @@ namespace RoboHTMLCompiler
                 if (RoboCSSCompiler::IsAbsoluteUnit(value.unit))
                 {
                     result.value = static_cast<float>(value.number * RoboCSSCompiler::AbsoluteUnitScale(value.unit));
+                    result.resolved = true;
                     return result;
                 }
 
@@ -283,6 +314,7 @@ namespace RoboHTMLCompiler
                 // Zero is the one length a stylesheet may write without a unit.
                 result.value = 0.0f;
                 result.unit = "0";
+                result.resolved = true;
                 return result;
             }
 
@@ -1014,6 +1046,10 @@ namespace RoboHTMLCompiler
                     {
                         out.textAlign = TextAlignKind::End;
                     }
+                    else if (align->text == "justify")
+                    {
+                        out.textAlign = TextAlignKind::Justify;
+                    }
                     else
                     {
                         return;
@@ -1032,7 +1068,8 @@ namespace RoboHTMLCompiler
                 LowerDirection(computed, out);
                 LowerFontKerning(computed, out);
                 LowerFontFeatures(computed, out, featureSettings);
-                LowerTextDecoration(computed, out);
+                LowerTextDecoration(computed, location, elementFontSize, out);
+                LowerLineBreaking(computed, location, elementFontSize, out);
             }
 
             void LowerFontKerning(const CSSComputedStyle& computed, CompiledStyle& out)
@@ -1064,37 +1101,22 @@ namespace RoboHTMLCompiler
                                    CompiledStyle& out,
                                    std::string& featureSettings)
             {
-                const CSSValue* settings = Value(computed, CSSPropertyId::FontFeatureSettings);
-
-                if (settings == nullptr || settings->kind == CSSValueKind::Keyword)
-                {
-                    return;
-                }
-
-                // The shaper wants one compact declaration it can parse, and the
-                // compiled style carries a document string index rather than a
-                // vector of settings, so the list is written back out here.
+                // One compact declaration the shaper can parse: the compiled
+                // style carries a document string index rather than a vector of
+                // settings, so everything is written back out here.
                 std::string written;
+                std::vector<std::string> writtenTags;
 
-                for (const CSSValue& entry : settings->items)
-                {
-                    const CSSValue* tag = &entry;
-                    const CSSValue* number = nullptr;
-
-                    if (entry.kind == CSSValueKind::List)
+                const auto addFeature = [&](const char* tag, int value) {
+                    const std::string name(tag);
+                    for (const std::string& existing : writtenTags)
                     {
-                        if (entry.items.empty())
+                        // An explicit `font-feature-settings` entry wins over a
+                        // `font-variant-*` longhand, so a tag is written once.
+                        if (existing == name)
                         {
-                            continue;
+                            return;
                         }
-
-                        tag = &entry.items[0];
-                        number = entry.items.size() > 1 ? &entry.items[1] : nullptr;
-                    }
-
-                    if (tag->kind != CSSValueKind::String)
-                    {
-                        continue;
                     }
 
                     if (!written.empty())
@@ -1102,19 +1124,58 @@ namespace RoboHTMLCompiler
                         written += ", ";
                     }
 
-                    written += "\"" + tag->text + "\"";
+                    written += "\"" + name + "\" " + std::to_string(value);
+                    writtenTags.push_back(name);
+                };
 
-                    if (number != nullptr)
+                const CSSValue* settings = Value(computed, CSSPropertyId::FontFeatureSettings);
+
+                if (settings != nullptr && settings->kind != CSSValueKind::Keyword)
+                {
+                    for (const CSSValue& entry : settings->items)
                     {
-                        written += " ";
+                        const CSSValue* tag = &entry;
+                        const CSSValue* number = nullptr;
 
-                        // CSS numbers arrive as doubles; a feature value is a
-                        // small non-negative integer, and a negative one is
-                        // clamped the way the grammar says.
-                        const long value = std::lround(number->number);
-                        written += std::to_string(value < 0 ? 0 : value);
+                        if (entry.kind == CSSValueKind::List)
+                        {
+                            if (entry.items.empty())
+                            {
+                                continue;
+                            }
+
+                            tag = &entry.items[0];
+                            number = entry.items.size() > 1 ? &entry.items[1] : nullptr;
+                        }
+
+                        if (tag->kind != CSSValueKind::String)
+                        {
+                            continue;
+                        }
+
+                        if (!written.empty())
+                        {
+                            written += ", ";
+                        }
+
+                        written += "\"" + tag->text + "\"";
+
+                        if (number != nullptr)
+                        {
+                            written += " ";
+
+                            // CSS numbers arrive as doubles; a feature value is
+                            // a small non-negative integer, and a negative one is
+                            // clamped the way the grammar says.
+                            const long value = std::lround(number->number);
+                            written += std::to_string(value < 0 ? 0 : value);
+                        }
+
+                        writtenTags.push_back(tag->text);
                     }
                 }
+
+                LowerFontVariants(computed, addFeature);
 
                 if (written.empty())
                 {
@@ -1125,12 +1186,216 @@ namespace RoboHTMLCompiler
                 out.specified |= StyleFlagFontFeatures;
             }
 
-            void LowerTextDecoration(const CSSComputedStyle& computed, CompiledStyle& out)
+            /// Turns the `font-variant-*` longhands into OpenType features. Each
+            /// keyword is the CSS spelling of a feature the shaper already
+            /// knows, which is why this needs no new runtime state.
+            template <typename AddFeature>
+            void LowerFontVariants(const CSSComputedStyle& computed, AddFeature&& addFeature)
+            {
+                const auto forEachKeyword = [&](CSSPropertyId id, auto&& visit) {
+                    const CSSValue* value = Value(computed, id);
+                    if (value == nullptr)
+                    {
+                        return;
+                    }
+
+                    // `normal` is the initial value and asks for nothing, but a
+                    // lone keyword is a real request: `small-caps`, `sub` and
+                    // `none` all arrive this way.
+                    if (value->kind == CSSValueKind::Keyword)
+                    {
+                        if (value->text != "normal")
+                        {
+                            visit(value->text);
+                        }
+                        return;
+                    }
+
+                    if (value->kind == CSSValueKind::List)
+                    {
+                        for (const CSSValue& entry : value->items)
+                        {
+                            if (entry.text != "normal")
+                            {
+                                visit(entry.text);
+                            }
+                        }
+                    }
+                };
+
+                forEachKeyword(CSSPropertyId::FontVariantLigatures, [&](const std::string& keyword) {
+                    if (keyword == "none")
+                    {
+                        addFeature("liga", 0);
+                        addFeature("clig", 0);
+                        addFeature("dlig", 0);
+                        addFeature("hlig", 0);
+                        addFeature("calt", 0);
+                    }
+                    else if (keyword == "common-ligatures")
+                    {
+                        addFeature("liga", 1);
+                        addFeature("clig", 1);
+                    }
+                    else if (keyword == "no-common-ligatures")
+                    {
+                        addFeature("liga", 0);
+                        addFeature("clig", 0);
+                    }
+                    else if (keyword == "discretionary-ligatures")
+                    {
+                        addFeature("dlig", 1);
+                    }
+                    else if (keyword == "no-discretionary-ligatures")
+                    {
+                        addFeature("dlig", 0);
+                    }
+                    else if (keyword == "historical-ligatures")
+                    {
+                        addFeature("hlig", 1);
+                    }
+                    else if (keyword == "no-historical-ligatures")
+                    {
+                        addFeature("hlig", 0);
+                    }
+                    else if (keyword == "contextual")
+                    {
+                        addFeature("calt", 1);
+                    }
+                    else if (keyword == "no-contextual")
+                    {
+                        addFeature("calt", 0);
+                    }
+                });
+
+                forEachKeyword(CSSPropertyId::FontVariantCaps, [&](const std::string& keyword) {
+                    if (keyword == "small-caps")
+                    {
+                        addFeature("smcp", 1);
+                    }
+                    else if (keyword == "all-small-caps")
+                    {
+                        addFeature("smcp", 1);
+                        addFeature("c2sc", 1);
+                    }
+                    else if (keyword == "petite-caps")
+                    {
+                        addFeature("pcap", 1);
+                    }
+                    else if (keyword == "all-petite-caps")
+                    {
+                        addFeature("pcap", 1);
+                        addFeature("c2pc", 1);
+                    }
+                    else if (keyword == "unicase")
+                    {
+                        addFeature("unic", 1);
+                    }
+                    else if (keyword == "titling-caps")
+                    {
+                        addFeature("titl", 1);
+                    }
+                });
+
+                forEachKeyword(CSSPropertyId::FontVariantNumeric, [&](const std::string& keyword) {
+                    if (keyword == "lining-nums")
+                    {
+                        addFeature("lnum", 1);
+                    }
+                    else if (keyword == "oldstyle-nums")
+                    {
+                        addFeature("onum", 1);
+                    }
+                    else if (keyword == "proportional-nums")
+                    {
+                        addFeature("pnum", 1);
+                    }
+                    else if (keyword == "tabular-nums")
+                    {
+                        addFeature("tnum", 1);
+                    }
+                    else if (keyword == "diagonal-fractions")
+                    {
+                        addFeature("frac", 1);
+                    }
+                    else if (keyword == "stacked-fractions")
+                    {
+                        addFeature("afrc", 1);
+                    }
+                    else if (keyword == "ordinal")
+                    {
+                        addFeature("ordn", 1);
+                    }
+                    else if (keyword == "slashed-zero")
+                    {
+                        addFeature("zero", 1);
+                    }
+                });
+
+                forEachKeyword(CSSPropertyId::FontVariantPosition, [&](const std::string& keyword) {
+                    if (keyword == "sub")
+                    {
+                        addFeature("subs", 1);
+                    }
+                    else if (keyword == "super")
+                    {
+                        addFeature("sups", 1);
+                    }
+                });
+
+                forEachKeyword(CSSPropertyId::FontVariantEastAsian, [&](const std::string& keyword) {
+                    if (keyword == "jis78")
+                    {
+                        addFeature("jp78", 1);
+                    }
+                    else if (keyword == "jis83")
+                    {
+                        addFeature("jp83", 1);
+                    }
+                    else if (keyword == "jis90")
+                    {
+                        addFeature("jp90", 1);
+                    }
+                    else if (keyword == "jis04")
+                    {
+                        addFeature("jp04", 1);
+                    }
+                    else if (keyword == "simplified")
+                    {
+                        addFeature("smpl", 1);
+                    }
+                    else if (keyword == "traditional")
+                    {
+                        addFeature("trad", 1);
+                    }
+                    else if (keyword == "full-width")
+                    {
+                        addFeature("fwid", 1);
+                    }
+                    else if (keyword == "proportional-width")
+                    {
+                        addFeature("pwid", 1);
+                    }
+                    else if (keyword == "ruby")
+                    {
+                        addFeature("ruby", 1);
+                    }
+                });
+            }
+
+            void LowerTextDecoration(const CSSComputedStyle& computed,
+                                     const SourceLocation& location,
+                                     float elementFontSize,
+                                     CompiledStyle& out)
             {
                 const CSSValue* line = Value(computed, CSSPropertyId::TextDecorationLine);
                 const CSSValue* color = Value(computed, CSSPropertyId::TextDecorationColor);
+                const CSSValue* style = Value(computed, CSSPropertyId::TextDecorationStyle);
+                const CSSValue* thickness = Value(computed, CSSPropertyId::TextDecorationThickness);
+                const CSSValue* offset = Value(computed, CSSPropertyId::TextUnderlineOffset);
 
-                if (line == nullptr && color == nullptr)
+                if (line == nullptr && color == nullptr && style == nullptr && thickness == nullptr &&
+                    offset == nullptr)
                 {
                     return;
                 }
@@ -1195,6 +1460,291 @@ namespace RoboHTMLCompiler
                 if (anyLine || line != nullptr)
                 {
                     out.specified |= StyleFlagTextDecoration;
+                }
+
+                if (style != nullptr && style->kind == CSSValueKind::Keyword)
+                {
+                    TextDecorationStyleKind kind = TextDecorationStyleKind::Solid;
+
+                    if (style->text == "double")
+                    {
+                        kind = TextDecorationStyleKind::Double;
+                    }
+                    else if (style->text == "dotted")
+                    {
+                        kind = TextDecorationStyleKind::Dotted;
+                    }
+                    else if (style->text == "dashed")
+                    {
+                        kind = TextDecorationStyleKind::Dashed;
+                    }
+                    else if (style->text == "wavy")
+                    {
+                        kind = TextDecorationStyleKind::Wavy;
+                    }
+
+                    out.textDecorationStyle = kind;
+                    out.specified |= StyleFlagTextDecorationStyle;
+                }
+
+                if (thickness != nullptr)
+                {
+                    if (thickness->kind == CSSValueKind::Keyword && thickness->text == "from-font")
+                    {
+                        out.textDecorationThicknessKind = TextDecorationThicknessKind::FromFont;
+                        out.textDecorationThickness = 0.0f;
+                        out.specified |= StyleFlagTextDecorationThickness;
+                    }
+                    else if (thickness->kind == CSSValueKind::Keyword && thickness->text == "auto")
+                    {
+                        out.textDecorationThicknessKind = TextDecorationThicknessKind::Auto;
+                        out.textDecorationThickness = 0.0f;
+                        out.specified |= StyleFlagTextDecorationThickness;
+                    }
+                    else
+                    {
+                        const LengthResolution resolved =
+                            ResolveLength(*thickness, context, elementFontSize, "text-decoration-thickness",
+                                          diagnostics, location);
+
+                        if (resolved.resolved && resolved.value >= 0.0f)
+                        {
+                            out.textDecorationThicknessKind = TextDecorationThicknessKind::Length;
+                            out.textDecorationThickness = resolved.value;
+                            out.specified |= StyleFlagTextDecorationThickness;
+                        }
+                    }
+                }
+
+                if (offset != nullptr)
+                {
+                    if (offset->kind == CSSValueKind::Keyword && offset->text == "auto")
+                    {
+                        out.textUnderlineOffsetKind = TextUnderlineOffsetKind::Auto;
+                        out.specified |= StyleFlagTextUnderlineOffset;
+                    }
+                    else
+                    {
+                        const LengthResolution resolved = ResolveLength(
+                            *offset, context, elementFontSize, "text-underline-offset", diagnostics, location);
+
+                        if (resolved.resolved)
+                        {
+                            out.textUnderlineOffsetKind = TextUnderlineOffsetKind::Length;
+                            out.textUnderlineOffset = resolved.value;
+                            out.specified |= StyleFlagTextUnderlineOffset;
+                        }
+                    }
+                }
+            }
+
+            /// The line-breaking family, and the two justification properties.
+            /// Each is a closed keyword set, so the lowering is a switch over the
+            /// computed keyword; `tab-size` is the one that takes a number.
+            void LowerLineBreaking(const CSSComputedStyle& computed,
+                                   const SourceLocation& location,
+                                   float elementFontSize,
+                                   CompiledStyle& out)
+            {
+                const auto lowerKeyword = [&](CSSPropertyId id, const char* const* names,
+                                              const std::uint8_t* kinds, std::size_t count,
+                                              StyleFlags flag, std::uint8_t& target) {
+                    const CSSValue* value = Value(computed, id);
+
+                    if (value == nullptr || value->kind != CSSValueKind::Keyword)
+                    {
+                        return;
+                    }
+
+                    for (std::size_t index = 0; index < count; ++index)
+                    {
+                        if (value->text == names[index])
+                        {
+                            target = kinds[index];
+                            out.specified |= flag;
+                            return;
+                        }
+                    }
+                };
+
+                static const char* const kHyphens[] = { "none", "manual", "auto" };
+                static const std::uint8_t kHyphensKinds[] = {
+                    static_cast<std::uint8_t>(HyphensKind::None), static_cast<std::uint8_t>(HyphensKind::Manual),
+                    static_cast<std::uint8_t>(HyphensKind::Auto)
+                };
+                static const char* const kOverflowWrap[] = { "normal", "break-word", "anywhere" };
+                static const std::uint8_t kOverflowWrapKinds[] = {
+                    static_cast<std::uint8_t>(OverflowWrapKind::Normal),
+                    static_cast<std::uint8_t>(OverflowWrapKind::BreakWord),
+                    static_cast<std::uint8_t>(OverflowWrapKind::Anywhere)
+                };
+                static const char* const kWordBreak[] = { "normal", "break-all", "keep-all" };
+                static const std::uint8_t kWordBreakKinds[] = {
+                    static_cast<std::uint8_t>(WordBreakKind::Normal),
+                    static_cast<std::uint8_t>(WordBreakKind::BreakAll),
+                    static_cast<std::uint8_t>(WordBreakKind::KeepAll)
+                };
+                static const char* const kLineBreak[] = { "auto", "loose", "normal", "strict", "anywhere" };
+                static const std::uint8_t kLineBreakKinds[] = {
+                    static_cast<std::uint8_t>(LineBreakKind::Auto), static_cast<std::uint8_t>(LineBreakKind::Loose),
+                    static_cast<std::uint8_t>(LineBreakKind::Normal),
+                    static_cast<std::uint8_t>(LineBreakKind::Strict),
+                    static_cast<std::uint8_t>(LineBreakKind::Anywhere)
+                };
+                static const char* const kTextJustify[] = { "auto", "none", "inter-word", "inter-character" };
+                static const std::uint8_t kTextJustifyKinds[] = {
+                    static_cast<std::uint8_t>(TextJustifyKind::Auto),
+                    static_cast<std::uint8_t>(TextJustifyKind::None),
+                    static_cast<std::uint8_t>(TextJustifyKind::InterWord),
+                    static_cast<std::uint8_t>(TextJustifyKind::InterCharacter)
+                };
+
+                std::uint8_t hyphens = static_cast<std::uint8_t>(out.hyphens);
+                std::uint8_t overflowWrap = static_cast<std::uint8_t>(out.overflowWrap);
+                std::uint8_t wordBreak = static_cast<std::uint8_t>(out.wordBreak);
+                std::uint8_t lineBreak = static_cast<std::uint8_t>(out.lineBreak);
+                std::uint8_t textJustify = static_cast<std::uint8_t>(out.textJustify);
+
+                lowerKeyword(CSSPropertyId::Hyphens, kHyphens, kHyphensKinds, 3, StyleFlagHyphens, hyphens);
+                lowerKeyword(CSSPropertyId::OverflowWrap, kOverflowWrap, kOverflowWrapKinds, 3,
+                             StyleFlagOverflowWrap, overflowWrap);
+                lowerKeyword(CSSPropertyId::WordBreak, kWordBreak, kWordBreakKinds, 3, StyleFlagWordBreak,
+                             wordBreak);
+                lowerKeyword(CSSPropertyId::LineBreak, kLineBreak, kLineBreakKinds, 5, StyleFlagLineBreak,
+                             lineBreak);
+                lowerKeyword(CSSPropertyId::TextJustify, kTextJustify, kTextJustifyKinds, 4,
+                             StyleFlagTextJustify, textJustify);
+
+                out.hyphens = static_cast<HyphensKind>(hyphens);
+                out.overflowWrap = static_cast<OverflowWrapKind>(overflowWrap);
+                out.wordBreak = static_cast<WordBreakKind>(wordBreak);
+                out.lineBreak = static_cast<LineBreakKind>(lineBreak);
+                out.textJustify = static_cast<TextJustifyKind>(textJustify);
+
+                const CSSValue* last = Value(computed, CSSPropertyId::TextAlignLast);
+
+                if (last != nullptr && last->kind == CSSValueKind::Keyword)
+                {
+                    TextAlignKind kind = TextAlignKind::Start;
+                    bool known = true;
+
+                    if (last->text == "start" || last->text == "left")
+                    {
+                        kind = TextAlignKind::Start;
+                    }
+                    else if (last->text == "center")
+                    {
+                        kind = TextAlignKind::Center;
+                    }
+                    else if (last->text == "end" || last->text == "right")
+                    {
+                        kind = TextAlignKind::End;
+                    }
+                    else if (last->text == "justify")
+                    {
+                        kind = TextAlignKind::Justify;
+                    }
+                    else if (last->text == "auto")
+                    {
+                        // `auto` means "whatever `text-align` says for the last
+                        // line", which the layout already does; recording it as
+                        // start keeps the flag meaningful without overriding.
+                        kind = TextAlignKind::Start;
+                    }
+                    else
+                    {
+                        known = false;
+                    }
+
+                    if (known)
+                    {
+                        out.textAlignLast = kind;
+                        out.hasTextAlignLast = last->text != "auto";
+                        out.specified |= StyleFlagTextAlignLast;
+                    }
+                }
+
+                const CSSValue* tab = Value(computed, CSSPropertyId::TabSize);
+
+                if (tab != nullptr)
+                {
+                    if (tab->kind == CSSValueKind::Number)
+                    {
+                        out.tabSize = static_cast<float>(tab->number);
+                        out.tabSizeLength = 0.0f;
+                        out.specified |= StyleFlagTabSize;
+                    }
+                    else
+                    {
+                        const LengthResolution resolved =
+                            ResolveLength(*tab, context, elementFontSize, "tab-size", diagnostics, location);
+
+                        if (resolved.resolved && resolved.value >= 0.0f)
+                        {
+                            out.tabSize = 0.0f;
+                            out.tabSizeLength = resolved.value;
+                            out.specified |= StyleFlagTabSize;
+                        }
+                    }
+                }
+
+                const CSSValue* writingMode = Value(computed, CSSPropertyId::WritingMode);
+
+                if (writingMode != nullptr && writingMode->kind == CSSValueKind::Keyword)
+                {
+                    WritingModeKind mode = WritingModeKind::HorizontalTb;
+
+                    if (writingMode->text == "horizontal-tb")
+                    {
+                        mode = WritingModeKind::HorizontalTb;
+                    }
+                    else if (writingMode->text == "vertical-rl")
+                    {
+                        mode = WritingModeKind::VerticalRl;
+                    }
+                    else if (writingMode->text == "vertical-lr")
+                    {
+                        mode = WritingModeKind::VerticalLr;
+                    }
+                    else if (writingMode->text == "sideways-rl")
+                    {
+                        mode = WritingModeKind::SidewaysRl;
+                    }
+                    else if (writingMode->text == "sideways-lr")
+                    {
+                        mode = WritingModeKind::SidewaysLr;
+                    }
+
+                    out.writingMode = mode;
+                    out.specified |= StyleFlagWritingMode;
+                }
+
+                const CSSValue* orientation = Value(computed, CSSPropertyId::TextOrientation);
+
+                if (orientation != nullptr && orientation->kind == CSSValueKind::Keyword)
+                {
+                    TextOrientationKind kind = TextOrientationKind::Mixed;
+
+                    if (orientation->text == "upright")
+                    {
+                        kind = TextOrientationKind::Upright;
+                    }
+                    else if (orientation->text == "sideways")
+                    {
+                        kind = TextOrientationKind::Sideways;
+                    }
+
+                    // The sideways writing modes force a sideways orientation,
+                    // whatever `text-orientation` says, which is what the
+                    // reference specifies.
+                    if (out.writingMode == WritingModeKind::SidewaysRl ||
+                        out.writingMode == WritingModeKind::SidewaysLr)
+                    {
+                        kind = TextOrientationKind::Sideways;
+                    }
+
+                    out.textOrientation = kind;
+                    out.specified |= StyleFlagTextOrientation;
                 }
             }
 
@@ -1687,7 +2237,67 @@ namespace RoboHTMLCompiler
             // The family name is interned later, so it is not part of the style
             // bytes; two styles that differ only in family must not share an
             // entry, so the interning key carries it explicitly.
-            std::string key(reinterpret_cast<const char*>(&lowered), sizeof(lowered));
+            // The key names every field the style carries. Dumping the struct's
+            // bytes would be shorter, but a struct has padding bytes no member
+            // names, and two styles that agree field for field must not compare
+            // unequal on whatever happened to sit in the padding. Listing the
+            // fields is the only way to say that without depending on layout.
+            std::string key;
+            const auto appendField = [&key](const auto& field) {
+                key.append(reinterpret_cast<const char*>(&field), sizeof(field));
+            };
+
+            appendField(lowered.specified);
+            appendField(lowered.width);
+            appendField(lowered.height);
+            appendField(lowered.minimumWidth);
+            appendField(lowered.minimumHeight);
+            appendField(lowered.margin);
+            appendField(lowered.padding);
+            appendField(lowered.borderWidth);
+            appendField(lowered.borderRadius);
+            appendField(lowered.background);
+            appendField(lowered.foreground);
+            appendField(lowered.borderColor);
+            appendField(lowered.fontSize);
+            appendField(lowered.lineHeight);
+            appendField(lowered.letterSpacing);
+            appendField(lowered.wordSpacing);
+            appendField(lowered.textIndent);
+            appendField(lowered.display);
+            appendField(lowered.overflowX);
+            appendField(lowered.overflowY);
+            appendField(lowered.textAlign);
+            appendField(lowered.fontWeight);
+            appendField(lowered.fontStyle);
+            appendField(lowered.whiteSpace);
+            appendField(lowered.textTransform);
+            appendField(lowered.direction);
+            appendField(lowered.hyphens);
+            appendField(lowered.overflowWrap);
+            appendField(lowered.wordBreak);
+            appendField(lowered.lineBreak);
+            appendField(lowered.tabSize);
+            appendField(lowered.tabSizeLength);
+            appendField(lowered.textAlignLast);
+            appendField(lowered.hasTextAlignLast);
+            appendField(lowered.textJustify);
+            appendField(lowered.writingMode);
+            appendField(lowered.textOrientation);
+            appendField(lowered.fontFamily);
+            appendField(lowered.fontFeatures);
+            appendField(lowered.fontKerning);
+            appendField(lowered.textDecoration);
+            appendField(lowered.textDecorationColor);
+            appendField(lowered.textDecorationStyle);
+            appendField(lowered.textDecorationThicknessKind);
+            appendField(lowered.textDecorationThickness);
+            appendField(lowered.textUnderlineOffsetKind);
+            appendField(lowered.textUnderlineOffset);
+            appendField(lowered.hasBackground);
+            appendField(lowered.hasForeground);
+            appendField(lowered.hasBorder);
+            appendField(lowered.hasFontSize);
             key += '|';
             key += fontFamily;
             key += '|';

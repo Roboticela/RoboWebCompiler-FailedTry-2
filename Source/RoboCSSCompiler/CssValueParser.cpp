@@ -1774,13 +1774,19 @@ namespace RoboCSSCompiler
                 return true;
             }
 
-            if (name == "justify" || name == "match-parent")
+            if (name == "justify")
+            {
+                out = CSSValue::MakeKeyword("justify");
+                return true;
+            }
+
+            if (name == "match-parent")
             {
                 diagnostics.Warning(CSSDiagnosticCode::UnsupportedFeature,
                                     location,
-                                    "text-align: " + name + " is not implemented.",
-                                    "the native text engine aligns left, centre and right",
-                                    "Use 'start', 'center' or 'end'.",
+                                    "text-align: match-parent is not implemented.",
+                                    "the native text engine has no parent writing mode to inherit",
+                                    "Use 'start', 'center', 'end' or 'justify'.",
                                     "text-align: " + name);
                 return false;
             }
@@ -1873,6 +1879,194 @@ namespace RoboCSSCompiler
             out.kind = CSSValueKind::List;
             out.items = std::move(keywords);
             out.location = location;
+            return true;
+        }
+
+        /// One or more keywords from the property's own closed set. `normal` and
+        /// `none` stand alone; any other keyword may be combined.
+        bool ParseKeywordSetListValue(const CSSPropertyDefinition& definition,
+                                      const std::vector<CSSComponentValue>& components,
+                                      CSSValue& out,
+                                      const CSSSourceLocation& location,
+                                      CSSDiagnosticSink& diagnostics)
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.empty())
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidGrammar, location,
+                                  "Expected a keyword for '" + std::string(definition.name) + "'.",
+                                  "no value given",
+                                  std::string("Write one of: ") + definition.keywords + ".",
+                                  definition.name);
+                return false;
+            }
+
+            // The registry's keyword set is a space separated list; asking it
+            // directly is what keeps the property and its validator in step.
+            const auto userOwnsKeyword = [&definition](const std::string& name) {
+                if (definition.keywords == nullptr)
+                {
+                    return false;
+                }
+
+                const std::string set(definition.keywords);
+                std::size_t position = 0;
+
+                while (position < set.size())
+                {
+                    while (position < set.size() && std::isspace(static_cast<unsigned char>(set[position])) != 0)
+                    {
+                        ++position;
+                    }
+
+                    const std::size_t begin = position;
+                    while (position < set.size() && std::isspace(static_cast<unsigned char>(set[position])) == 0)
+                    {
+                        ++position;
+                    }
+
+                    if (position > begin && set.compare(begin, position - begin, name) == 0)
+                    {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+
+            std::vector<CSSValue> keywords;
+
+            for (const CSSComponentValue* value : values)
+            {
+                if (value->token.type != CSSTokenType::Ident)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                                      location,
+                                      "Invalid value for '" + std::string(definition.name) + "'.",
+                                      std::string("the keyword set is ") + definition.keywords,
+                                      std::string("Write one of: ") + definition.keywords + ".",
+                                      ComponentsToText(components));
+                    return false;
+                }
+
+                const std::string name = LowerCase(value->token.text);
+                if (!userOwnsKeyword(name))
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                                      location,
+                                      "Unknown keyword for '" + std::string(definition.name) +
+                                          "': '" + value->token.text + "'.",
+                                      "not a keyword the property defines",
+                                      std::string("Write one of: ") + definition.keywords + ".",
+                                      value->token.text);
+                    return false;
+                }
+
+                keywords.push_back(CSSValue::MakeKeyword(name));
+            }
+
+            if (keywords.size() == 1)
+            {
+                out = keywords[0];
+                return true;
+            }
+
+            // `normal` and `none` say "nothing here", so they cannot be combined
+            // with the keyword that would say something.
+            for (const CSSValue& keyword : keywords)
+            {
+                if (keyword.text == "normal" || keyword.text == "none")
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                                      location,
+                                      "Invalid value for '" + std::string(definition.name) + "'.",
+                                      "'" + keyword.text + "' cannot be combined with another keyword",
+                                      "Write '" + keyword.text + "' on its own.",
+                                      ComponentsToText(components));
+                    return false;
+                }
+            }
+
+            out = CSSValue();
+            out.kind = CSSValueKind::List;
+            out.items = std::move(keywords);
+            out.location = location;
+            return true;
+        }
+
+        /// `auto | from-font | <length-percentage>`. `auto` and `from-font` are
+        /// keywords, so they cannot ride the length parser; everything else can.
+        bool ParseTextDecorationThicknessValue(const CSSPropertyDefinition& definition,
+                                               const std::vector<CSSComponentValue>& components,
+                                               CSSValue& out,
+                                               const CSSSourceLocation& location,
+                                               CSSDiagnosticSink& diagnostics)
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.size() == 1 && values[0]->token.type == CSSTokenType::Ident)
+            {
+                const std::string name = LowerCase(values[0]->token.text);
+
+                if (name == "auto" || name == "from-font")
+                {
+                    out = CSSValue::MakeKeyword(name);
+                    return true;
+                }
+            }
+
+            return ParseLengthPercentage(components, out, location, diagnostics, false, true, definition.name);
+        }
+
+        /// `<number> | <length>`. A number is a count of space advances, which
+        /// is how the reference writes a tab stop.
+        bool ParseTabSizeValue(const std::vector<CSSComponentValue>& components,
+                               CSSValue& out,
+                               const CSSSourceLocation& location,
+                               CSSDiagnosticSink& diagnostics)
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.size() != 1)
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidGrammar, location,
+                                  "tab-size takes a single number or length.",
+                                  std::to_string(values.size()) + " values given",
+                                  "Write '4' or '2rem'.", "tab-size");
+                return false;
+            }
+
+            const CSSComponentValue& value = *values[0];
+
+            if (value.token.type == CSSTokenType::Number)
+            {
+                if (value.token.number < 0.0)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                      "tab-size cannot be negative.", "a tab stop is a width of at least zero",
+                                      "Write a positive number of spaces.", "tab-size");
+                    return false;
+                }
+
+                out = CSSValue::MakeNumber(value.token.number, true);
+                return true;
+            }
+
+            if (!ParseLengthPercentage(components, out, location, diagnostics, false, true, "tab-size"))
+            {
+                return false;
+            }
+
+            if (out.kind == CSSValueKind::Percentage)
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                  "tab-size does not take a percentage.",
+                                  "a tab stop is a count of spaces or a length",
+                                  "Write '4' or '2rem'.", "tab-size");
+                return false;
+            }
+
             return true;
         }
 
@@ -2465,6 +2659,15 @@ namespace RoboCSSCompiler
 
         case CSSValueGrammar::FontFeatureSettings:
             return ParseFontFeatureSettingsValue(components, out, location, diagnostics);
+
+        case CSSValueGrammar::KeywordSetList:
+            return ParseKeywordSetListValue(definition, components, out, location, diagnostics);
+
+        case CSSValueGrammar::TextDecorationThickness:
+            return ParseTextDecorationThicknessValue(definition, components, out, location, diagnostics);
+
+        case CSSValueGrammar::TabSize:
+            return ParseTabSizeValue(components, out, location, diagnostics);
 
         case CSSValueGrammar::FontWeight:
             return ParseFontWeightValue(components, out, location, diagnostics);

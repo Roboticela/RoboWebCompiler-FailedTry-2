@@ -773,6 +773,58 @@ namespace RoboRenderer
         {
             target.textDecorationColor = authored.textDecorationColor;
         }
+        if (IsSpecified(specified, StyleFlagTextDecorationStyle))
+        {
+            target.textDecorationStyle = authored.textDecorationStyle;
+        }
+        if (IsSpecified(specified, StyleFlagTextDecorationThickness))
+        {
+            target.textDecorationThicknessKind = authored.textDecorationThicknessKind;
+            target.textDecorationThickness = authored.textDecorationThickness;
+        }
+        if (IsSpecified(specified, StyleFlagTextUnderlineOffset))
+        {
+            target.textUnderlineOffsetKind = authored.textUnderlineOffsetKind;
+            target.textUnderlineOffset = authored.textUnderlineOffset;
+        }
+        if (IsSpecified(specified, StyleFlagHyphens))
+        {
+            target.hyphens = authored.hyphens;
+        }
+        if (IsSpecified(specified, StyleFlagOverflowWrap))
+        {
+            target.overflowWrap = authored.overflowWrap;
+        }
+        if (IsSpecified(specified, StyleFlagWordBreak))
+        {
+            target.wordBreak = authored.wordBreak;
+        }
+        if (IsSpecified(specified, StyleFlagLineBreak))
+        {
+            target.lineBreak = authored.lineBreak;
+        }
+        if (IsSpecified(specified, StyleFlagTabSize))
+        {
+            target.tabSize = authored.tabSize;
+            target.tabSizeLength = authored.tabSizeLength;
+        }
+        if (IsSpecified(specified, StyleFlagTextAlignLast))
+        {
+            target.textAlignLast = authored.textAlignLast;
+            target.hasTextAlignLast = authored.hasTextAlignLast;
+        }
+        if (IsSpecified(specified, StyleFlagTextJustify))
+        {
+            target.textJustify = authored.textJustify;
+        }
+        if (IsSpecified(specified, StyleFlagWritingMode))
+        {
+            target.writingMode = authored.writingMode;
+        }
+        if (IsSpecified(specified, StyleFlagTextOrientation))
+        {
+            target.textOrientation = authored.textOrientation;
+        }
         if (IsSpecified(specified, StyleFlagTextAlign))
         {
             target.textAlign = authored.textAlign;
