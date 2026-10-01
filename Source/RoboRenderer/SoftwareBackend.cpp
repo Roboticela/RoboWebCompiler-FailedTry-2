@@ -723,68 +723,96 @@ namespace RoboRenderer
                 continue;
             }
 
-            const std::int32_t firstX = std::max(clip.left, static_cast<std::int32_t>(std::floor(bitmapLeft)));
-            const std::int32_t lastX =
-                std::min(clip.right, static_cast<std::int32_t>(std::ceil(bitmapLeft + static_cast<float>(bitmap.width))));
-            const std::int32_t firstY = std::max(clip.top, static_cast<std::int32_t>(std::floor(bitmapTop)));
-            const std::int32_t lastY =
-                std::min(clip.bottom,
-                         static_cast<std::int32_t>(std::ceil(bitmapTop + static_cast<float>(bitmap.height))));
+            const std::int32_t sourceLeft = static_cast<std::int32_t>(std::floor(bitmapLeft));
+            const std::int32_t sourceTop = static_cast<std::int32_t>(std::floor(bitmapTop));
+            const std::int32_t sourceRight = sourceLeft + static_cast<std::int32_t>(bitmap.width);
+            const std::int32_t sourceBottom = sourceTop + static_cast<std::int32_t>(bitmap.height);
 
-            for (std::int32_t y = firstY; y < lastY; ++y)
-            {
-                const std::int32_t bitmapY = y - static_cast<std::int32_t>(std::floor(bitmapTop));
-                if (bitmapY < 0 || bitmapY >= static_cast<std::int32_t>(bitmap.height))
+            // Blends one device pixel sampled from one bitmap pixel. The source
+            // address is in device space; the caller maps it, which is what lets
+            // a turned glyph reuse this sampler unchanged.
+            const auto blendSource = [&](std::int32_t deviceX, std::int32_t deviceY, std::int32_t sourceX,
+                                         std::int32_t sourceY) {
+                const std::int32_t bitmapX = sourceX - sourceLeft;
+                const std::int32_t bitmapY = sourceY - sourceTop;
+
+                if (bitmapX < 0 || bitmapX >= static_cast<std::int32_t>(bitmap.width) || bitmapY < 0 ||
+                    bitmapY >= static_cast<std::int32_t>(bitmap.height))
                 {
-                    continue;
+                    return;
                 }
 
                 if (rasterized.color != nullptr)
                 {
                     // A colour glyph brings its own RGBA pixels; the command's
                     // colour is ignored.
-                    const std::uint8_t* colorRow =
-                        rasterized.color + static_cast<std::size_t>(bitmapY) * bitmap.width * 4;
+                    const std::uint8_t* source =
+                        rasterized.color +
+                        (static_cast<std::size_t>(bitmapY) * bitmap.width + static_cast<std::size_t>(bitmapX)) * 4;
 
-                    for (std::int32_t x = firstX; x < lastX; ++x)
+                    if (source[3] == 0)
                     {
-                        const std::int32_t bitmapX =
-                            x - static_cast<std::int32_t>(std::floor(bitmapLeft));
-                        if (bitmapX < 0 || bitmapX >= static_cast<std::int32_t>(bitmap.width))
-                        {
-                            continue;
-                        }
-
-                        const std::uint8_t* source = colorRow + static_cast<std::size_t>(bitmapX) * 4;
-                        if (source[3] == 0)
-                        {
-                            continue;
-                        }
-
-                        BlendPixel(x, y, Color{ source[0], source[1], source[2], source[3] }, 1.0f);
+                        return;
                     }
 
-                    continue;
+                    BlendPixel(deviceX, deviceY, Color{ source[0], source[1], source[2], source[3] }, 1.0f);
+                    return;
                 }
 
-                const std::uint8_t* coverageRow =
-                    rasterized.coverage + static_cast<std::size_t>(bitmapY) * bitmap.width;
+                const std::uint8_t coverage =
+                    rasterized.coverage[static_cast<std::size_t>(bitmapY) * bitmap.width +
+                                         static_cast<std::size_t>(bitmapX)];
 
+                if (coverage == 0)
+                {
+                    return;
+                }
+
+                BlendPixel(deviceX, deviceY, command.color, static_cast<float>(coverage) / 255.0f);
+            };
+
+            if (glyph.rotation != 0)
+            {
+                // A quarter turn clockwise about the glyph's own pen position:
+                // a source vector (dx, dy) becomes (-dy, dx), so the advance runs
+                // down the page and the glyph's top faces right. The output box
+                // is walked and each pixel mapped back into the bitmap, which
+                // leaves no holes a forward map or a transpose would.
+                const float outLeftF = penX - (static_cast<float>(sourceBottom) - baselineY);
+                const float outRightF = penX - (static_cast<float>(sourceTop) - baselineY);
+                const float outTopF = baselineY + (static_cast<float>(sourceLeft) - penX);
+                const float outBottomF = baselineY + (static_cast<float>(sourceRight) - penX);
+
+                const std::int32_t firstX = std::max(clip.left, static_cast<std::int32_t>(std::floor(outLeftF)));
+                const std::int32_t lastX = std::min(clip.right, static_cast<std::int32_t>(std::ceil(outRightF)));
+                const std::int32_t firstY = std::max(clip.top, static_cast<std::int32_t>(std::floor(outTopF)));
+                const std::int32_t lastY = std::min(clip.bottom, static_cast<std::int32_t>(std::ceil(outBottomF)));
+
+                for (std::int32_t y = firstY; y < lastY; ++y)
+                {
+                    for (std::int32_t x = firstX; x < lastX; ++x)
+                    {
+                        const float relX = static_cast<float>(x) - penX;
+                        const float relY = static_cast<float>(y) - baselineY;
+                        const std::int32_t sourceX = static_cast<std::int32_t>(std::floor(penX + relY));
+                        const std::int32_t sourceY = static_cast<std::int32_t>(std::floor(baselineY - relX));
+                        blendSource(x, y, sourceX, sourceY);
+                    }
+                }
+
+                continue;
+            }
+
+            const std::int32_t firstX = std::max(clip.left, sourceLeft);
+            const std::int32_t lastX = std::min(clip.right, sourceRight);
+            const std::int32_t firstY = std::max(clip.top, sourceTop);
+            const std::int32_t lastY = std::min(clip.bottom, sourceBottom);
+
+            for (std::int32_t y = firstY; y < lastY; ++y)
+            {
                 for (std::int32_t x = firstX; x < lastX; ++x)
                 {
-                    const std::int32_t bitmapX = x - static_cast<std::int32_t>(std::floor(bitmapLeft));
-                    if (bitmapX < 0 || bitmapX >= static_cast<std::int32_t>(bitmap.width))
-                    {
-                        continue;
-                    }
-
-                    const std::uint8_t coverage = coverageRow[bitmapX];
-                    if (coverage == 0)
-                    {
-                        continue;
-                    }
-
-                    BlendPixel(x, y, command.color, static_cast<float>(coverage) / 255.0f);
+                    blendSource(x, y, x, y);
                 }
             }
         }

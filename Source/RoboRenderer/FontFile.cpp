@@ -320,6 +320,10 @@ namespace RoboRenderer
             {
                 target = &name;
             }
+            else if (TagEquals(tag, "post"))
+            {
+                target = &post;
+            }
             else if (TagEquals(tag, "kern"))
             {
                 target = &kern;
@@ -418,6 +422,7 @@ namespace RoboRenderer
         ReadName();
         ReadCmap();
         ReadKern();
+        ReadPost();
 
         hasGlyf = glyf.present && loca.present;
         hasCff = cff.present;
@@ -515,6 +520,32 @@ namespace RoboRenderer
         if (xHeight <= 0.0f)
         {
             xHeight = ascent > 0.0f ? ascent * 0.52f : unitsPerEm * 0.52f;
+        }
+    }
+
+    void SfntFont::ReadPost()
+    {
+        // `post` version 2.0 and 3.0 both carry the underline metrics at the
+        // same offsets; version 1.0 has no space for them, so the conventional
+        // defaults stand.
+        if (!post.present || post.length < 12)
+        {
+            return;
+        }
+
+        const std::uint16_t version = ReadU16(post.offset);
+
+        if (version != 0x0002 && version != 0x0003)
+        {
+            return;
+        }
+
+        underlinePosition = static_cast<float>(ReadI16(post.offset + 8));
+        underlineThickness = static_cast<float>(ReadI16(post.offset + 10));
+
+        if (underlineThickness <= 0.0f)
+        {
+            underlineThickness = 50.0f;
         }
     }
 

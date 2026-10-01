@@ -1165,6 +1165,7 @@ namespace RoboRenderer
                 line.element = item.element;
                 line.container = container;
                 line.vertical = true;
+                line.textOrientation = style.textOrientation;
                 line.x = columnX;
                 line.width = lineHeight;
                 line.baseline = penY;

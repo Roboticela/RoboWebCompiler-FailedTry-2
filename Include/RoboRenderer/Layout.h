@@ -208,6 +208,9 @@ namespace RoboRenderer
         /// at `lineTop` and walks down `lineHeight`, with `x` as the column's
         /// cross-axis position and `width` its cross-axis size.
         bool vertical = false;
+
+        /// `text-orientation`: which glyphs of a vertical run stand sideways.
+        TextOrientationKind textOrientation = TextOrientationKind::Mixed;
     };
 
     /// The geometry of one layout pass.

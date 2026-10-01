@@ -694,6 +694,11 @@ namespace RoboHTMLCompiler
                     runElement->kind = ElementKind::Text;
                     runElement->id = nextElementId++;
                     runElement->content.text = run;
+                    // A text run is inline content even though it shares its
+                    // parent's tag: `text <code>x</code> text` is one line of
+                    // text, not three blocks, so the run has to flow with the
+                    // inline siblings either side of it.
+                    runElement->nature.inlineContent = true;
                     runElement->source.tag = element.sourceTag;
                     runElement->source.ns = element.ns;
                     runElement->source.file = textNode.location.file;

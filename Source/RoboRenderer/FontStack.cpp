@@ -69,6 +69,8 @@ namespace RoboRenderer
             float Ascent() const override { return font->Ascent(); }
             float Descent() const override { return font->Descent(); }
             float LineGap() const override { return font->LineGap(); }
+            float UnderlinePosition() const override { return font->UnderlinePosition(); }
+            float UnderlineThickness() const override { return font->UnderlineThickness(); }
             float Weight() const override { return static_cast<float>(font->WeightClass()); }
             int WeightClass() const override { return font->WeightClass(); }
             bool HasColorGlyphs() const override { return font->HasColorGlyphs(); }
@@ -328,6 +330,8 @@ namespace RoboRenderer
             float Ascent() const override { return base->Ascent(); }
             float Descent() const override { return base->Descent(); }
             float LineGap() const override { return base->LineGap(); }
+            float UnderlinePosition() const override { return base->UnderlinePosition(); }
+            float UnderlineThickness() const override { return base->UnderlineThickness(); }
             float Weight() const override { return 700.0f; }
             int WeightClass() const override { return 700; }
             bool HasColorGlyphs() const override { return base->HasColorGlyphs(); }
@@ -472,6 +476,8 @@ namespace RoboRenderer
             float Ascent() const override { return base->Ascent(); }
             float Descent() const override { return base->Descent(); }
             float LineGap() const override { return base->LineGap(); }
+            float UnderlinePosition() const override { return base->UnderlinePosition(); }
+            float UnderlineThickness() const override { return base->UnderlineThickness(); }
             float Weight() const override { return base->Weight(); }
             int WeightClass() const override { return base->WeightClass(); }
             bool HasColorGlyphs() const override { return base->HasColorGlyphs(); }

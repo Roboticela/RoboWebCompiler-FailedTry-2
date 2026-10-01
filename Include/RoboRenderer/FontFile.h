@@ -341,6 +341,12 @@ namespace RoboRenderer
         float CapHeight() const { return capHeight; }
         float XHeight() const { return xHeight; }
 
+        /// Where the face draws an underline, in design units, negative below
+        /// the baseline.
+        float UnderlinePosition() const { return underlinePosition; }
+        /// How thick the face draws an underline, in design units.
+        float UnderlineThickness() const { return underlineThickness; }
+
         std::uint16_t GlyphCount() const { return glyphCount; }
 
         // --- glyph lookup --------------------------------------------------
@@ -489,6 +495,7 @@ namespace RoboRenderer
         std::string NameString(std::uint16_t nameId) const;
         void ReadCmap();
         void ReadKern();
+        void ReadPost();
         bool ReadGlyf(std::uint16_t glyph, GlyphPath& out, int depth) const;
 
         std::vector<std::uint8_t> bytes;
@@ -502,6 +509,7 @@ namespace RoboRenderer
         Table loca;
         Table os2;
         Table name;
+        Table post;
         Table kern;
         Table colr;
         Table cpal;
@@ -535,6 +543,12 @@ namespace RoboRenderer
         float lineGap = 0.0f;
         float capHeight = 700.0f;
         float xHeight = 500.0f;
+
+        /// From the `post` table, in font design units. The defaults are the
+        /// values a face without one conventionally presents, so a decoration
+        /// still has a metric to use.
+        float underlinePosition = -80.0f;
+        float underlineThickness = 50.0f;
 
         int weightClass = 400;
         bool bold = false;

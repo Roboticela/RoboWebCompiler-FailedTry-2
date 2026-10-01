@@ -66,18 +66,49 @@ namespace RoboRenderer
         std::vector<Stop> stops;
     };
 
+    /// How a stroke decorates the two ends of an open contour and the corners
+    /// between its segments.
+    struct SvgStrokeStyle
+    {
+        enum class Cap : std::uint8_t
+        {
+            Butt = 0,
+            Round,
+            Square
+        };
+
+        enum class Join : std::uint8_t
+        {
+            Miter = 0,
+            Round,
+            Bevel
+        };
+
+        Cap cap = Cap::Butt;
+        Join join = Join::Miter;
+        /// `stroke-miterlimit`: a miter longer than this many times the stroke
+        /// width is cut back to a bevel, as SVG specifies.
+        float miterLimit = 4.0f;
+    };
+
     /// One filled shape: closed contours in the document's own units, its fill,
     /// and an optional stroke. A shape with `hasFill == false` paints nothing
     /// for a fill but may still be stroked (`<line>`, `fill="none"`).
     struct SvgShape
     {
         std::vector<std::vector<SvgPoint>> contours;
+        /// One entry per contour: true when the subpath is closed by `Z`, or by
+        /// the shape itself (`<rect>`, `<circle>`, `<polygon>`). A stroked open
+        /// contour stops at its last point instead of drawing a segment back to
+        /// the first one, and takes caps rather than a join across the gap.
+        std::vector<bool> contourClosed;
         SvgPaint paint;
 
         bool hasFill = true;
         bool hasStroke = false;
         float strokeWidth = 1.0f;
         SvgPaint stroke;
+        SvgStrokeStyle strokeStyle;
         /// `fill-rule: evenodd` rather than the default nonzero winding.
         bool evenOdd = false;
     };

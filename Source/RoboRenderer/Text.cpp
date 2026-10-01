@@ -834,7 +834,10 @@ namespace RoboRenderer
             const std::uint32_t codepoint = DecodeUtf8(text, offset);
 
             // Line breaks carry no advance; the caller has already split lines.
-            if (codepoint == '\r' || codepoint == '\n')
+            // A soft hyphen is a break opportunity with no ink of its own, so it
+            // is skipped here rather than represented: it must not be measured
+            // and it must never paint as a missing glyph.
+            if (codepoint == '\r' || codepoint == '\n' || codepoint == 0x00AD)
             {
                 continue;
             }
@@ -1021,11 +1024,37 @@ namespace RoboRenderer
         return (face.Ascent() + face.Descent() + face.LineGap()) * scale;
     }
 
+    float TextLayout::UnderlineThickness(float fontSize, FontWeightKind weight,
+                                         const TextRunStyle* runStyle) const
+    {
+        const FontFace& face = registry.FaceFor('A', weight,
+                                                runStyle != nullptr ? runStyle->fontFamily : nullptr,
+                                                runStyle != nullptr ? runStyle->slant : FontSlantKind::Upright);
+        const float units = face.UnitsPerEm() > 0.0f ? face.UnitsPerEm() : 1000.0f;
+        return std::max(1.0f, face.UnderlineThickness() * (fontSize / units));
+    }
+
+    float TextLayout::UnderlinePosition(float fontSize, FontWeightKind weight,
+                                        const TextRunStyle* runStyle) const
+    {
+        const FontFace& face = registry.FaceFor('A', weight,
+                                                runStyle != nullptr ? runStyle->fontFamily : nullptr,
+                                                runStyle != nullptr ? runStyle->slant : FontSlantKind::Upright);
+        const float units = face.UnitsPerEm() > 0.0f ? face.UnitsPerEm() : 1000.0f;
+        return face.UnderlinePosition() * (fontSize / units);
+    }
+
     float TextLayout::Advance(std::uint32_t codepoint,
                               float fontSize,
                               FontWeightKind weight,
                               const TextRunStyle* runStyle) const
     {
+        // A soft hyphen is a break opportunity, not a glyph: it has no width.
+        if (codepoint == 0x00AD)
+        {
+            return 0.0f;
+        }
+
         const FontFace& face = registry.FaceFor(codepoint, weight,
                                                 runStyle != nullptr ? runStyle->fontFamily : nullptr,
                                                 runStyle != nullptr ? runStyle->slant : FontSlantKind::Upright);
@@ -1172,6 +1201,20 @@ namespace RoboRenderer
 
             if (codepoint == '\r')
             {
+                continue;
+            }
+
+            if (codepoint == 0x00AD)
+            {
+                // A soft hyphen is a break opportunity: `hyphens: none` ignores
+                // it, and any other value honours it. It takes no width, so the
+                // break point is exactly where it is written.
+                if (!preserveWhitespace && policy.hyphens != HyphensKind::None)
+                {
+                    breakByte = codepointStart;
+                    widthAtBreak = lineWidth;
+                    hasBreak = true;
+                }
                 continue;
             }
 

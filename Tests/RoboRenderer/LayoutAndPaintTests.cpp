@@ -8,9 +8,64 @@
 // ---------------------------------------------------------------------------
 #include "RendererTestSupport.h"
 
+#include <algorithm>
+
 using namespace RoboTest;
 
 using namespace RoboRenderer;
+
+ROBO_TEST(Layout, AnInlineElementKeepsTheTextAroundItOnOneLine)
+{
+    // The compiler lowers each text node beside an inline element into an element
+    // of its own. Those runs are inline content exactly like the element between
+    // them, so `text <code>x</code>.` is one line box, not three.
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBody("<p id=\"cap\">Bars, a circle with a stroke, and a polyline "
+                           "\xE2\x80\x94 one inline <code>svg</code>.</p>",
+                           application, error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 800.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex caption = FindElementById(document, "cap");
+    ROBO_CHECK(caption != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+
+    std::vector<LineLayout> runs;
+    for (const LineLayout& line : layout.lines)
+    {
+        if (line.container == caption)
+        {
+            runs.push_back(line);
+        }
+    }
+
+    std::sort(runs.begin(), runs.end(), [](const LineLayout& left, const LineLayout& right) {
+        return left.x < right.x;
+    });
+
+    ROBO_CHECK(runs.size() >= 3);
+
+    if (runs.size() >= 3)
+    {
+        // One line box: every run sits on the same line top.
+        for (const LineLayout& run : runs)
+        {
+            ROBO_CHECK(run.lineTop > runs.front().lineTop - 0.01f);
+            ROBO_CHECK(run.lineTop < runs.front().lineTop + 0.01f);
+        }
+
+        // And they follow one another across it rather than each starting a line.
+        for (std::size_t index = 1; index < runs.size(); ++index)
+        {
+            ROBO_CHECK(runs[index].x > runs[index - 1].x + 1.0f);
+        }
+    }
+}
 
 ROBO_TEST(Layout, RootFillsTheViewportAndFollowsAResize)
 {

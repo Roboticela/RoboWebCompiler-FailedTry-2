@@ -646,6 +646,38 @@ namespace RoboRenderer
             contours.push_back(std::move(transformed));
         }
 
+        /// A rounded rectangle walked clockwise from the corner of its first arc,
+        /// letting the last point of each quarter circle be the first of the next.
+        std::vector<SvgPoint> RoundedRectPoints(float x, float y, float width, float height,
+                                                float radiusX, float radiusY)
+        {
+            const float largestRadius = std::max(radiusX, radiusY);
+            const int steps = std::max(4, std::min(32, static_cast<int>(largestRadius + 0.5f)));
+            const float quarterTurn = Pi * 0.5f;
+
+            std::vector<SvgPoint> points;
+            points.reserve(static_cast<std::size_t>(steps + 1) * 4);
+
+            const auto appendCorner = [&](float centreX, float centreY, float startAngle) {
+                for (int step = 0; step <= steps; ++step)
+                {
+                    const float angle =
+                        startAngle + quarterTurn * static_cast<float>(step) / static_cast<float>(steps);
+                    points.push_back(SvgPoint{ centreX + radiusX * std::cos(angle),
+                                               centreY + radiusY * std::sin(angle) });
+                }
+            };
+
+            // SVG's y grows downwards, so the four corner centres are met in this
+            // order by a clockwise walk.
+            appendCorner(x + radiusX, y + radiusY, Pi);
+            appendCorner(x + width - radiusX, y + radiusY, Pi * 1.5f);
+            appendCorner(x + width - radiusX, y + height - radiusY, 0.0f);
+            appendCorner(x + radiusX, y + height - radiusY, quarterTurn);
+
+            return points;
+        }
+
         std::vector<SvgPoint> EllipsePoints(float cx, float cy, float rx, float ry)
         {
             constexpr int Steps = 48;
@@ -801,7 +833,12 @@ namespace RoboRenderer
             }
         }
 
-        void ParsePathData(const std::string& data, std::vector<std::vector<SvgPoint>>& out)
+        /// Reads `d` into contours, with one flag per contour saying whether the
+        /// subpath was closed with `Z`. An open subpath is still filled as if it
+        /// were closed, but a stroke stops at its last point.
+        void ParsePathData(const std::string& data,
+                           std::vector<std::vector<SvgPoint>>& out,
+                           std::vector<bool>& closedOut)
         {
             PathScanner scanner{ data, 0, false };
             float currentX = 0.0f;
@@ -813,10 +850,13 @@ namespace RoboRenderer
             char previous = 0;
             std::vector<SvgPoint> contour;
 
-            const auto flush = [&]() {
-                if (contour.size() >= 3)
+            // A contour of two points is real: a stroked `M10 30 L50 30` is a
+            // line like any `<line>`. Filling skips it later.
+            const auto flush = [&](bool closed) {
+                if (contour.size() >= 2)
                 {
                     out.push_back(contour);
+                    closedOut.push_back(closed);
                 }
                 contour.clear();
             };
@@ -867,7 +907,7 @@ namespace RoboRenderer
                     {
                         break;
                     }
-                    flush();
+                    flush(false);
                     currentX = x;
                     currentY = y;
                     startX = x;
@@ -984,9 +1024,11 @@ namespace RoboRenderer
                 }
                 else if (upper == 'Z')
                 {
-                    flush();
+                    flush(true);
                     currentX = startX;
                     currentY = startY;
+                    // A drawing command after `Z` continues from the start point.
+                    contour.push_back(SvgPoint{ startX, startY });
                     previous = command;
                     continue;
                 }
@@ -998,7 +1040,7 @@ namespace RoboRenderer
                 previous = command;
             }
 
-            flush();
+            flush(false);
         }
 
         // -------------------------------------------------------------------
@@ -1156,14 +1198,30 @@ namespace RoboRenderer
         struct PendingShape
         {
             std::vector<std::vector<SvgPoint>> contours;
+            std::vector<bool> closed;
             SvgPaint paint;
             bool hasFill = true;
             bool hasStroke = false;
             float strokeWidth = 1.0f;
             SvgPaint stroke;
+            SvgStrokeStyle strokeStyle;
             bool evenOdd = false;
             std::string gradientId;
         };
+
+        /// Adds a polygon SVG defines as closed — a `<rect>`, a `<circle>`, a
+        /// `<polygon>` — together with the closure flag that strokes read.
+        void AppendClosedPolygon(PendingShape& shape,
+                                 const Matrix& matrix,
+                                 const std::vector<SvgPoint>& points)
+        {
+            const std::size_t before = shape.contours.size();
+            AppendPolygon(shape.contours, matrix, points);
+            if (shape.contours.size() > before)
+            {
+                shape.closed.push_back(true);
+            }
+        }
 
         void ComputeBounds(const std::vector<std::vector<SvgPoint>>& contours,
                            float& x0,
@@ -1305,7 +1363,8 @@ namespace RoboRenderer
             if (token.name == "path")
             {
                 pending.emplace_back();
-                ParsePathData(Attribute(attributes, "d"), pending.back().contours);
+                ParsePathData(Attribute(attributes, "d"), pending.back().contours,
+                              pending.back().closed);
             }
             else if (token.name == "rect")
             {
@@ -1313,10 +1372,35 @@ namespace RoboRenderer
                 const float y = read("y", 0.0f);
                 const float w = read("width", 0.0f);
                 const float h = read("height", 0.0f);
+                float radiusX = std::max(0.0f, read("rx", 0.0f));
+                float radiusY = std::max(0.0f, read("ry", 0.0f));
+
+                // One radius stands in for the other, and neither may bulge out
+                // of the box it rounds.
+                if (radiusX <= 0.0f)
+                {
+                    radiusX = radiusY;
+                }
+                if (radiusY <= 0.0f)
+                {
+                    radiusY = radiusX;
+                }
+                radiusX = std::min(radiusX, w * 0.5f);
+                radiusY = std::min(radiusY, h * 0.5f);
+
                 pending.emplace_back();
-                AppendPolygon(pending.back().contours, Matrix{},
-                              { SvgPoint{ x, y }, SvgPoint{ x + w, y }, SvgPoint{ x + w, y + h },
-                                SvgPoint{ x, y + h } });
+                // A rectangle with no area is not rendered at all.
+                if (w > 0.0f && h > 0.0f && radiusX > 0.0f && radiusY > 0.0f)
+                {
+                    AppendClosedPolygon(pending.back(), Matrix{},
+                                        RoundedRectPoints(x, y, w, h, radiusX, radiusY));
+                }
+                else if (w > 0.0f && h > 0.0f)
+                {
+                    AppendClosedPolygon(pending.back(), Matrix{},
+                                        { SvgPoint{ x, y }, SvgPoint{ x + w, y },
+                                          SvgPoint{ x + w, y + h }, SvgPoint{ x, y + h } });
+                }
             }
             else if (token.name == "circle")
             {
@@ -1324,7 +1408,7 @@ namespace RoboRenderer
                 const float cy = read("cy", 0.0f);
                 const float r = read("r", 0.0f);
                 pending.emplace_back();
-                AppendPolygon(pending.back().contours, Matrix{}, EllipsePoints(cx, cy, r, r));
+                AppendClosedPolygon(pending.back(), Matrix{}, EllipsePoints(cx, cy, r, r));
             }
             else if (token.name == "ellipse")
             {
@@ -1333,7 +1417,7 @@ namespace RoboRenderer
                 const float rx = read("rx", 0.0f);
                 const float ry = read("ry", 0.0f);
                 pending.emplace_back();
-                AppendPolygon(pending.back().contours, Matrix{}, EllipsePoints(cx, cy, rx, ry));
+                AppendClosedPolygon(pending.back(), Matrix{}, EllipsePoints(cx, cy, rx, ry));
             }
             else if (token.name == "line")
             {
@@ -1346,6 +1430,7 @@ namespace RoboRenderer
                 // is what SVG says a missing fill means for a straight segment.
                 pending.back().hasFill = false;
                 pending.back().contours.push_back({ SvgPoint{ x1, y1 }, SvgPoint{ x2, y2 } });
+                pending.back().closed.push_back(false);
             }
             else if (token.name == "polygon" || token.name == "polyline")
             {
@@ -1368,7 +1453,13 @@ namespace RoboRenderer
                     polygon.push_back(SvgPoint{ x, y });
                 }
                 pending.emplace_back();
-                AppendPolygon(pending.back().contours, Matrix{}, polygon);
+                // A polyline is open and a polygon is not: the difference is
+                // exactly whether the stroke draws the closing segment.
+                AppendClosedPolygon(pending.back(), Matrix{}, polygon);
+                if (token.name == "polyline" && !pending.back().closed.empty())
+                {
+                    pending.back().closed.back() = false;
+                }
             }
             else
             {
@@ -1419,6 +1510,33 @@ namespace RoboRenderer
             {
                 pending.back().hasStroke = true;
                 pending.back().strokeWidth = std::max(0.0f, read("stroke-width", 1.0f));
+
+                SvgStrokeStyle& style = pending.back().strokeStyle;
+                const std::string cap = Attribute(attributes, "stroke-linecap");
+                if (cap == "round")
+                {
+                    style.cap = SvgStrokeStyle::Cap::Round;
+                }
+                else if (cap == "square")
+                {
+                    style.cap = SvgStrokeStyle::Cap::Square;
+                }
+
+                const std::string join = Attribute(attributes, "stroke-linejoin");
+                if (join == "round")
+                {
+                    style.join = SvgStrokeStyle::Join::Round;
+                }
+                else if (join == "bevel")
+                {
+                    style.join = SvgStrokeStyle::Join::Bevel;
+                }
+
+                float miterLimit = style.miterLimit;
+                if (AttributeNumber(attributes, "stroke-miterlimit", miterLimit) && miterLimit >= 1.0f)
+                {
+                    style.miterLimit = miterLimit;
+                }
 
                 float strokeOpacity = 1.0f;
                 if (AttributeNumber(attributes, "stroke-opacity", strokeOpacity))
@@ -1491,6 +1609,8 @@ namespace RoboRenderer
             result.hasStroke = shape.hasStroke;
             result.strokeWidth = shape.strokeWidth;
             result.stroke = shape.stroke;
+            result.strokeStyle = shape.strokeStyle;
+            result.contourClosed = shape.closed;
             result.evenOdd = shape.evenOdd;
 
             if (flipY)

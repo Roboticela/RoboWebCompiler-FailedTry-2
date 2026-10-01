@@ -10,6 +10,7 @@ namespace RoboRenderer
 {
     namespace
     {
+        constexpr float Tau = 6.28318530717958647692f;
         constexpr int SubSamples = 4;
         constexpr int MaxCoverage = SubSamples * SubSamples;
         constexpr float MaxRasterSize = 2048.0f;
@@ -275,12 +276,186 @@ namespace RoboRenderer
             }
         }
 
-        /// Turns a contour into the quads one stroke of it covers: a rectangle
-        /// per segment, plus a small square at each vertex so joins do not leave
-        /// a notch. Square caps are a deliberate approximation of the round and
-        /// butt caps SVG offers.
+        /// Twice the area the shoelace formula gives, so the sign is a polygon's
+        /// winding direction.
+        float SignedArea(const std::vector<SvgPoint>& polygon)
+        {
+            float total = 0.0f;
+            const std::size_t count = polygon.size();
+            for (std::size_t index = 0; index < count; ++index)
+            {
+                const SvgPoint& a = polygon[index];
+                const SvgPoint& b = polygon[(index + 1) % count];
+                total += a.x * b.y - b.x * a.y;
+            }
+            return total * 0.5f;
+        }
+
+        /// Adds one piece of a stroke, wound the same way as every other piece.
+        /// The non-zero rule *adds* overlapping pieces, so a piece wound the
+        /// other way from the ones it touches cancels them out: a stroke built
+        /// from pieces of mixed winding comes out speckled rather than solid.
+        void AppendStrokePiece(std::vector<std::vector<SvgPoint>>& out, std::vector<SvgPoint> piece)
+        {
+            if (piece.size() < 3)
+            {
+                return;
+            }
+
+            if (SignedArea(piece) < 0.0f)
+            {
+                std::reverse(piece.begin(), piece.end());
+            }
+
+            out.push_back(std::move(piece));
+        }
+
+        /// The disc a round cap or a round join covers, as a polygon.
+        void AppendStrokeDisc(std::vector<std::vector<SvgPoint>>& out,
+                              float centreX,
+                              float centreY,
+                              float radius)
+        {
+            constexpr int Steps = 16;
+            std::vector<SvgPoint> disc;
+            disc.reserve(Steps);
+
+            for (int step = 0; step < Steps; ++step)
+            {
+                const float angle = Tau * static_cast<float>(step) / static_cast<float>(Steps);
+                disc.push_back(SvgPoint{ centreX + radius * std::cos(angle),
+                                         centreY + radius * std::sin(angle) });
+            }
+
+            AppendStrokePiece(out, std::move(disc));
+        }
+
+        /// The rectangle one segment of a stroke covers.
+        void AppendStrokeSegment(std::vector<std::vector<SvgPoint>>& out,
+                                 const SvgPoint& a,
+                                 const SvgPoint& b,
+                                 float halfWidth)
+        {
+            const float dx = b.x - a.x;
+            const float dy = b.y - a.y;
+            const float length = std::sqrt(dx * dx + dy * dy);
+            if (length <= 0.0f)
+            {
+                return;
+            }
+
+            const float nx = -dy / length * halfWidth;
+            const float ny = dx / length * halfWidth;
+
+            AppendStrokePiece(out, { SvgPoint{ a.x + nx, a.y + ny }, SvgPoint{ b.x + nx, b.y + ny },
+                                     SvgPoint{ b.x - nx, b.y - ny }, SvgPoint{ a.x - nx, a.y - ny } });
+        }
+
+        /// The end of an open contour. `outwardX/outwardY` is the unit direction
+        /// the contour travels in, so the cap sits on the far side of the end.
+        void AppendStrokeCap(std::vector<std::vector<SvgPoint>>& out,
+                             const SvgPoint& end,
+                             float outwardX,
+                             float outwardY,
+                             float halfWidth,
+                             const SvgStrokeStyle& style)
+        {
+            if (style.cap == SvgStrokeStyle::Cap::Butt)
+            {
+                return;
+            }
+
+            if (style.cap == SvgStrokeStyle::Cap::Round)
+            {
+                AppendStrokeDisc(out, end.x, end.y, halfWidth);
+                return;
+            }
+
+            const float nx = -outwardY * halfWidth;
+            const float ny = outwardX * halfWidth;
+            const float reach = halfWidth;
+
+            AppendStrokePiece(out, { SvgPoint{ end.x + nx, end.y + ny },
+                                     SvgPoint{ end.x + nx + outwardX * reach,
+                                               end.y + ny + outwardY * reach },
+                                     SvgPoint{ end.x - nx + outwardX * reach,
+                                               end.y - ny + outwardY * reach },
+                                     SvgPoint{ end.x - nx, end.y - ny } });
+        }
+
+        /// The wedge the two segment rectangles leave bare where they meet. The
+        /// outside of the corner is the side where both segments put their offset
+        /// on the same hand, and it is filled out to the miter point, an arc, or
+        /// the straight cut between the two offset corners.
+        void AppendStrokeJoin(std::vector<std::vector<SvgPoint>>& out,
+                              const SvgPoint& corner,
+                              float incomingX,
+                              float incomingY,
+                              float outgoingX,
+                              float outgoingY,
+                              float halfWidth,
+                              const SvgStrokeStyle& style)
+        {
+            const float cross = incomingX * outgoingY - incomingY * outgoingX;
+            if (cross == 0.0f)
+            {
+                // Straight through: the rectangles already meet here.
+                return;
+            }
+
+            const float side = cross > 0.0f ? -1.0f : 1.0f;
+            const float firstNormalX = side * -incomingY;
+            const float firstNormalY = side * incomingX;
+            const float secondNormalX = side * -outgoingY;
+            const float secondNormalY = side * outgoingX;
+
+            const SvgPoint first{ corner.x + firstNormalX * halfWidth,
+                                  corner.y + firstNormalY * halfWidth };
+            const SvgPoint second{ corner.x + secondNormalX * halfWidth,
+                                   corner.y + secondNormalY * halfWidth };
+
+            if (style.join == SvgStrokeStyle::Join::Round)
+            {
+                AppendStrokeDisc(out, corner.x, corner.y, halfWidth);
+                return;
+            }
+
+            if (style.join == SvgStrokeStyle::Join::Miter)
+            {
+                // The miter tip is where the two offset edges cross, and its
+                // distance from the corner over the stroke width is the ratio
+                // `stroke-miterlimit` bounds: past the limit the corner is cut
+                // back to a bevel rather than spiking off the joint.
+                const float dot = incomingX * outgoingX + incomingY * outgoingY;
+                const float ratio = std::sqrt(2.0f / std::max(0.0f, 1.0f + dot));
+                if (ratio <= style.miterLimit)
+                {
+                    const float normals = 1.0f + firstNormalX * secondNormalX +
+                                          firstNormalY * secondNormalY;
+                    if (normals > 0.0f)
+                    {
+                        const float tipX =
+                            corner.x + (firstNormalX + secondNormalX) / normals * halfWidth;
+                        const float tipY =
+                            corner.y + (firstNormalY + secondNormalY) / normals * halfWidth;
+                        AppendStrokePiece(out, { first, SvgPoint{ tipX, tipY }, second, corner });
+                        return;
+                    }
+                }
+            }
+
+            AppendStrokePiece(out, { first, second, corner });
+        }
+
+        /// Turns a stroked contour into the pieces one stroke of it covers: a
+        /// rectangle per segment, a wedge at every corner, and the requested cap
+        /// at each end of an open contour. `closed` says whether the contour
+        /// joins its last point back to its first, which is the difference
+        /// between a `Z` and a path that simply stops.
         void AppendStrokePolygons(const std::vector<SvgPoint>& contour,
+                                  bool closed,
                                   float halfWidth,
+                                  const SvgStrokeStyle& style,
                                   std::vector<std::vector<SvgPoint>>& out)
         {
             const std::size_t count = contour.size();
@@ -289,35 +464,65 @@ namespace RoboRenderer
                 return;
             }
 
-            const bool closed = count >= 3;
-            const std::size_t segments = closed ? count : count - 1;
+            const bool closedContour = closed && count >= 3;
+            const std::size_t segments = closedContour ? count : count - 1;
 
             for (std::size_t index = 0; index < segments; ++index)
             {
-                const SvgPoint& a = contour[index];
-                const SvgPoint& b = contour[(index + 1) % count];
+                AppendStrokeSegment(out, contour[index], contour[(index + 1) % count], halfWidth);
+            }
 
-                const float dx = b.x - a.x;
-                const float dy = b.y - a.y;
+            const auto unitDirection = [](const SvgPoint& from, const SvgPoint& to, float& x, float& y) {
+                const float dx = to.x - from.x;
+                const float dy = to.y - from.y;
                 const float length = std::sqrt(dx * dx + dy * dy);
                 if (length <= 0.0f)
+                {
+                    return false;
+                }
+
+                x = dx / length;
+                y = dy / length;
+                return true;
+            };
+
+            // A closed contour meets itself at every vertex; an open one has
+            // interior corners only, because its two ends are capped.
+            const std::size_t joinBegin = closedContour ? 0 : 1;
+            const std::size_t joinEnd = closedContour ? count : count - 1;
+
+            for (std::size_t index = joinBegin; index < joinEnd; ++index)
+            {
+                const SvgPoint& previous = contour[(index + count - 1) % count];
+                const SvgPoint& corner = contour[index];
+                const SvgPoint& next = contour[(index + 1) % count];
+
+                float incomingX = 0.0f;
+                float incomingY = 0.0f;
+                float outgoingX = 0.0f;
+                float outgoingY = 0.0f;
+                if (!unitDirection(previous, corner, incomingX, incomingY) ||
+                    !unitDirection(corner, next, outgoingX, outgoingY))
                 {
                     continue;
                 }
 
-                const float nx = -dy / length * halfWidth;
-                const float ny = dx / length * halfWidth;
-
-                out.push_back({ SvgPoint{ a.x + nx, a.y + ny }, SvgPoint{ b.x + nx, b.y + ny },
-                                SvgPoint{ b.x - nx, b.y - ny }, SvgPoint{ a.x - nx, a.y - ny } });
+                AppendStrokeJoin(out, corner, incomingX, incomingY, outgoingX, outgoingY, halfWidth,
+                                 style);
             }
 
-            for (const SvgPoint& point : contour)
+            if (!closedContour)
             {
-                out.push_back({ SvgPoint{ point.x - halfWidth, point.y - halfWidth },
-                                SvgPoint{ point.x + halfWidth, point.y - halfWidth },
-                                SvgPoint{ point.x + halfWidth, point.y + halfWidth },
-                                SvgPoint{ point.x - halfWidth, point.y + halfWidth } });
+                float outwardX = 0.0f;
+                float outwardY = 0.0f;
+                if (unitDirection(contour[count - 2], contour[count - 1], outwardX, outwardY))
+                {
+                    AppendStrokeCap(out, contour[count - 1], outwardX, outwardY, halfWidth, style);
+                }
+                if (unitDirection(contour[1], contour[0], outwardX, outwardY))
+                {
+                    AppendStrokeCap(out, contour[0], outwardX, outwardY, halfWidth, style);
+                }
             }
         }
 
@@ -514,14 +719,23 @@ namespace RoboRenderer
 
             if (shape.hasStroke)
             {
-                const float halfWidth = std::max(0.5f, shape.strokeWidth * 0.5f);
-                for (const std::vector<SvgPoint>& contour : shape.contours)
+                // The stroke width is in user units, so it has to be scaled like
+                // the geometry it outlines. A floor of half a pixel keeps a
+                // hairline visible in a downscaled raster.
+                const float halfWidth = std::max(0.5f, shape.strokeWidth * scale * 0.5f);
+                for (std::size_t index = 0; index < shape.contours.size(); ++index)
                 {
-                    std::vector<SvgPoint> device = toDevice(contour);
-                    if (device.size() >= 2)
+                    std::vector<SvgPoint> device = toDevice(shape.contours[index]);
+                    if (device.size() < 2)
                     {
-                        AppendStrokePolygons(device, halfWidth, strokePolygons);
+                        continue;
                     }
+
+                    // Closure is per contour: a document may hold a closed
+                    // outline and an open one in the same shape.
+                    const bool closed =
+                        index < shape.contourClosed.size() ? shape.contourClosed[index] : true;
+                    AppendStrokePolygons(device, closed, halfWidth, shape.strokeStyle, strokePolygons);
                 }
                 shape.hasStroke = !strokePolygons.empty();
             }

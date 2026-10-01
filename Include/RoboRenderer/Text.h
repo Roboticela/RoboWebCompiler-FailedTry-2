@@ -177,6 +177,12 @@ namespace RoboRenderer
         virtual float LineGap() const = 0;
         virtual float Weight() const = 0;
 
+        /// Where the face draws an underline, in font units, negative below the
+        /// baseline. The default is what a face with no `post` metrics presents.
+        virtual float UnderlinePosition() const { return -80.0f; }
+        /// How thick the face draws an underline, in font units.
+        virtual float UnderlineThickness() const { return 50.0f; }
+
         /// Glyph for a code point, or nullptr when the face has none.
         virtual const Glyph* FindGlyph(std::uint32_t codepoint) const = 0;
         /// Glyph used for unmapped code points.
@@ -753,6 +759,18 @@ namespace RoboRenderer
             const float count = runStyle->tabSize > 0.0f ? runStyle->tabSize : 4.0f;
             return Advance(' ', fontSize, weight) * count;
         }
+
+        /// Where the run's face draws an underline, in logical units, negative
+        /// below the baseline. This is the metric `text-decoration-thickness:
+        /// from-font` and `text-underline-offset: auto` are about.
+        float UnderlinePosition(float fontSize,
+                                FontWeightKind weight,
+                                const TextRunStyle* runStyle = nullptr) const;
+
+        /// How thick the run's face draws an underline, in logical units.
+        float UnderlineThickness(float fontSize,
+                                 FontWeightKind weight,
+                                 const TextRunStyle* runStyle = nullptr) const;
 
         /// Breaks a string into lines that fit `availableWidth`.
         ///

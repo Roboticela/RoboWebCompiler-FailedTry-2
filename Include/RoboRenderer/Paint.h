@@ -101,6 +101,11 @@ namespace RoboRenderer
         /// which is what the built-in stroke face and unshaped runs use.
         std::uint32_t faceId = 0;
         std::uint16_t glyphId = 0;
+
+        /// Quarter turns clockwise the glyph is drawn at: 0 upright, 1 sideways.
+        /// A vertical writing mode sets it for the glyphs whose orientation is
+        /// not upright, which is Latin under `text-orientation: mixed`.
+        std::uint8_t rotation = 0;
     };
 
     /// How a control paints itself in its current state. The painters below
@@ -297,7 +302,8 @@ namespace RoboRenderer
                          FontWeightKind weight,
                          const Color& color,
                          const TextRunStyle* runStyle = nullptr,
-                         bool vertical = false);
+                         bool vertical = false,
+                         TextOrientationKind orientation = TextOrientationKind::Mixed);
 
         const CompiledDocument& document;
         const LayoutEngine& layout;

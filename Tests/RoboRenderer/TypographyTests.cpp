@@ -1308,6 +1308,51 @@ ROBO_TEST(Typography, TabSizeScalesTheTabStop)
     ROBO_CHECK(std::abs(lengthStop - 40.0f) < 0.001f);
 }
 
+ROBO_TEST(Typography, ASoftHyphenIsABreakOpportunity)
+{
+    FontRegistry fonts;
+    TextLayout layout(fonts);
+
+    // "alpha" + U+00AD + "beta". The concatenation stops the hex escape from
+    // swallowing the 'b', which is a hex digit.
+    const char* text = "alpha\xC2\xAD" "beta";
+
+    TextRunStyle manual;
+    manual.breakPolicy.hyphens = HyphensKind::Manual;
+
+    const float narrowWidth = layout.Measure("alpha", 16.0f, FontWeightKind::Normal) + 1.0f;
+
+    std::vector<TextLine> lines;
+    layout.Wrap(text, 16.0f, FontWeightKind::Normal, narrowWidth, false, lines, &manual);
+
+    ROBO_CHECK(lines.size() >= 2);
+
+    if (lines.size() >= 2)
+    {
+        // The break lands at the soft hyphen, which is the sixth byte.
+        ROBO_CHECK_EQ(lines[0].endByte, static_cast<std::uint32_t>(5));
+    }
+
+    // `hyphens: none` ignores the soft hyphen, so the word is one line when it
+    // fits on one.
+    TextRunStyle none;
+    none.breakPolicy.hyphens = HyphensKind::None;
+
+    std::vector<TextLine> unbroken;
+    layout.Wrap(text, 16.0f, FontWeightKind::Normal, 1000.0f, false, unbroken, &none);
+    ROBO_CHECK_EQ(unbroken.size(), static_cast<std::size_t>(1));
+
+    // And the soft hyphen paints nothing: shaping skips it.
+    std::vector<PositionedGlyph> glyphs;
+    layout.ShapeRun(text, 0, static_cast<std::uint32_t>(std::char_traits<char>::length(text)), 16.0f,
+                    FontWeightKind::Normal, glyphs, &manual);
+
+    for (const PositionedGlyph& glyph : glyphs)
+    {
+        ROBO_CHECK(glyph.codepoint != 0x00AD);
+    }
+}
+
 ROBO_TEST(Typography, WritingModeAndOrientationReachTheRuntime)
 {
     RoboTools::CompiledApplication application;
@@ -1386,6 +1431,147 @@ ROBO_TEST(Typography, VerticalWritingModeLaysTextDownAColumn)
     {
         ROBO_CHECK(textCommand->bounds.height > textCommand->bounds.width);
     }
+
+    // `text-orientation` defaults to `mixed`, so the Latin letters are turned a
+    // quarter turn and the backend has to rotate them.
+    bool sawTurnedGlyph = false;
+
+    for (const PaintGlyph& glyph : window.renderer.Paint().List().Glyphs())
+    {
+        if (glyph.rotation != 0)
+        {
+            sawTurnedGlyph = true;
+        }
+    }
+
+    ROBO_CHECK(sawTurnedGlyph);
+}
+
+ROBO_TEST(Typography, UprightOrientationLeavesGlyphsStanding)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p id=\"vertical\">abcde</p>", application,
+        { { "app.css", "#vertical { writing-mode: vertical-rl; text-orientation: upright }" } }, error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 200.0f, 400.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex paragraph = FindElementById(document, "vertical");
+    ROBO_CHECK(paragraph != NoElement);
+
+    std::size_t glyphCount = 0;
+
+    for (const PaintGlyph& glyph : window.renderer.Paint().List().Glyphs())
+    {
+        ++glyphCount;
+        ROBO_CHECK_EQ(static_cast<int>(glyph.rotation), 0);
+    }
+
+    ROBO_CHECK(glyphCount > 0);
+}
+
+ROBO_TEST(Typography, AVerticalUnderlineRunsDownTheColumn)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p id=\"vertical\">abcde</p>", application,
+        { { "app.css", "#vertical { writing-mode: vertical-rl; text-decoration: underline }" } }, error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 200.0f, 400.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex paragraph = FindElementById(document, "vertical");
+    ROBO_CHECK(paragraph != NoElement);
+
+    // The underline is a bar along the column, so it is taller than it is wide.
+    bool sawVerticalBar = false;
+
+    for (const PaintCommand& command : window.renderer.Paint().List().Commands())
+    {
+        if (command.type == PaintCommandType::FillRect && command.element == paragraph &&
+            command.bounds.height > command.bounds.width)
+        {
+            sawVerticalBar = true;
+        }
+    }
+
+    ROBO_CHECK(sawVerticalBar);
+}
+
+ROBO_TEST(Typography, UnderlineMetricsComeFromTheFace)
+{
+    FontRegistry fonts;
+    TextLayout layout(fonts);
+
+    const float small = layout.UnderlineThickness(100.0f, FontWeightKind::Normal);
+    const float large = layout.UnderlineThickness(200.0f, FontWeightKind::Normal);
+
+    ROBO_CHECK(small > 0.0f);
+
+    // The thickness is a design-unit value scaled by the font size, so doubling
+    // the size doubles it; the only exception is both hitting the one-pixel
+    // floor, which a face with an unusually thin underline would.
+    const bool doubles = std::abs(large - small * 2.0f) < 0.05f;
+    ROBO_CHECK(doubles || (small == 1.0f && large == 1.0f));
+
+    // An underline sits below the baseline.
+    ROBO_CHECK(layout.UnderlinePosition(100.0f, FontWeightKind::Normal) < 0.0f);
+}
+
+ROBO_TEST(Typography, AVerticalFieldPaintsAHorizontalCaret)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<input id=\"field\" type=\"text\" value=\"hi\">", application,
+        { { "app.css", "#field { writing-mode: vertical-rl }" } }, error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 320.0f, 240.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex field = FindElementById(document, "field");
+    ROBO_CHECK(field != NoElement);
+
+    ROBO_CHECK(window.ClickElement(field).paintChanged);
+    ROBO_CHECK_EQ(window.renderer.State().Focused(), field);
+
+    // Repaint with the field focused, so the frame carries the caret.
+    ROBO_CHECK(window.Frame());
+
+    // The caret is a thin bar crossing the column, so it is wide and one pixel
+    // tall - the horizontal bar a vertical run needs, not the vertical bar a
+    // horizontal run draws.
+    bool sawHorizontalCaret = false;
+
+    for (const PaintCommand& command : window.renderer.Paint().List().Commands())
+    {
+        if (command.type != PaintCommandType::FillRect || command.element != field)
+        {
+            continue;
+        }
+
+        if (command.bounds.height <= 1.5f && command.bounds.width >= 4.0f && command.bounds.width <= 40.0f)
+        {
+            sawHorizontalCaret = true;
+        }
+    }
+
+    ROBO_CHECK(sawHorizontalCaret);
 }
 
 

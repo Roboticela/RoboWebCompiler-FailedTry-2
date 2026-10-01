@@ -803,7 +803,8 @@ namespace RoboRenderer
                                   FontWeightKind weight,
                                   const Color& color,
                                   const TextRunStyle* runStyle,
-                                  bool vertical)
+                                  bool vertical,
+                                  TextOrientationKind orientation)
     {
         if (text == nullptr || fontSize <= 0.0f || startByte >= endByte)
         {
@@ -872,6 +873,15 @@ namespace RoboRenderer
                 {
                     glyph.x = x + positioned.xOffset;
                     glyph.y = pen + positioned.yOffset + fontSize * 0.75f;
+
+                    // `upright` stands every glyph up; `sideways` turns every
+                    // one; `mixed` stands up the wide scripts and turns the
+                    // rest, which is the rule the reference states.
+                    const bool standsUpright =
+                        orientation == TextOrientationKind::Upright ||
+                        (orientation == TextOrientationKind::Mixed &&
+                         IsCjkCodepoint(positioned.codepoint));
+                    glyph.rotation = standsUpright ? 0 : 1;
                 }
                 else
                 {
@@ -981,31 +991,41 @@ namespace RoboRenderer
             runStyle.kerning = line.kerning;
             runStyle.fontFeatures = line.fontFeatures;
 
-            // A selection paints under the glyphs; a caret paints over them. A
-            // vertical line skips both: the boxes they need are horizontal.
-            if (!line.vertical && field != nullptr && focused && field->HasSelection() && line.controlValue)
+            // A selection paints under the glyphs; a caret paints over them. The
+            // band a selection covers runs along the line, so a vertical line
+            // covers a band down its column instead.
+            if (field != nullptr && focused && field->HasSelection() && line.controlValue)
             {
                 const std::uint32_t startByte = TextLayout::ByteOffsetForCodepoint(text, field->SelectionStart());
                 const std::uint32_t endByte = TextLayout::ByteOffsetForCodepoint(text, field->SelectionEnd());
 
                 if (endByte > startByte)
                 {
-                    const float selectionX =
-                        lineX +
+                    const float selectionStart =
                         layout.Text().MeasurePrefix(text, startByte, line.fontSize, line.weight, &runStyle);
                     const float selectionEnd =
-                        lineX +
                         layout.Text().MeasurePrefix(text, endByte, line.fontSize, line.weight, &runStyle);
 
-                    list.Add(PaintCommandType::FillRect,
-                             Rect{ selectionX, top, selectionEnd - selectionX, line.lineHeight },
-                             index)
-                        .color = SelectionColor;
+                    if (line.vertical)
+                    {
+                        list.Add(PaintCommandType::FillRect,
+                                 Rect{ lineX, top + selectionStart, line.width, selectionEnd - selectionStart },
+                                 index)
+                            .color = SelectionColor;
+                    }
+                    else
+                    {
+                        list.Add(PaintCommandType::FillRect,
+                                 Rect{ lineX + selectionStart, top, selectionEnd - selectionStart,
+                                       line.lineHeight },
+                                 index)
+                            .color = SelectionColor;
+                    }
                 }
             }
 
             EmitTextRun(index, lineX, line.vertical ? top : baseline, text, line.startByte, line.endByte,
-                        line.fontSize, line.weight, color, &runStyle, line.vertical);
+                        line.fontSize, line.weight, color, &runStyle, line.vertical, line.textOrientation);
 
             // The decoration colour is the element's own colour unless the
             // document named one: that is what `currentColor` means, and the
@@ -1017,22 +1037,24 @@ namespace RoboRenderer
                 decoration |= TextDecorationUnderline;
             }
 
-            if (!line.vertical && decoration != 0u)
+            if (decoration != 0u)
             {
                 const Color decorationColor = line.hasDecorationColor ? line.decorationColor : color;
 
                 float thickness = std::max(1.0f, line.fontSize * 0.07f);
 
-                if (line.decorationThicknessKind == TextDecorationThicknessKind::Length &&
-                    line.decorationThickness > 0.0f)
+                if (line.decorationThicknessKind == TextDecorationThicknessKind::FromFont)
+                {
+                    // `from-font` reads the face's own `post` metrics rather than
+                    // a fraction of the font size.
+                    thickness = layout.Text().UnderlineThickness(line.fontSize, line.weight, &runStyle);
+                }
+                else if (line.decorationThicknessKind == TextDecorationThicknessKind::Length &&
+                         line.decorationThickness > 0.0f)
                 {
                     thickness = line.decorationThickness;
                 }
 
-                // `from-font` asks for the font's own underline thickness, which
-                // the font reader does not expose, so it keeps the derived
-                // default `auto` uses. The line is still drawn, at the width a
-                // reader expects.
                 const TextDecorationStyleKind decorationStyle = line.decorationStyle;
                 const float decorationWidth = std::max(line.width, 1.0f);
 
@@ -1107,35 +1129,151 @@ namespace RoboRenderer
                     }
                 };
 
+                // A vertical line's decoration runs down the column: the
+                // underline on the far side, the overline on the near side and a
+                // strikethrough through the middle. Which physical side each
+                // falls on is what the glyphs' quarter turn makes of the
+                // baseline's above and below.
+                const auto drawVerticalDecoration = [&](float barX, float barY, float length,
+                                                        float strokeThickness) {
+                    switch (decorationStyle)
+                    {
+                    case TextDecorationStyleKind::Solid:
+                        list.Add(PaintCommandType::FillRect, Rect{ barX, barY, strokeThickness, length }, index)
+                            .color = decorationColor;
+                        break;
+
+                    case TextDecorationStyleKind::Double:
+                    {
+                        const float bar = std::max(1.0f, strokeThickness * 0.4f);
+                        const float gap = std::max(1.0f, strokeThickness * 0.4f);
+                        list.Add(PaintCommandType::FillRect, Rect{ barX, barY, bar, length }, index).color =
+                            decorationColor;
+                        list.Add(PaintCommandType::FillRect, Rect{ barX + bar + gap, barY, bar, length }, index)
+                            .color = decorationColor;
+                        break;
+                    }
+
+                    case TextDecorationStyleKind::Dotted:
+                    {
+                        const float dot = std::max(1.0f, strokeThickness);
+                        const float step = dot * 2.0f;
+
+                        for (float offset = 0.0f; offset < length; offset += step)
+                        {
+                            const float piece = std::min(dot, length - offset);
+                            list.Add(PaintCommandType::FillRect, Rect{ barX, barY + offset, dot, piece }, index)
+                                .color = decorationColor;
+                        }
+                        break;
+                    }
+
+                    case TextDecorationStyleKind::Dashed:
+                    {
+                        const float dash = std::max(2.0f, strokeThickness * 3.0f);
+                        const float step = dash * 2.0f;
+
+                        for (float offset = 0.0f; offset < length; offset += step)
+                        {
+                            const float piece = std::min(dash, length - offset);
+                            list.Add(PaintCommandType::FillRect,
+                                     Rect{ barX, barY + offset, strokeThickness, piece }, index)
+                                .color = decorationColor;
+                        }
+                        break;
+                    }
+
+                    case TextDecorationStyleKind::Wavy:
+                    {
+                        const float amplitude = std::max(1.0f, strokeThickness);
+                        const float quarter = std::max(2.0f, strokeThickness * 2.0f);
+                        int phase = 0;
+
+                        for (float offset = 0.0f; offset < length; offset += quarter, ++phase)
+                        {
+                            const float level = ((phase / 2) % 2 == 0) ? 0.0f : amplitude;
+                            const float piece = std::min(quarter, length - offset);
+                            list.Add(PaintCommandType::FillRect,
+                                     Rect{ barX + level, barY + offset, strokeThickness, piece }, index)
+                                .color = decorationColor;
+                        }
+                        break;
+                    }
+                    }
+                };
+
+                const float columnLength = std::max(line.lineHeight, 1.0f);
+
                 if ((decoration & TextDecorationUnderline) != 0u)
                 {
-                    const float defaultOffset = std::max(1.0f, line.fontSize * 0.12f);
-                    const float underlineY = baseline + (line.underlineOffsetKind == TextUnderlineOffsetKind::Length
-                                                             ? line.underlineOffset
-                                                             : defaultOffset);
-                    drawDecoration(lineX, underlineY, decorationWidth, thickness);
+                    // `auto` puts the underline where the face says it goes,
+                    // which is the `post` table's position; a face without one
+                    // falls back to the fraction of the font size.
+                    const float fontOffset =
+                        -layout.Text().UnderlinePosition(line.fontSize, line.weight, &runStyle);
+                    const float defaultOffset =
+                        fontOffset > 0.0f ? fontOffset : std::max(1.0f, line.fontSize * 0.12f);
+                    const float underlineOffset =
+                        line.underlineOffsetKind == TextUnderlineOffsetKind::Length ? line.underlineOffset
+                                                                                    : defaultOffset;
+
+                    if (line.vertical)
+                    {
+                        const float barX = lineX + std::max(line.width - thickness, 0.0f) + underlineOffset;
+                        drawVerticalDecoration(barX, top, columnLength, thickness);
+                    }
+                    else
+                    {
+                        drawDecoration(lineX, baseline + underlineOffset, decorationWidth, thickness);
+                    }
                 }
 
                 if ((decoration & TextDecorationOverline) != 0u)
                 {
-                    drawDecoration(lineX, top, decorationWidth, thickness);
+                    if (line.vertical)
+                    {
+                        drawVerticalDecoration(lineX, top, columnLength, thickness);
+                    }
+                    else
+                    {
+                        drawDecoration(lineX, top, decorationWidth, thickness);
+                    }
                 }
 
                 if ((decoration & TextDecorationLineThrough) != 0u)
                 {
-                    drawDecoration(lineX, baseline - line.fontSize * 0.28f, decorationWidth, thickness);
+                    if (line.vertical)
+                    {
+                        const float barX = lineX + std::max(line.width * 0.5f - thickness * 0.5f, 0.0f);
+                        drawVerticalDecoration(barX, top, columnLength, thickness);
+                    }
+                    else
+                    {
+                        drawDecoration(lineX, baseline - line.fontSize * 0.28f, decorationWidth, thickness);
+                    }
                 }
             }
 
-            if (!line.vertical && field != nullptr && focused && caretVisible && !field->HasSelection())
+            if (field != nullptr && focused && caretVisible && !field->HasSelection())
             {
                 const std::uint32_t caretByte = TextLayout::ByteOffsetForCodepoint(text, field->caret);
-                const float caretX =
-                    lineX +
+                const float caretOffset =
                     layout.Text().MeasurePrefix(text, caretByte, line.fontSize, line.weight, &runStyle);
 
-                list.Add(PaintCommandType::FillRect, Rect{ caretX, top, 1.0f, line.lineHeight }, index).color =
-                    TextColor;
+                if (line.vertical)
+                {
+                    // The caret crosses the column at the offset the prefix
+                    // reaches, which is a horizontal bar in a vertical run.
+                    list.Add(PaintCommandType::FillRect,
+                             Rect{ lineX, top + caretOffset, std::max(line.width, 1.0f), 1.0f }, index)
+                        .color = TextColor;
+                }
+                else
+                {
+                    list.Add(PaintCommandType::FillRect,
+                             Rect{ lineX + caretOffset, top, 1.0f, line.lineHeight }, index)
+                        .color = TextColor;
+                }
             }
         });
     }

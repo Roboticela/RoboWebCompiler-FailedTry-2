@@ -210,7 +210,11 @@ The behaviours worth naming, because each one is a decision:
   available width, at real break opportunities, and the fragment's block's first
   and last line boxes are grown around them. `ResolveInlineBoxes()` then unions an
   element's own fragments back into its border box — that is what makes a `<span>`
-  a real, hit-testable, clickable box rather than a decoration.
+  a real, hit-testable, clickable box rather than a decoration. A text node beside
+  an inline element becomes a run of its own, and the compiler records that run as
+  inline content like the element between them: `text <code>x</code>.` is one
+  line, not three, because a run that claimed to be a block would end the line box
+  it sits on.
 * **Replaced elements.** An `<img>` takes its size from the declared attributes,
   then from the decoded resource's intrinsic size, then from the category default,
   and preserves the aspect ratio when only one dimension is known.
@@ -328,17 +332,23 @@ what `currentColor` means; a link's underline sets the same bit, so one field
 decides every decoration. `text-decoration-style` picks the line's shape — a solid
 bar, two bars, a run of dots, a run of dashes, or a staircase that stands in for a
 wave — `text-decoration-thickness` sets how thick it is (a length, or the derived
-default that `auto` and `from-font` use), and `text-underline-offset` moves the
-underline away from the baseline. Each is composed from the backend's rectangle
-command, which is the only primitive the paint list offers.
+default), and `text-underline-offset` moves the underline away from the baseline.
+`from-font` reads the face's own `post` table — its underline position and
+thickness — so the line is the width the designer chose; `auto` places the
+underline where that same table says it goes, falling back to a fraction of the
+font size for a face without one. Each style is composed from the backend's
+rectangle command, which is the only primitive the paint list offers.
 
 **Line breaking and justification.** `TextRunStyle::breakPolicy` carries the four
 properties that decide where a break opportunity exists — `overflow-wrap`,
-`word-break`, `line-break` and `hyphens` — and `TextLayout::Wrap` reads it rather
-than the CSS names. A space and a literal hyphen are opportunities as before;
+`word-break`, `line-break` and `hyphens` — and `TextLayout::Wrap` reads itrather than the CSS names. A space and a literal hyphen are opportunities as before;
 `break-all`, `anywhere` and `keep-all` change that answer, so a line rewinds to the
-last character that fit rather than to the last space. A word with no opportunity
-still breaks inside rather than overflowing. `tab-size` sets the width of a tab
+last character that fit rather than to the last space. A soft hyphen (U+00AD) is a
+break opportunity under `manual` and `auto` and is ignored under `none`; it is
+skipped by the shaper, so it never measures and never paints as a missing glyph. A
+word with no opportunity still breaks inside rather than overflowing. `hyphens:
+auto` does not yet add dictionary hyphenation — the runtime carries no pattern set —
+so it behaves as `manual` does for the soft hyphens a document contains. `tab-size` sets the width of a tab
 stop (a count of space advances, or a length as written). `text-align: justify`
 stretches every line but the last: the slack is divided between the spaces inside
 each fragment and the seams between fragments, and handed to the paint engine as
@@ -351,11 +361,16 @@ flow: the inline direction runs down a column and the block direction runs acros
 columns. `ArrangeVerticalInlineRun` lays the same items out down the column, each
 run's own measured advance becoming its extent, and emits a `LineLayout` with
 `vertical` set. The paint engine walks its pen down the column instead of along the
-baseline, so a glyph keeps its orientation — which is what `text-orientation:
-upright` asks for — and the columns advance right to left (`vertical-rl`, the
-initial vertical direction) or left to right (`vertical-lr`). Selection, caret and
-decoration boxes are horizontal primitives and are left undrawn on a vertical run
-rather than drawn wrong; sideways glyph rotation is not modelled.
+baseline, and the columns advance right to left (`vertical-rl`, the initial
+vertical direction) or left to right (`vertical-lr`). `text-orientation` decides how
+each glyph stands: `upright` leaves them standing, `sideways` turns every one a
+quarter turn, and `mixed` — the initial value — stands up the wide scripts and
+turns the rest, so a Latin letter under `mixed` is drawn rotated. The software
+backend rotates a glyph by walking the turned output box and mapping each pixel
+back into the bitmap, so the glyph keeps its shape rather than being transposed.
+Selection bands, carets and decoration bars follow the same axis: a selection is a
+band down the column, a caret a horizontal bar across it, and an underline a bar
+along its far side.
 
 **Italics.** `font-style: italic` selects an italic sibling of the chosen family
 when the host installs one and otherwise shears the upright design synthetically
@@ -540,11 +555,24 @@ modest share of a frame instead of the dominant one.
   whose path ends in `.svg`, is parsed by `SvgGlyph.cpp` and rasterized into RGBA
   by `SvgImage.cpp`; from that point on it is an image like any other, so sizing,
   the placeholder and load-once all apply unchanged. The rasterizer covers fills
-  (nonzero and evenodd), strokes and linear/radial gradients. Filters, masks,
-  patterns, clipping and `<text>` inside an SVG are outside it: an element it does
-  not understand contributes nothing rather than something wrong. `SvgImage.cpp`
-  supersamples 4×4 per pixel, which is why an SVG edge anti-aliases like every
-  other curve the backend draws.
+  (nonzero and evenodd), strokes and linear/radial gradients, and rounds a
+  `<rect rx ry>` corner with a real arc.
+
+  A stroke is expanded into the pieces one stroke of it covers — a rectangle per
+  segment, a wedge at every corner, and the cap the style asks for at each end of
+  an open contour. The pieces are wound alike on purpose: the nonzero rule *adds*
+  them, so a piece wound the other way from the ones it touches would cancel them
+  and leave a speckled ring where a solid outline belongs. A subpath `Z` never
+  closed stops at its last point rather than drawing a segment back to its first,
+  and `stroke-linecap` (`butt`, `round`, `square`), `stroke-linejoin` (`miter`,
+  `round`, `bevel`) and `stroke-miterlimit` are honoured. `stroke-width` is in
+  user units and is scaled with the geometry it outlines, so an outline in a
+  scaled `viewBox` strokes in proportion.
+
+  Filters, masks, patterns, clipping and `<text>` inside an SVG are outside it: an
+  element it does not understand contributes nothing rather than something wrong.
+  `SvgImage.cpp` supersamples 4×4 per pixel, which is why an SVG edge
+  anti-aliases like every other curve the backend draws.
 
 ---
 
