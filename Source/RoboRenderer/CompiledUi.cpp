@@ -326,6 +326,7 @@ namespace RoboRenderer
         case ResourceKind::StyleSheet: return "StyleSheet";
         case ResourceKind::Script: return "Script";
         case ResourceKind::Document: return "Document";
+        case ResourceKind::SvgMarkup: return "SvgMarkup";
         }
 
         return "None";
@@ -520,10 +521,12 @@ namespace RoboRenderer
 
         case ElementKind::CustomElement: return RenderCategory::CustomElement;
 
-        // SVG and MathML are separate source namespaces with their own native
-        // categories. They are outside the HTML-only runtime phase; the renderer
-        // reports every occurrence instead of pretending they rendered.
-        case ElementKind::SvgDocument:
+        // An `<svg>` element is drawn as an image: the compiler rasterizes its
+        // subtree through a resource, so it takes the same layout and paint path
+        // a `<img>` does. Its own children are that image's content and paint
+        // nothing on their own, so they are folded into None rather than laid
+        // out a second time.
+        case ElementKind::SvgDocument: return RenderCategory::Image;
         case ElementKind::SvgContainer:
         case ElementKind::SvgShape:
         case ElementKind::SvgPath:
@@ -541,6 +544,10 @@ namespace RoboRenderer
         case ElementKind::SvgAnimation:
         case ElementKind::SvgForeignObject:
         case ElementKind::SvgMetadata:
+            return RenderCategory::None;
+
+        // MathML is a separate source namespace outside the runtime's phase; the
+        // renderer reports every occurrence instead of pretending it rendered.
         case ElementKind::MathRoot:
         case ElementKind::MathToken:
         case ElementKind::MathOperator:

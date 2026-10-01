@@ -1613,6 +1613,15 @@ namespace
             options.output = (directory.empty() ? std::string() : directory + "\\") + "preview.png";
         }
 
+        // An image or stylesheet is named the way the document names it, so it
+        // is resolved beside the document unless the caller says otherwise. That
+        // is what a browser does and it is what makes a preview of a linked
+        // asset honest.
+        if (options.assetDirectory.empty())
+        {
+            options.assetDirectory = DirectoryOf(options.input);
+        }
+
         return true;
     }
 

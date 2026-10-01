@@ -23,6 +23,7 @@ rem Examples:
 rem     Tools\Watch.bat
 rem     Tools\Watch.bat Examples\Watch\index.html
 rem     Tools\Watch.bat Examples\Watch\typography.html
+rem     Tools\Watch.bat Examples\Watch\graphics.html
 rem     Tools\Watch.bat Examples\LandingPage\index.html Examples\LandingPage\app.css
 rem     Tools\Watch.bat Examples\LandingPage\index.html --width 1200 --height 800
 rem     Tools\Watch.bat Examples\Watch\index.html --auto
@@ -30,7 +31,9 @@ rem
 rem The stylesheet is the one the document links; failing that, `app.css` beside
 rem it. `Examples\Watch\typography.html` links `typography.css` and puts every
 rem font and text property on one page, which is what makes it the quickest way
-rem to see the text engine's own work.
+rem to see the text engine's own work. `Examples\Watch\graphics.html` links
+rem `graphics.css` and does the same for SVG, drawing an inline document and a
+rem linked `shape.svg`.
 rem
 rem The editor is the first one of `code`, `notepad++` and `notepad` that is on
 rem the path; set ROBO_EDITOR to choose another one.
@@ -185,6 +188,7 @@ echo Examples:
 echo     Tools\Watch.bat
 echo     Tools\Watch.bat Examples\LandingPage\index.html
 echo     Tools\Watch.bat Examples\Watch\typography.html
+echo     Tools\Watch.bat Examples\Watch\graphics.html
 echo     Tools\Watch.bat Examples\LandingPage\index.html --width 1200 --height 800
 echo     Tools\Watch.bat Examples\Watch\index.html --auto
 exit /b 2

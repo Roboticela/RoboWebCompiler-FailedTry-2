@@ -92,7 +92,7 @@ which component printed it:
 | Code                  | Meaning                                                        |
 | --------------------- | -------------------------------------------------------------- |
 | `RRE001` / `RRE002`   | invalid element id / invalid child or sibling index            |
-| `RRE003` / `RRE004`   | invalid resource id / category outside the HTML-only phase     |
+| `RRE003` / `RRE004`   | invalid resource id / category outside the HTML-only phase (MathML) |
 | `RRE005` / `RRE006`   | unusable layout data / graphics backend failure                |
 | `RRE007` / `RRE008`   | unknown event binding / invalid string index                   |
 | `RRE009` / `RRE010`   | invalid style index / resource failed to load or decode        |
@@ -174,6 +174,11 @@ name, and the namespace frontends restore the canonical spelling from the
 registry, so `viewBox`, `linearGradient` and `definitionURL` survive intact.
 `<foreignObject>` and `<annotation-xml encoding="text/html">` are HTML
 integration points that hand their subtree back to the HTML vocabulary.
+
+SVG is a *rendered* namespace, not just a validated one: an inline `<svg>` is
+serialized back to markup at compile time and a linked `.svg` is read at load
+time, and both are rasterized by the runtime into an image the backend draws.
+MathML remains recognised-and-lowered only, reported as `RRE004` per element.
 
 ---
 
@@ -270,6 +275,7 @@ successful build.
 Tools\Watch.bat
 Tools\Watch.bat Examples\Watch\index.html
 Tools\Watch.bat Examples\Watch\typography.html
+Tools\Watch.bat Examples\Watch\graphics.html
 Tools\Watch.bat Examples\LandingPage\index.html Examples\LandingPage\app.css
 ```
 
@@ -283,7 +289,13 @@ stylesheet, the one it links is used, and failing that `app.css` beside it.
 `Examples/Watch/typography.html` links `typography.css`, which puts the font and
 text properties on one page: a kerned and ligated line beside the same words with
 both switched off, an underline in its own colour, a strikethrough, and an RTL
-paragraph. It is the quickest way to watch the text engine work. The boxes compile when they are asked to:
+paragraph. It is the quickest way to watch the text engine work.
+`Examples/Watch/graphics.html` does the same for the SVG renderer: an inline
+`<svg>` with bars, a stroked circle and a polyline beside a linked `shape.svg`
+drawn at two sizes. A resource named by the document is resolved beside it, so
+neither example needs `--assets`.
+
+The boxes compile when they are asked to:
 `F5`, the Rebuild button, or `Ctrl+S`, which writes them back to the two files
 first. Typing never starts a build and a build never runs on the window thread,
 so a large document or a large paste cannot stall the window; a build in flight

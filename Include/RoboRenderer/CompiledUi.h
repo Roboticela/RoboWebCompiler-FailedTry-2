@@ -109,7 +109,11 @@ namespace RoboRenderer
         Font = 3,
         StyleSheet = 4,
         Script = 5,
-        Document = 6
+        Document = 6,
+        /// Inline SVG markup, carried in the string table rather than on disk.
+        /// An `<svg>` element has no file of its own, so the compiler serializes
+        /// its subtree and the runtime rasterizes it like a linked `.svg`.
+        SvgMarkup = 7
     };
 
     /// A statically discovered resource. Identical sources are deduplicated by

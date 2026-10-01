@@ -367,7 +367,11 @@ namespace RoboHTMLCompiler
             CompiledResource resource{};
             resource.source = interner.Intern(source);
             resource.kind = declared;
-            resource.inferredKind = ResourceKindFor(source);
+            // Inline SVG markup has no file extension to infer from; the
+            // compiler knows what it is and says so rather than guessing.
+            resource.inferredKind = declared == ResourceKind::SvgMarkup
+                                        ? ResourceKind::SvgMarkup
+                                        : ResourceKindFor(source);
             resource.declaredWidth = declaredWidth;
             resource.declaredHeight = declaredHeight;
             resource.hasAlternativeText = hasAlternativeText ? 1 : 0;
@@ -564,6 +568,44 @@ namespace RoboHTMLCompiler
                     if (element.auxiliaryText != 0)
                     {
                         element.flags |= ElementFlagHasAlternativeText;
+                    }
+
+                    if (node.kind == ElementKind::SvgDocument)
+                    {
+                        // An `<svg>` element has no file of its own: the compiler
+                        // serialized its subtree into the string table, and the
+                        // runtime rasterizes it through the image pipeline. Its
+                        // own width/height (or its viewBox) set the raster size.
+                        if (node.resource.source.empty())
+                        {
+                            break;
+                        }
+
+                        const double svgWidth = node.svgGeometry.width;
+                        const double svgHeight = node.svgGeometry.height;
+                        const std::uint32_t svgColumns =
+                            svgWidth > 0.0 ? static_cast<std::uint32_t>(svgWidth) : 0u;
+                        const std::uint32_t svgRows =
+                            svgHeight > 0.0 ? static_cast<std::uint32_t>(svgHeight) : 0u;
+
+                        element.resource = internResource(node.resource.source, ResourceKind::SvgMarkup,
+                                                          ClampCount(svgColumns), ClampCount(svgRows), false);
+
+                        if (element.resource != 0)
+                        {
+                            element.flags |= ElementFlagHasResource;
+                        }
+                        if (svgWidth > 0.0)
+                        {
+                            element.attributeWidth = static_cast<float>(svgWidth);
+                            element.flags |= ElementFlagHasWidth;
+                        }
+                        if (svgHeight > 0.0)
+                        {
+                            element.attributeHeight = static_cast<float>(svgHeight);
+                            element.flags |= ElementFlagHasHeight;
+                        }
+                        break;
                     }
 
                     const std::uint32_t width = node.layout.hasWidth ? node.layout.width : 0u;

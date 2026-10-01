@@ -1157,6 +1157,11 @@ namespace RoboRenderer
         {
             std::vector<std::vector<SvgPoint>> contours;
             SvgPaint paint;
+            bool hasFill = true;
+            bool hasStroke = false;
+            float strokeWidth = 1.0f;
+            SvgPaint stroke;
+            bool evenOdd = false;
             std::string gradientId;
         };
 
@@ -1182,26 +1187,69 @@ namespace RoboRenderer
         }
     }
 
-    bool RenderSvgGlyph(const std::uint8_t* data, std::size_t size, std::vector<SvgShape>& out)
+    namespace
     {
-        out.clear();
-
-        if (data == nullptr || size == 0)
+        /// Reads the viewBox and the root width/height an `<svg>` start tag
+        /// carries, which is what turns user units into a raster size.
+        void ReadDocumentMetrics(const std::unordered_map<std::string, std::string>& attributes,
+                                 SvgDocumentMetrics& metrics)
         {
-            return false;
+            const std::string box = Attribute(attributes, "viewBox");
+            if (!box.empty())
+            {
+                std::size_t position = 0;
+                float values[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+                int count = 0;
+                while (count < 4 && ReadNumber(box, position, values[count]))
+                {
+                    ++count;
+                    SkipSeparators(box, position);
+                }
+
+                if (count == 4 && values[2] > 0.0f && values[3] > 0.0f)
+                {
+                    metrics.hasViewBox = true;
+                    metrics.viewX = values[0];
+                    metrics.viewY = values[1];
+                    metrics.viewWidth = values[2];
+                    metrics.viewHeight = values[3];
+                }
+            }
+
+            float width = 0.0f;
+            if (AttributeNumber(attributes, "width", width) && width > 0.0f)
+            {
+                metrics.width = width;
+            }
+
+            float height = 0.0f;
+            if (AttributeNumber(attributes, "height", height) && height > 0.0f)
+            {
+                metrics.height = height;
+            }
         }
 
-        const std::string document(reinterpret_cast<const char*>(data), size);
+        /// The one document walk. `flipY` is the only difference between an
+        /// `SVG ` glyph (font units, y up) and an ordinary SVG document (screen
+        /// units, y down).
+        bool ReadSvg(const std::string& document,
+                     bool flipY,
+                     std::vector<SvgShape>& out,
+                     SvgDocumentMetrics& metrics)
+        {
+            out.clear();
+            metrics = SvgDocumentMetrics{};
 
-        std::unordered_map<std::string, Gradient> gradients;
-        CollectGradients(document, gradients);
+            std::unordered_map<std::string, Gradient> gradients;
+            CollectGradients(document, gradients);
 
-        std::vector<PendingShape> pending;
-        std::vector<Matrix> stack;
-        Matrix current;
+            std::vector<PendingShape> pending;
+            std::vector<Matrix> stack;
+            Matrix current;
+            bool readMetrics = false;
 
-        std::size_t index = 0;
-        Token token;
+            std::size_t index = 0;
+            Token token;
 
         while (NextToken(document, index, token))
         {
@@ -1218,13 +1266,17 @@ namespace RoboRenderer
                     stack.pop_back();
                 }
                 continue;
-            }
+            }                std::unordered_map<std::string, std::string> attributes;
+                ParseAttributes(token.tag, attributes);
 
-            std::unordered_map<std::string, std::string> attributes;
-            ParseAttributes(token.tag, attributes);
+                if (token.name == "svg" && !readMetrics)
+                {
+                    ReadDocumentMetrics(attributes, metrics);
+                    readMetrics = true;
+                }
 
-            if (token.name == "g")
-            {
+                if (token.name == "g")
+                {
                 if (token.kind == Token::Kind::SelfClosing)
                 {
                     continue;
@@ -1283,6 +1335,18 @@ namespace RoboRenderer
                 pending.emplace_back();
                 AppendPolygon(pending.back().contours, Matrix{}, EllipsePoints(cx, cy, rx, ry));
             }
+            else if (token.name == "line")
+            {
+                const float x1 = read("x1", 0.0f);
+                const float y1 = read("y1", 0.0f);
+                const float x2 = read("x2", 0.0f);
+                const float y2 = read("y2", 0.0f);
+                pending.emplace_back();
+                // A line has no interior: it is only visible when stroked, which
+                // is what SVG says a missing fill means for a straight segment.
+                pending.back().hasFill = false;
+                pending.back().contours.push_back({ SvgPoint{ x1, y1 }, SvgPoint{ x2, y2 } });
+            }
             else if (token.name == "polygon" || token.name == "polyline")
             {
                 const std::string values = Attribute(attributes, "points");
@@ -1320,26 +1384,59 @@ namespace RoboRenderer
                 }
             }
 
-            const std::string fill = Attribute(attributes, "fill");
-            if (!fill.empty() && fill.size() > 5 && fill.compare(0, 5, "url(#") == 0)
+            if (token.name != "line")
             {
-                pending.back().gradientId = fill.substr(5, fill.size() - 6);
-            }
-            else if (!ParseSvgFill(fill.empty() ? "black" : fill.c_str(), pending.back().paint))
-            {
-                // `none` or an unreadable colour: the shape paints nothing, which
-                // is what SVG says a missing fill means for `none`.
-                pending.back().contours.clear();
+                const std::string fill = Attribute(attributes, "fill");
+                if (!fill.empty() && fill.size() > 5 && fill.compare(0, 5, "url(#") == 0)
+                {
+                    pending.back().gradientId = fill.substr(5, fill.size() - 6);
+                }
+                else if (ParseSvgFill(fill.empty() ? "black" : fill.c_str(), pending.back().paint))
+                {
+                    pending.back().hasFill = true;
+                }
+                else
+                {
+                    // `none` or an unreadable colour: no fill. The shape may
+                    // still be stroked, so its contours are kept.
+                    pending.back().hasFill = false;
+                }
+
+                // `nonzero` is the default; only `evenodd` changes the fill test.
+                pending.back().evenOdd = Attribute(attributes, "fill-rule") == "evenodd";
+
+                float fillOpacity = 1.0f;
+                if (AttributeNumber(attributes, "fill-opacity", fillOpacity))
+                {
+                    pending.back().paint.alpha *= fillOpacity;
+                }
             }
 
-            float opacity = 1.0f;
-            if (AttributeNumber(attributes, "fill-opacity", opacity))
+            // The stroke is independent of the fill, so `fill="none"` plus a
+            // stroke is a visible outline rather than nothing.
+            const std::string stroke = Attribute(attributes, "stroke");
+            if (!stroke.empty() && stroke != "none" && ParseSvgFill(stroke.c_str(), pending.back().stroke))
             {
-                pending.back().paint.alpha *= opacity;
+                pending.back().hasStroke = true;
+                pending.back().strokeWidth = std::max(0.0f, read("stroke-width", 1.0f));
+
+                float strokeOpacity = 1.0f;
+                if (AttributeNumber(attributes, "stroke-opacity", strokeOpacity))
+                {
+                    pending.back().stroke.alpha *= strokeOpacity;
+                }
+            }
+
+            float elementOpacity = 1.0f;
+            if (AttributeNumber(attributes, "opacity", elementOpacity))
+            {
+                pending.back().paint.alpha *= elementOpacity;
+                pending.back().stroke.alpha *= elementOpacity;
             }
         }
 
-        // Resolve gradients, drop empty shapes, and flip to font units (y up).
+        // Resolve gradients, drop undrawable shapes, and flip when the caller
+        // asked for font units.
         for (PendingShape& shape : pending)
         {
             if (shape.contours.empty())
@@ -1352,15 +1449,28 @@ namespace RoboRenderer
                 const auto found = gradients.find(shape.gradientId);
                 if (found == gradients.end())
                 {
-                    continue;
+                    shape.hasFill = false;
                 }
+                else
+                {
+                    float bx0 = 0.0f;
+                    float by0 = 0.0f;
+                    float bx1 = 0.0f;
+                    float by1 = 0.0f;
+                    ComputeBounds(shape.contours, bx0, by0, bx1, by1);
+                    shape.paint = ResolveGradient(found->second, bx0, by0, bx1, by1);
+                    shape.hasFill = true;
+                }
+            }
 
-                float bx0 = 0.0f;
-                float by0 = 0.0f;
-                float bx1 = 0.0f;
-                float by1 = 0.0f;
-                ComputeBounds(shape.contours, bx0, by0, bx1, by1);
-                shape.paint = ResolveGradient(found->second, bx0, by0, bx1, by1);
+            if (shape.hasStroke && shape.strokeWidth <= 0.0f)
+            {
+                shape.hasStroke = false;
+            }
+
+            if (!shape.hasFill && !shape.hasStroke)
+            {
+                continue;
             }
 
             SvgShape result;
@@ -1371,17 +1481,91 @@ namespace RoboRenderer
                 for (const SvgPoint& point : shape.contours[contour])
                 {
                     // SVG y grows downwards; font units grow upwards.
-                    result.contours[contour].push_back(SvgPoint{ point.x, -point.y });
+                    result.contours[contour].push_back(
+                        SvgPoint{ point.x, flipY ? -point.y : point.y });
                 }
             }
 
+            result.hasFill = shape.hasFill;
             result.paint = shape.paint;
-            result.paint.y0 = -result.paint.y0;
-            result.paint.y1 = -result.paint.y1;
+            result.hasStroke = shape.hasStroke;
+            result.strokeWidth = shape.strokeWidth;
+            result.stroke = shape.stroke;
+            result.evenOdd = shape.evenOdd;
+
+            if (flipY)
+            {
+                result.paint.y0 = -result.paint.y0;
+                result.paint.y1 = -result.paint.y1;
+                result.stroke.y0 = -result.stroke.y0;
+                result.stroke.y1 = -result.stroke.y1;
+            }
 
             out.push_back(std::move(result));
         }
 
         return !out.empty();
+        }
+    }
+
+    bool RenderSvgGlyph(const std::uint8_t* data, std::size_t size, std::vector<SvgShape>& out)
+    {
+        out.clear();
+
+        if (data == nullptr || size == 0)
+        {
+            return false;
+        }
+
+        const std::string document(reinterpret_cast<const char*>(data), size);
+
+        std::vector<SvgShape> shapes;
+        SvgDocumentMetrics metrics;
+        if (!ReadSvg(document, true, shapes, metrics))
+        {
+            return false;
+        }
+
+        // A glyph is filled outlines only: the reader's fill-less shapes (a
+        // `fill="none"` path, a stray `<line>`) contribute nothing without the
+        // stroke an `SVG ` glyph does not draw.
+        for (SvgShape& shape : shapes)
+        {
+            if (!shape.hasFill || shape.contours.empty())
+            {
+                continue;
+            }
+
+            shape.hasStroke = false;
+            out.push_back(std::move(shape));
+        }
+
+        return !out.empty();
+    }
+
+    bool RenderSvgDocument(const char* text, std::size_t size, std::vector<SvgShape>& out,
+                           SvgDocumentMetrics* metrics)
+    {
+        out.clear();
+
+        if (text == nullptr || size == 0)
+        {
+            return false;
+        }
+
+        const std::string document(text, size);
+        SvgDocumentMetrics read;
+
+        if (!ReadSvg(document, false, out, read))
+        {
+            return false;
+        }
+
+        if (metrics != nullptr)
+        {
+            *metrics = read;
+        }
+
+        return true;
     }
 }

@@ -23,6 +23,25 @@ namespace RoboHTMLCompiler
             stream << contents;
         }
 
+        /// One line of source comment out of arbitrary text. Inline SVG markup
+        /// carries newlines and quotes, which would otherwise end the comment.
+        std::string CommentText(const char* text)
+        {
+            if (text == nullptr)
+            {
+                return std::string();
+            }
+
+            std::string label;
+            for (const char* cursor = text; *cursor != '\0' && label.size() < 96; ++cursor)
+            {
+                const unsigned char character = static_cast<unsigned char>(*cursor);
+                label.push_back(character < 0x20 ? ' ' : *cursor);
+            }
+
+            return label;
+        }
+
         std::string FlagsExpression(std::uint64_t flags)
         {
             if (flags == 0)
@@ -559,7 +578,7 @@ namespace RoboHTMLCompiler
             {
                 const CompiledResource& resource = document.resources[index];
                 source << "            // #" << index << " " << RoboRenderer::ToString(resource.kind) << " \""
-                       << StringAt(document, resource.source) << "\"\n";
+                       << CommentText(StringAt(document, resource.source)) << "\"\n";
                 source << "            tables.resources[" << index << "].source = " << resource.source << ";\n";
                 source << "            tables.resources[" << index << "].kind = RoboRenderer::ResourceKind::"
                        << RoboRenderer::ToString(resource.kind) << ";\n";

@@ -225,7 +225,8 @@ namespace RoboRenderer
         void FillPolygons(const std::vector<std::vector<Vec2>>& polygons,
                           std::uint8_t* coverage,
                           int width,
-                          int height)
+                          int height,
+                          bool evenOdd = false)
         {
             constexpr int SubSamplesY = 4;
             constexpr int SubSamplesX = 4;
@@ -265,7 +266,9 @@ namespace RoboRenderer
 
                             const float t = (sampleY - a.y) / (b.y - a.y);
                             crossings.push_back(a.x + t * (b.x - a.x));
-                            directions.push_back(b.y > a.y ? 1 : -1);
+                            // Even-odd counts crossings, so every edge contributes
+                            // one; nonzero carries the edge's direction instead.
+                            directions.push_back(evenOdd ? 1 : (b.y > a.y ? 1 : -1));
                         }
                     }
 
@@ -1732,7 +1735,7 @@ namespace RoboRenderer
                             }
                             polygons.push_back(std::move(device));
                         }
-                        FillPolygons(polygons, coverage.data(), width, height);
+                        FillPolygons(polygons, coverage.data(), width, height, shape.evenOdd);
 
                         for (std::size_t pixel = 0; pixel < pixels; ++pixel)
                         {

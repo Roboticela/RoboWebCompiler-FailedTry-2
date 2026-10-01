@@ -1,0 +1,58 @@
+/* ---------------------------------------------------------------------------
+   SVG, in one page.
+
+   RoboWatch previews this beside its stylesheet. Both the inline <svg> and the
+   linked shape.svg are rasterized by the runtime and then drawn through the
+   ordinary image path, so what the preview shows is the SVG renderer itself.
+
+     Tools\Watch.bat Examples\Watch\graphics.html
+   --------------------------------------------------------------------------- */
+
+.page {
+  background-color: #f7f8fa;
+  color: #1f2430;
+  padding: 28px;
+}
+
+.column {
+  width: 560px;
+}
+
+.eyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.title {
+  font-size: 32px;
+  font-weight: bold;
+  line-height: 1.2;
+}
+
+.lede {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #3b4252;
+}
+
+.chart {
+  border: 1px solid #c7d2fe;
+  background-color: #ffffff;
+}
+
+.caption {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.badge {
+  border: 1px solid #d1d5db;
+  margin-right: 10px;
+}
+
+.note {
+  font-size: 13px;
+  color: #4b5563;
+}

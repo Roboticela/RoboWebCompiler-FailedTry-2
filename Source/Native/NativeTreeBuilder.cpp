@@ -8,6 +8,75 @@ namespace RoboHTMLCompiler
 {
     namespace
     {
+        /// Escapes the five characters markup cannot carry literally, so a
+        /// serialized attribute or text node reads back exactly as written.
+        void AppendEscaped(std::string& out, const std::string& value)
+        {
+            for (const char character : value)
+            {
+                switch (character)
+                {
+                case '&': out += "&amp;"; break;
+                case '<': out += "&lt;"; break;
+                case '>': out += "&gt;"; break;
+                case '\"': out += "&quot;"; break;
+                default: out.push_back(character); break;
+                }
+            }
+        }
+
+        void SerializeElement(std::string& out, const ElementNode& element);
+
+        void SerializeNode(std::string& out, const Node& node)
+        {
+            if (node.kind == NodeKind::Text)
+            {
+                AppendEscaped(out, static_cast<const TextNode&>(node).text);
+            }
+            else if (node.kind == NodeKind::Element)
+            {
+                SerializeElement(out, static_cast<const ElementNode&>(node));
+            }
+            // Comments and doctypes contribute nothing to a picture.
+        }
+
+        /// Writes an element subtree back out as markup. An `<svg>` element has
+        /// no rendering tree of its own in the runtime, so the compiler hands
+        /// the runtime the document rather than a set of boxes it cannot lay
+        /// out.
+        void SerializeElement(std::string& out, const ElementNode& element)
+        {
+            out.push_back('<');
+            out += element.sourceTag;
+
+            for (const AttributeNode& attribute : element.attributes)
+            {
+                out.push_back(' ');
+                out += attribute.name;
+                if (attribute.hasValue)
+                {
+                    out += "=\"";
+                    AppendEscaped(out, attribute.value);
+                    out.push_back('\"');
+                }
+            }
+
+            if (element.children.empty())
+            {
+                out += "/>";
+                return;
+            }
+
+            out.push_back('>');
+            for (const std::unique_ptr<Node>& child : element.children)
+            {
+                SerializeNode(out, *child);
+            }
+            out += "</";
+            out += element.sourceTag;
+            out.push_back('>');
+        }
+
         bool ToBoolean(const AttributeNode& attribute)
         {
             if (!attribute.hasValue)
@@ -550,6 +619,16 @@ namespace RoboHTMLCompiler
             }
 
             RouteAttribute(*native, *attributeDefinition, attribute);
+        }
+
+        if (native->kind == ElementKind::SvgDocument)
+        {
+            // An `<svg>` subtree is a picture, not a box tree: the runtime has no
+            // layout for its shapes. Serialize it back to markup so it reaches the
+            // frame through the image pipeline every other graphic does.
+            std::string markup;
+            SerializeElement(markup, element);
+            native->resource.source = std::move(markup);
         }
 
         if (!native->content.id.empty())

@@ -1,6 +1,14 @@
 #include "RoboRenderer/ResourceManager.h"
 
+#include "RoboRenderer/SvgImage.h"
+
+#include <algorithm>
+#include <cctype>
 #include <chrono>
+#include <cstring>
+#include <fstream>
+#include <iterator>
+#include <string>
 
 namespace RoboRenderer
 {
@@ -26,6 +34,53 @@ namespace RoboRenderer
             }
 
             return source.find("://") != std::string::npos;
+        }
+
+        /// True for a path a browser would treat as a vector image.
+        bool EndsWithSvg(const std::string& path)
+        {
+            if (path.size() < 4)
+            {
+                return false;
+            }
+
+            std::string tail = path.substr(path.size() - 4);
+            for (char& character : tail)
+            {
+                character = static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
+            }
+
+            return tail == ".svg";
+        }
+
+        /// A short, printable stand-in for inline markup, which is far too long
+        /// to put in a diagnostic unchanged.
+        std::string SourceLabel(const char* text, std::size_t length)
+        {
+            if (text == nullptr)
+            {
+                return std::string();
+            }
+
+            const std::size_t take = std::min<std::size_t>(length, 64);
+            std::string label(text, take);
+            if (length > take)
+            {
+                label += "...";
+            }
+            return label;
+        }
+
+        bool ReadTextFile(const std::string& path, std::string& out)
+        {
+            std::ifstream file(path, std::ios::binary);
+            if (!file)
+            {
+                return false;
+            }
+
+            out.assign(std::istreambuf_iterator<char>(file), std::istreambuf_iterator<char>());
+            return true;
         }
     }
 
@@ -87,28 +142,71 @@ namespace RoboRenderer
             return true;
         }
 
-        const std::string path = SourcePath(index);
+        const CompiledResource& resource = document->resources[index];
 
-        if (path.empty())
-        {
-            ResourceDiagnostic diagnostic;
-            diagnostic.index = index;
-            diagnostic.source = path;
-            diagnostic.message = "the compiled resource has no source";
-            diagnostics.push_back(std::move(diagnostic));
-
-            ++stats.failedCount;
-            return false;
-        }
-
+        // Inline SVG markup lives in the string table; a linked `.svg` is a file
+        // like any other. Both reach the frame through the same rasterizer.
         Image image;
-        const ImageDecodeResult result = DecodeImageFile(path.c_str(), image);
+        ImageDecodeResult result;
+        std::string sourceLabel;
+
+        if (resource.kind == ResourceKind::SvgMarkup)
+        {
+            const char* markup = StringAt(*document, resource.source);
+            const std::size_t length = markup != nullptr ? std::strlen(markup) : 0;
+            sourceLabel = SourceLabel(markup, length);
+            result = DecodeSvgDocument(markup != nullptr ? markup : "", length,
+                                       static_cast<float>(resource.declaredWidth),
+                                       static_cast<float>(resource.declaredHeight), image);
+        }
+        else
+        {
+            const std::string path = SourcePath(index);
+
+            if (path.empty())
+            {
+                ResourceDiagnostic diagnostic;
+                diagnostic.index = index;
+                diagnostic.source = path;
+                diagnostic.message = "the compiled resource has no source";
+                diagnostics.push_back(std::move(diagnostic));
+
+                ++stats.failedCount;
+                return false;
+            }
+
+            sourceLabel = path;
+
+            if (EndsWithSvg(path))
+            {
+                std::string text;
+                if (!ReadTextFile(path, text))
+                {
+                    ResourceDiagnostic diagnostic;
+                    diagnostic.index = index;
+                    diagnostic.source = path;
+                    diagnostic.message = "the SVG document could not be read";
+                    diagnostics.push_back(std::move(diagnostic));
+
+                    ++stats.failedCount;
+                    return false;
+                }
+
+                result = DecodeSvgDocument(text.c_str(), text.size(),
+                                           static_cast<float>(resource.declaredWidth),
+                                           static_cast<float>(resource.declaredHeight), image);
+            }
+            else
+            {
+                result = DecodeImageFile(path.c_str(), image);
+            }
+        }
 
         if (!result.success)
         {
             ResourceDiagnostic diagnostic;
             diagnostic.index = index;
-            diagnostic.source = path;
+            diagnostic.source = sourceLabel;
             diagnostic.message = result.message;
             diagnostics.push_back(std::move(diagnostic));
 

@@ -66,17 +66,47 @@ namespace RoboRenderer
         std::vector<Stop> stops;
     };
 
-    /// One filled shape: closed contours in font units, and its paint.
+    /// One filled shape: closed contours in the document's own units, its fill,
+    /// and an optional stroke. A shape with `hasFill == false` paints nothing
+    /// for a fill but may still be stroked (`<line>`, `fill="none"`).
     struct SvgShape
     {
         std::vector<std::vector<SvgPoint>> contours;
         SvgPaint paint;
+
+        bool hasFill = true;
+        bool hasStroke = false;
+        float strokeWidth = 1.0f;
+        SvgPaint stroke;
+        /// `fill-rule: evenodd` rather than the default nonzero winding.
+        bool evenOdd = false;
+    };
+
+    /// The document-level metrics an SVG file declares: its viewBox and its own
+    /// width/height, both in user units. Feeds the rasterizer, which has to turn
+    /// user units into pixels.
+    struct SvgDocumentMetrics
+    {
+        bool hasViewBox = false;
+        float viewX = 0.0f;
+        float viewY = 0.0f;
+        float viewWidth = 0.0f;
+        float viewHeight = 0.0f;
+        float width = 0.0f;
+        float height = 0.0f;
     };
 
     /// Renders an SVG glyph document into filled shapes. Returns false when the
     /// bytes are not a document this reader can draw at all, in which case the
     /// caller keeps the glyph's outline.
     bool RenderSvgGlyph(const std::uint8_t* data, std::size_t size, std::vector<SvgShape>& out);
+
+    /// Reads an ordinary SVG document into shapes in the document's user units,
+    /// y growing downwards as the format defines. Used to rasterize an inline
+    /// `<svg>` or a linked `.svg` image. Returns false when nothing drawable was
+    /// found.
+    bool RenderSvgDocument(const char* text, std::size_t size, std::vector<SvgShape>& out,
+                           SvgDocumentMetrics* metrics = nullptr);
 
     /// Applies a `fill` value the same way `RenderSvgGlyph` does, exposed so a
     /// test can pin the colour parsing without a font. Returns false for `none`
