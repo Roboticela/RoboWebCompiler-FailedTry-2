@@ -2142,11 +2142,14 @@ namespace RoboHTMLCompiler
                     static_cast<std::uint8_t>(OverflowWrapKind::BreakWord),
                     static_cast<std::uint8_t>(OverflowWrapKind::Anywhere)
                 };
-                static const char* const kWordBreak[] = { "normal", "break-all", "keep-all" };
+                static const char* const kWordBreak[] = { "normal", "break-all", "keep-all", "auto-phrase" };
                 static const std::uint8_t kWordBreakKinds[] = {
                     static_cast<std::uint8_t>(WordBreakKind::Normal),
                     static_cast<std::uint8_t>(WordBreakKind::BreakAll),
-                    static_cast<std::uint8_t>(WordBreakKind::KeepAll)
+                    static_cast<std::uint8_t>(WordBreakKind::KeepAll),
+                    // `auto-phrase` breaks between the words of a phrase, which is
+                    // where `normal` breaks too.
+                    static_cast<std::uint8_t>(WordBreakKind::Normal)
                 };
                 static const char* const kLineBreak[] = { "auto", "loose", "normal", "strict", "anywhere" };
                 static const std::uint8_t kLineBreakKinds[] = {
@@ -2155,12 +2158,16 @@ namespace RoboHTMLCompiler
                     static_cast<std::uint8_t>(LineBreakKind::Strict),
                     static_cast<std::uint8_t>(LineBreakKind::Anywhere)
                 };
-                static const char* const kTextJustify[] = { "auto", "none", "inter-word", "inter-character" };
+                static const char* const kTextJustify[] = { "auto", "none", "inter-word", "inter-character",
+                                                            "distribute" };
                 static const std::uint8_t kTextJustifyKinds[] = {
                     static_cast<std::uint8_t>(TextJustifyKind::Auto),
                     static_cast<std::uint8_t>(TextJustifyKind::None),
                     static_cast<std::uint8_t>(TextJustifyKind::InterWord),
-                    static_cast<std::uint8_t>(TextJustifyKind::InterCharacter)
+                    static_cast<std::uint8_t>(TextJustifyKind::InterCharacter),
+                    // `distribute` is the deprecated spelling of spreading the slack
+                    // between words.
+                    static_cast<std::uint8_t>(TextJustifyKind::InterWord)
                 };
 
                 std::uint8_t hyphens = static_cast<std::uint8_t>(out.hyphens);
@@ -2172,11 +2179,11 @@ namespace RoboHTMLCompiler
                 lowerKeyword(CSSPropertyId::Hyphens, kHyphens, kHyphensKinds, 3, StyleFlagHyphens, hyphens);
                 lowerKeyword(CSSPropertyId::OverflowWrap, kOverflowWrap, kOverflowWrapKinds, 3,
                              StyleFlagOverflowWrap, overflowWrap);
-                lowerKeyword(CSSPropertyId::WordBreak, kWordBreak, kWordBreakKinds, 3, StyleFlagWordBreak,
+                lowerKeyword(CSSPropertyId::WordBreak, kWordBreak, kWordBreakKinds, 4, StyleFlagWordBreak,
                              wordBreak);
                 lowerKeyword(CSSPropertyId::LineBreak, kLineBreak, kLineBreakKinds, 5, StyleFlagLineBreak,
                              lineBreak);
-                lowerKeyword(CSSPropertyId::TextJustify, kTextJustify, kTextJustifyKinds, 4,
+                lowerKeyword(CSSPropertyId::TextJustify, kTextJustify, kTextJustifyKinds, 5,
                              StyleFlagTextJustify, textJustify);
 
                 out.hyphens = static_cast<HyphensKind>(hyphens);
@@ -2258,11 +2265,15 @@ namespace RoboHTMLCompiler
                 {
                     WritingModeKind mode = WritingModeKind::HorizontalTb;
 
-                    if (writingMode->text == "horizontal-tb")
+                    // `lr`/`lr-tb` and `rl`/`tb`/`tb-rl` are the deprecated
+                    // spellings of the two older modes and compute to them.
+                    if (writingMode->text == "horizontal-tb" || writingMode->text == "lr" ||
+                        writingMode->text == "lr-tb")
                     {
                         mode = WritingModeKind::HorizontalTb;
                     }
-                    else if (writingMode->text == "vertical-rl")
+                    else if (writingMode->text == "vertical-rl" || writingMode->text == "rl" ||
+                             writingMode->text == "tb" || writingMode->text == "tb-rl")
                     {
                         mode = WritingModeKind::VerticalRl;
                     }
@@ -2289,11 +2300,14 @@ namespace RoboHTMLCompiler
                 {
                     TextOrientationKind kind = TextOrientationKind::Mixed;
 
+                    // `sideways-right` is the deprecated spelling of `sideways`,
+                    // and `use-glyph-orientation` the deprecated spelling of
+                    // `mixed`.
                     if (orientation->text == "upright")
                     {
                         kind = TextOrientationKind::Upright;
                     }
-                    else if (orientation->text == "sideways")
+                    else if (orientation->text == "sideways" || orientation->text == "sideways-right")
                     {
                         kind = TextOrientationKind::Sideways;
                     }
@@ -2346,8 +2360,12 @@ namespace RoboHTMLCompiler
                     return;
                 }
 
-                out.fontStyle = style->text == "italic" ? RoboRenderer::FontSlantKind::Italic
-                                                         : RoboRenderer::FontSlantKind::Upright;
+                // `oblique` is the other slanted face; the runtime has one slant
+                // per family, so both keywords select it.
+                const bool slanted = style->text == "italic" || style->text == "oblique";
+
+                out.fontStyle = slanted ? RoboRenderer::FontSlantKind::Italic
+                                        : RoboRenderer::FontSlantKind::Upright;
                 out.specified |= StyleFlagFontStyle;
             }
 
@@ -2496,6 +2514,9 @@ namespace RoboHTMLCompiler
                 }
                 else
                 {
+                    // The value parser canonicalises every longhand combination
+                    // (including `break-spaces`, `preserve` and `collapse`) to one
+                    // of the five classic keywords, so `normal` is what is left.
                     out.whiteSpace = RoboRenderer::WhiteSpaceKind::Normal;
                 }
 

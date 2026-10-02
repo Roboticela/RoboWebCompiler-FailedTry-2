@@ -947,3 +947,302 @@ ROBO_TEST(CssCoverage, TheNativeBaselineIsValidCss)
         ROBO_CHECK(ParsePropertyValue(*definition, declaration.value, parsed, declaration.location, diagnostics));
     }
 }
+
+// ---------------------------------------------------------------------------
+// The numeric functions
+//
+// Every value here is the one a browser computes for the same declaration; the
+// expected number is written beside the expression so the two can be read
+// together. A function is only implemented if it produces the browser's number,
+// which is why these assert the value and not merely that the declaration parsed.
+// ---------------------------------------------------------------------------
+
+namespace
+{
+    /// Parses one `width` declaration and reports whether it produced a value.
+    bool ParseWidthDeclaration(const char* declaration, CSSValue& value, CSSDiagnosticSink& diagnostics)
+    {
+        const std::vector<CSSDeclaration> declarations =
+            CSSParser(diagnostics).ParseDeclarationList("t.css", declaration);
+
+        if (declarations.empty())
+        {
+            return false;
+        }
+
+        const CSSPropertyDefinition* definition = CSSPropertyRegistry::Instance().Find(CSSPropertyId::Width);
+
+        if (definition == nullptr)
+        {
+            return false;
+        }
+
+        return ParsePropertyValue(*definition, declarations[0].value, value, declarations[0].location, diagnostics);
+    }
+}
+
+ROBO_TEST(CssValue, TheNumericFunctionsComputeTheBrowsersValue)
+{
+    struct Row
+    {
+        const char* declaration;
+        double expected;
+        CSSUnit unit;
+    };
+
+    // Each expression is written so that the function's own result is the value
+    // the property takes: the number-valued functions are multiplied by 1px and
+    // the angle-valued ones divided by 1deg, which is exactly the type algebra
+    // the reference defines.
+    static const Row rows[] = {
+        // calc(): arithmetic, and the absolute units it has to bring to one unit.
+        { "width: calc(100px - 20px)", 80.0, CSSUnit::Px },
+        { "width: calc(1in + 1px)", 97.0, CSSUnit::Px },
+        { "width: calc(1cm + 1mm)", 41.57480314960630, CSSUnit::Px },
+        { "width: calc(6px / 2px * 1px)", 3.0, CSSUnit::Px },
+        { "width: calc(2 * 3px)", 6.0, CSSUnit::Px },
+
+        // min(), max(), clamp().
+        { "width: min(2px, 3px)", 2.0, CSSUnit::Px },
+        { "width: max(2px, 5px)", 5.0, CSSUnit::Px },
+        { "width: clamp(1px, 10px, 5px)", 5.0, CSSUnit::Px },
+        { "width: clamp(1px, 0px, 5px)", 1.0, CSSUnit::Px },
+        { "width: max(1px, 2px, 3px)", 3.0, CSSUnit::Px },
+
+        // abs(), sign().
+        { "width: abs(-10px)", 10.0, CSSUnit::Px },
+        { "width: abs(10px)", 10.0, CSSUnit::Px },
+        { "width: calc(sign(-3) * 1px)", -1.0, CSSUnit::Px },
+        { "width: calc(sign(0) * 1px)", 0.0, CSSUnit::Px },
+        { "width: calc(sign(3) * 1px)", 1.0, CSSUnit::Px },
+
+        // sqrt(), hypot(), pow(), exp(), log().
+        { "width: sqrt(16px)", 4.0, CSSUnit::Px },
+        { "width: hypot(3px, 4px)", 5.0, CSSUnit::Px },
+        { "width: hypot(2px, 3px, 6px)", 7.0, CSSUnit::Px },
+        { "width: calc(pow(2, 10) * 1px)", 1024.0, CSSUnit::Px },
+        { "width: calc(exp(0) * 1px)", 1.0, CSSUnit::Px },
+        { "width: calc(log(8, 2) * 1px)", 3.0, CSSUnit::Px },
+        { "width: calc(log(1) * 1px)", 0.0, CSSUnit::Px },
+
+        // mod() and rem(): the one difference between them is the sign they keep.
+        { "width: mod(10px, 3px)", 1.0, CSSUnit::Px },
+        { "width: rem(10px, 3px)", 1.0, CSSUnit::Px },
+        { "width: mod(-10px, 3px)", 2.0, CSSUnit::Px },
+        { "width: rem(-10px, 3px)", -1.0, CSSUnit::Px },
+        { "width: mod(10px, -3px)", -2.0, CSSUnit::Px },
+        { "width: rem(10px, -3px)", 1.0, CSSUnit::Px },
+
+        // round(), with each of the four strategies the reference defines.
+        { "width: round(10.4px)", 10.0, CSSUnit::Px },
+        { "width: round(10.5px)", 11.0, CSSUnit::Px },
+        { "width: round(nearest, 10.5px)", 11.0, CSSUnit::Px },
+        { "width: round(up, 10.1px)", 11.0, CSSUnit::Px },
+        { "width: round(down, 10.9px)", 10.0, CSSUnit::Px },
+        { "width: round(to-zero, -10.9px)", -10.0, CSSUnit::Px },
+        { "width: round(nearest, 10px, 3px)", 9.0, CSSUnit::Px },
+        { "width: round(up, 10px, 3px)", 12.0, CSSUnit::Px },
+
+        // The trigonometric set. sin/cos/tan take an angle and give a number;
+        // asin/acos/atan/atan2 take numbers and give an angle.
+        { "width: calc(sin(30deg) * 10px)", 5.0, CSSUnit::Px },
+        { "width: calc(cos(60deg) * 10px)", 5.0, CSSUnit::Px },
+        { "width: calc(tan(45deg) * 10px)", 10.0, CSSUnit::Px },
+        { "width: calc(sin(0.25turn) * 10px)", 10.0, CSSUnit::Px },
+        { "width: calc(sin(3.141592653589793rad) * 1px)", 0.0, CSSUnit::Px },
+        { "width: calc(sin(100grad) * 10px)", 10.0, CSSUnit::Px },
+        { "width: calc(asin(0.5) / 1deg * 1px)", 30.0, CSSUnit::Px },
+        { "width: calc(acos(0.5) / 1deg * 1px)", 60.0, CSSUnit::Px },
+        { "width: calc(atan(1) / 1deg * 1px)", 45.0, CSSUnit::Px },
+        { "width: calc(atan2(1, 1) / 1deg * 1px)", 45.0, CSSUnit::Px },
+        { "width: calc(atan2(1, -1) / 1deg * 1px)", 135.0, CSSUnit::Px },
+
+        // Nesting: a function is an operand of another, which is what makes the
+        // whole family compose rather than only work at the top level.
+        { "width: calc(abs(-10px) + sqrt(16px))", 14.0, CSSUnit::Px },
+        { "width: min(hypot(3px, 4px), 6px)", 5.0, CSSUnit::Px },
+        { "width: calc(round(up, 1.5px) * 2 + hypot(2px, 2px))", 6.8284271247461903, CSSUnit::Px },
+        { "width: hypot(2px, round(up, 1.5px))", 2.8284271247461903, CSSUnit::Px }
+    };
+
+    for (const Row& row : rows)
+    {
+        CSSDiagnosticSink diagnostics;
+        CSSValue value;
+
+        const bool parsed = ParseWidthDeclaration(row.declaration, value, diagnostics);
+
+        if (!parsed)
+        {
+            RoboTest::Fail(std::string("did not parse: ") + row.declaration + "\n" + diagnostics.Format(),
+                           __FILE__, __LINE__);
+            continue;
+        }
+
+        if (value.kind != CSSValueKind::Dimension || value.unit != row.unit)
+        {
+            RoboTest::Fail(std::string("not a length in the expected unit: ") + row.declaration, __FILE__,
+                           __LINE__);
+            continue;
+        }
+
+        if (std::fabs(value.number - row.expected) > 1e-6)
+        {
+            RoboTest::Fail(std::string(row.declaration) + " gave " + std::to_string(value.number) +
+                               " where a browser gives " + std::to_string(row.expected),
+                           __FILE__, __LINE__);
+        }
+    }
+}
+
+ROBO_TEST(CssValue, AMathFunctionThatIsNotAValueIsReported)
+{
+    // Each of these is invalid CSS, and the compiler has to say so rather than
+    // pick a number: a length times a length is an area, `sqrt` has no real
+    // answer below zero, a trigonometric function needs an angle, `log` has no
+    // answer at zero, and `mod` has none with a zero divisor.
+    static const char* const invalid[] = {
+        "width: sqrt(-1px)",
+        "width: sin(30)",
+        "width: calc(log(0) * 1px)",
+        "width: mod(1px, 0px)",
+        "width: pow(2px, 2)",
+        "width: hypot()",
+        "width: cos(1px)",
+        "width: asin(2)",
+        "width: abs(1px, 2px)",
+        "width: round(1px, 2px, 3px)"
+    };
+
+    for (const char* declaration : invalid)
+    {
+        CSSDiagnosticSink diagnostics;
+        CSSValue value;
+
+        const bool parsed = ParseWidthDeclaration(declaration, value, diagnostics);
+
+        if (parsed)
+        {
+            RoboTest::Fail(std::string("accepted, but a browser refuses it: ") + declaration, __FILE__,
+                           __LINE__);
+        }
+    }
+}
+
+ROBO_TEST(CssValue, EveryCompiledPropertyStatesTheInitialValueTheReferenceDoes)
+{
+    // The initial value is what a property means when nothing sets it, so a wrong
+    // one is invisible until a document relies on it - `flex-shrink` that starts
+    // at 0, or a `background-color` that starts opaque. Every compiled property is
+    // listed with the initial value its reference page states.
+    struct Row
+    {
+        CSSPropertyId id;
+        const char* initial;
+    };
+
+    static const Row rows[] = {
+        { CSSPropertyId::All, "initial" },
+        { CSSPropertyId::Display, "inline" },
+        { CSSPropertyId::Width, "auto" },
+        { CSSPropertyId::Height, "auto" },
+        { CSSPropertyId::MinWidth, "0" },
+        { CSSPropertyId::MinHeight, "0" },
+        { CSSPropertyId::MaxWidth, "none" },
+        { CSSPropertyId::MaxHeight, "none" },
+        { CSSPropertyId::MarginTop, "0" },
+        { CSSPropertyId::MarginRight, "0" },
+        { CSSPropertyId::MarginBottom, "0" },
+        { CSSPropertyId::MarginLeft, "0" },
+        { CSSPropertyId::PaddingTop, "0" },
+        { CSSPropertyId::PaddingRight, "0" },
+        { CSSPropertyId::PaddingBottom, "0" },
+        { CSSPropertyId::PaddingLeft, "0" },
+        { CSSPropertyId::Position, "static" },
+        { CSSPropertyId::Top, "auto" },
+        { CSSPropertyId::Right, "auto" },
+        { CSSPropertyId::Bottom, "auto" },
+        { CSSPropertyId::Left, "auto" },
+        { CSSPropertyId::ZIndex, "auto" },
+        { CSSPropertyId::Float, "none" },
+        { CSSPropertyId::Clear, "none" },
+        { CSSPropertyId::FlexDirection, "row" },
+        { CSSPropertyId::JustifyContent, "normal" },
+        { CSSPropertyId::AlignItems, "normal" },
+        { CSSPropertyId::AlignSelf, "auto" },
+        { CSSPropertyId::FlexGrow, "0" },
+        { CSSPropertyId::FlexShrink, "1" },
+        { CSSPropertyId::FlexBasis, "auto" },
+        { CSSPropertyId::FlexOrder, "0" },
+        { CSSPropertyId::BorderTopWidth, "medium" },
+        { CSSPropertyId::BorderRightWidth, "medium" },
+        { CSSPropertyId::BorderBottomWidth, "medium" },
+        { CSSPropertyId::BorderLeftWidth, "medium" },
+        { CSSPropertyId::BorderTopStyle, "none" },
+        { CSSPropertyId::BorderRightStyle, "none" },
+        { CSSPropertyId::BorderBottomStyle, "none" },
+        { CSSPropertyId::BorderLeftStyle, "none" },
+        { CSSPropertyId::BorderTopColor, "currentcolor" },
+        { CSSPropertyId::BorderRightColor, "currentcolor" },
+        { CSSPropertyId::BorderBottomColor, "currentcolor" },
+        { CSSPropertyId::BorderLeftColor, "currentcolor" },
+        { CSSPropertyId::BorderRadius, "0" },
+        { CSSPropertyId::Color, "black" },
+        { CSSPropertyId::BackgroundColor, "transparent" },
+        { CSSPropertyId::FontSize, "medium" },
+        { CSSPropertyId::FontWeight, "normal" },
+        { CSSPropertyId::FontFamily, "serif" },
+        { CSSPropertyId::FontStyle, "normal" },
+        { CSSPropertyId::FontKerning, "auto" },
+        { CSSPropertyId::FontFeatureSettings, "normal" },
+        { CSSPropertyId::FontVariantLigatures, "normal" },
+        { CSSPropertyId::FontVariantCaps, "normal" },
+        { CSSPropertyId::FontVariantNumeric, "normal" },
+        { CSSPropertyId::FontVariantPosition, "normal" },
+        { CSSPropertyId::FontVariantEastAsian, "normal" },
+        { CSSPropertyId::LineHeight, "normal" },
+        { CSSPropertyId::LetterSpacing, "normal" },
+        { CSSPropertyId::WordSpacing, "normal" },
+        { CSSPropertyId::TextAlign, "start" },
+        { CSSPropertyId::TextAlignLast, "auto" },
+        { CSSPropertyId::TextJustify, "auto" },
+        { CSSPropertyId::TextIndent, "0" },
+        { CSSPropertyId::TextTransform, "none" },
+        { CSSPropertyId::TextDecorationLine, "none" },
+        { CSSPropertyId::TextDecorationColor, "currentcolor" },
+        { CSSPropertyId::TextDecorationStyle, "solid" },
+        { CSSPropertyId::TextDecorationThickness, "auto" },
+        { CSSPropertyId::TextUnderlineOffset, "auto" },
+        { CSSPropertyId::WhiteSpace, "normal" },
+        { CSSPropertyId::Direction, "ltr" },
+        { CSSPropertyId::WritingMode, "horizontal-tb" },
+        { CSSPropertyId::TextOrientation, "mixed" },
+        { CSSPropertyId::Hyphens, "manual" },
+        { CSSPropertyId::OverflowWrap, "normal" },
+        { CSSPropertyId::WordBreak, "normal" },
+        { CSSPropertyId::LineBreak, "auto" },
+        { CSSPropertyId::TabSize, "8" },
+        { CSSPropertyId::OverflowX, "visible" },
+        { CSSPropertyId::OverflowY, "visible" }
+    };
+
+    const CSSPropertyRegistry& registry = CSSPropertyRegistry::Instance();
+
+    for (const Row& row : rows)
+    {
+        const CSSPropertyDefinition* definition = registry.Find(row.id);
+        ROBO_CHECK(definition != nullptr);
+
+        if (definition == nullptr)
+        {
+            continue;
+        }
+
+        if (std::string(definition->initialValue) != row.initial)
+        {
+            RoboTest::Fail(std::string(definition->name) + " starts at '" + definition->initialValue +
+                               "' where the reference states '" + row.initial + "'",
+                           __FILE__, __LINE__);
+        }
+    }
+}

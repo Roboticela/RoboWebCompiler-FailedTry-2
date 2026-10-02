@@ -233,14 +233,23 @@ namespace RoboCSSCompiler
             { Id::FontSize, "font-size", Cat::Font, true, "medium", Grammar::FontSize, nullptr, true, true, true, true, true, "css-fonts-3" },
             { Id::FontWeight, "font-weight", Cat::Font, true, "normal", Grammar::FontWeight, nullptr, true, true, true, true, true, "css-fonts-3" },
             { Id::FontFamily, "font-family", Cat::Font, true, "serif", Grammar::FontFamily, nullptr, true, true, true, true, true, "css-fonts-3" },
-            { Id::FontStyle, "font-style", Cat::Font, true, "normal", Grammar::Keyword, "normal italic", true, true, true, true, true, "css-fonts-3" },
+            // `oblique` is accepted as the slanted face `italic` already is: the
+            // native text engine has one slanted face per family, so an oblique
+            // request resolves to it. The `oblique <angle>` form is not a keyword
+            // and is reported rather than silently squared away.
+            { Id::FontStyle, "font-style", Cat::Font, true, "normal", Grammar::Keyword, "normal italic oblique", true, true, true, true, true, "css-fonts-3" },
             { Id::LineHeight, "line-height", Cat::Font, true, "normal", Grammar::LineHeight, nullptr, true, true, true, true, true, "css-inline-3" },
             { Id::LetterSpacing, "letter-spacing", Cat::Text, true, "normal", Grammar::LengthOrNormal, nullptr, true, true, true, true, true, "css-text-3" },
             { Id::WordSpacing, "word-spacing", Cat::Text, true, "normal", Grammar::LengthOrNormal, nullptr, true, true, true, true, true, "css-text-3" },
             { Id::TextAlign, "text-align", Cat::Text, true, "start", Grammar::TextAlign, nullptr, false, true, true, false, true, "css-text-3" },
             { Id::TextIndent, "text-indent", Cat::Text, true, "0", Grammar::LengthPercentage, nullptr, true, true, true, true, true, "css-text-3" },
             { Id::TextTransform, "text-transform", Cat::Text, true, "none", Grammar::Keyword, "none uppercase lowercase capitalize", false, true, true, false, true, "css-text-3" },
-            { Id::WhiteSpace, "white-space", Cat::Text, true, "normal", Grammar::Keyword, "normal nowrap pre pre-wrap pre-line", true, true, true, true, true, "css-text-3" },
+            // `white-space` became a shorthand for `white-space-collapse` and
+            // `text-wrap-mode`, so the reference now names the longhand values too:
+            // `wrap` and `collapse` mean the initial collapsing-and-wrapping
+            // behaviour, `preserve` means keep the spaces and wrap, and
+            // `break-spaces` is that plus the preservation of trailing spaces.
+            { Id::WhiteSpace, "white-space", Cat::Text, true, "normal", Grammar::WhiteSpace, "normal nowrap pre pre-wrap pre-line", true, true, true, true, true, "css-text-3" },
             { Id::Direction, "direction", Cat::Text, true, "ltr", Grammar::Keyword, "ltr rtl", false, true, true, true, true, "css-writing-modes-3" },
             { Id::FontKerning, "font-kerning", Cat::Font, true, "auto", Grammar::Keyword, "auto normal none", false, true, true, false, true, "css-fonts-3" },
             { Id::FontFeatureSettings, "font-feature-settings", Cat::Font, true, "normal", Grammar::FontFeatureSettings, nullptr, false, true, true, false, true, "css-fonts-3" },
@@ -261,23 +270,33 @@ namespace RoboCSSCompiler
             { Id::TextDecorationLine, "text-decoration-line", Cat::Text, true, "none", Grammar::TextDecorationLine, "none underline overline line-through", false, true, true, false, true, "css-text-decor-3" },
             { Id::TextDecorationColor, "text-decoration-color", Cat::Text, true, "currentcolor", Grammar::Color, nullptr, false, true, false, false, true, "css-text-decor-3" },
             { Id::TextDecorationStyle, "text-decoration-style", Cat::Text, true, "solid", Grammar::Keyword, "solid double dotted dashed wavy", false, true, false, false, true, "css-text-decor-3" },
-            { Id::TextDecorationThickness, "text-decoration-thickness", Cat::Text, true, "auto", Grammar::TextDecorationThickness, "auto from-font", false, true, false, false, true, "css-text-decor-3" },
-            { Id::TextUnderlineOffset, "text-underline-offset", Cat::Text, true, "auto", Grammar::LengthPercentageOrAuto, nullptr, false, true, false, false, true, "css-text-decor-3" },
+            // These two moved on to css-text-decor-4; the reference states them
+            // there, so that is the module the citation names.
+            { Id::TextDecorationThickness, "text-decoration-thickness", Cat::Text, true, "auto", Grammar::TextDecorationThickness, "auto from-font", false, true, false, false, true, "css-text-decor-4" },
+            { Id::TextUnderlineOffset, "text-underline-offset", Cat::Text, true, "auto", Grammar::LengthPercentageOrAuto, nullptr, false, true, false, false, true, "css-text-decor-4" },
 
             // The line-breaking family: each controls where a line may break,
             // which is a property of the text layout rather than the paint.
             { Id::Hyphens, "hyphens", Cat::Text, true, "manual", Grammar::Keyword, "none manual auto", true, false, true, false, true, "css-text-3" },
             { Id::OverflowWrap, "overflow-wrap", Cat::Text, true, "normal", Grammar::Keyword, "normal break-word anywhere", true, false, true, false, true, "css-text-3" },
-            { Id::WordBreak, "word-break", Cat::Text, true, "normal", Grammar::Keyword, "normal break-all keep-all break-word", true, false, true, false, true, "css-text-3" },
+            // `auto-phrase` breaks between words of a phrase rather than inside
+            // them, which is the behaviour `normal` already has here.
+            { Id::WordBreak, "word-break", Cat::Text, true, "normal", Grammar::Keyword, "normal break-all keep-all break-word auto-phrase", true, false, true, false, true, "css-text-3" },
             { Id::LineBreak, "line-break", Cat::Text, true, "auto", Grammar::Keyword, "auto loose normal strict anywhere", true, false, true, false, true, "css-text-3" },
             { Id::TabSize, "tab-size", Cat::Text, true, "8", Grammar::TabSize, nullptr, true, false, true, false, true, "css-text-3" },
             { Id::TextAlignLast, "text-align-last", Cat::Text, true, "auto", Grammar::Keyword, "auto start end left right center justify", false, true, true, false, true, "css-text-3" },
-            { Id::TextJustify, "text-justify", Cat::Text, true, "auto", Grammar::Keyword, "auto none inter-word inter-character", false, true, true, false, true, "css-text-3" },
+            // `distribute` is the deprecated spelling of distributing the slack
+            // between words, which is what `inter-word` does.
+            { Id::TextJustify, "text-justify", Cat::Text, true, "auto", Grammar::Keyword, "auto none inter-word inter-character distribute", false, true, true, false, true, "css-text-3" },
 
             // The writing mode decides which axis a line runs along, so both are
             // layout properties that also affect how the text is painted.
-            { Id::WritingMode, "writing-mode", Cat::Text, true, "horizontal-tb", Grammar::Keyword, "horizontal-tb vertical-rl vertical-lr sideways-rl sideways-lr", true, true, true, true, true, "css-writing-modes-3" },
-            { Id::TextOrientation, "text-orientation", Cat::Text, true, "mixed", Grammar::Keyword, "mixed upright sideways", true, false, true, false, true, "css-writing-modes-3" },
+            // The two-letter and axis spellings are the reference's deprecated
+            // aliases for the two older writing modes, and `sideways-right` and
+            // `use-glyph-orientation` are the deprecated aliases for
+            // `sideways` and `mixed`.
+            { Id::WritingMode, "writing-mode", Cat::Text, true, "horizontal-tb", Grammar::Keyword, "horizontal-tb vertical-rl vertical-lr sideways-rl sideways-lr lr lr-tb rl tb tb-rl", true, true, true, true, true, "css-writing-modes-3" },
+            { Id::TextOrientation, "text-orientation", Cat::Text, true, "mixed", Grammar::Keyword, "mixed upright sideways sideways-right use-glyph-orientation", true, false, true, false, true, "css-writing-modes-3" },
 
             { Id::OverflowX, "overflow-x", Cat::Overflow, false, "visible", Grammar::Overflow, nullptr, true, true, false, true, true, "css-overflow-3" },
             { Id::OverflowY, "overflow-y", Cat::Overflow, false, "visible", Grammar::Overflow, nullptr, true, true, false, true, true, "css-overflow-3" }

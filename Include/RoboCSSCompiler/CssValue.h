@@ -228,7 +228,43 @@ namespace RoboCSSCompiler
         Divide,
         Min,
         Max,
-        Clamp
+        Clamp,
+
+        // The numeric functions. Each is a pure function of its operands, so a
+        // step names the function and how many of the stack's top slots it
+        // consumes (`operands`); the value it produces carries the type the
+        // reference gives it, which is what lets `hypot(3px, 4px)` be a length
+        // and `sin(30deg)` a plain number.
+        Abs,
+        Sign,
+        Sqrt,
+        Hypot,
+        Pow,
+        Log,
+        Exp,
+        Mod,
+        Rem,
+        Round,
+        Sin,
+        Cos,
+        Tan,
+        Asin,
+        Acos,
+        Atan,
+        Atan2
+    };
+
+    /// Which way `round()` breaks a tie, from the reference's three keywords.
+    enum class CSSRoundingStrategy : std::uint8_t
+    {
+        /// `nearest`, the initial value: the whole number closest to the value.
+        Nearest = 0,
+        /// `up`: the smallest whole number at or above the value.
+        Up,
+        /// `down`: the largest whole number at or below the value.
+        Down,
+        /// `to-zero`: the whole number closest to zero, which truncates.
+        ToZero
     };
 
     const char* ToString(CSSMathOperator op);
@@ -252,6 +288,11 @@ namespace RoboCSSCompiler
             CSSUnit unit = CSSUnit::None;
             /// True when the operand is a percentage of the reference.
             bool isPercentage = false;
+            /// How many operands a function step consumes from the stack. Zero
+            /// for the operators whose count is fixed by the operator itself.
+            std::uint8_t operands = 0;
+            /// The rounding strategy a `round()` step was written with.
+            CSSRoundingStrategy rounding = CSSRoundingStrategy::Nearest;
         };
 
         std::vector<Step> steps;

@@ -460,7 +460,9 @@ along its far side.
 
 **Italics.** `font-style: italic` selects an italic sibling of the chosen family
 when the host installs one and otherwise shears the upright design synthetically
-(`Glyph::slant`, applied by the rasterizer). A shear changes no advance, so
+(`Glyph::slant`, applied by the rasterizer). The CSS `oblique` keyword resolves to
+the same face: the runtime carries one slant per family, so the two are one
+request here. A shear changes no advance, so
 measurement is identical and only the painted outline leans. `TextRunStyle` carries
 the family, slant and direction a run was measured and painted with, and
 `FontRegistry::Face`/`FaceFor` take the slant, so layout and paint always resolve

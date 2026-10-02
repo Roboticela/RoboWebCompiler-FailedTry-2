@@ -770,3 +770,288 @@ ROBO_TEST(CssPipeline, ADecorationReachesTheTextItIsDrawnAround)
 
     ROBO_CHECK_EQ(decorated, static_cast<std::size_t>(4));
 }
+
+// ---------------------------------------------------------------------------
+// The values the reference names
+//
+// Each of these is a value an MDN property page documents that the compiler had
+// no answer for: it was refused as unknown, or it computed to the wrong thing.
+// They are checked at the compiled table, because a value that parses but lowers
+// to the wrong kind is not implemented, only accepted.
+// ---------------------------------------------------------------------------
+
+ROBO_TEST(CssPipeline, WhiteSpaceLonghandCombinationsComputeToTheClassicKeywords)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    // `white-space` is a shorthand for `white-space-collapse` and
+    // `text-wrap-mode`, so each of these is the pair the page gives, spelled the
+    // way the page spells it.
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"a\">a</div><div class=\"b\">b</div><div class=\"c\">c</div>"
+        "<div class=\"d\">d</div><div class=\"e\">e</div><div class=\"f\">f</div><div class=\"g\">g</div>",
+        application,
+        Sheet(".a { white-space: break-spaces }"
+              ".b { white-space: preserve }"
+              ".c { white-space: preserve nowrap }"
+              ".d { white-space: collapse }"
+              ".e { white-space: wrap }"
+              ".f { white-space: pre-wrap }"
+              ".g { white-space: pre-line }"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    const WhiteSpaceKind expected[7] = {
+        WhiteSpaceKind::PreWrap, // break-spaces: keep the spaces, wrap.
+        WhiteSpaceKind::PreWrap, // preserve: the same, said the longhand way.
+        WhiteSpaceKind::Pre,     // preserve nowrap: the classic `pre`.
+        WhiteSpaceKind::Normal,  // collapse: collapse and wrap, the initial pair.
+        WhiteSpaceKind::Normal,  // wrap: the wrap half on its own.
+        WhiteSpaceKind::PreWrap,
+        WhiteSpaceKind::PreLine
+    };
+
+    for (std::size_t ordinal = 0; ordinal < 7; ++ordinal)
+    {
+        const ElementIndex index = StyledElement(document, ordinal);
+        ROBO_CHECK(index != NoElement);
+
+        const CompiledStyle& style = document.styles[document.elements[index].styleIndex];
+        ROBO_CHECK(IsSpecified(style.specified, StyleFlagWhiteSpace));
+        ROBO_CHECK(style.whiteSpace == expected[ordinal]);
+    }
+}
+
+ROBO_TEST(CssPipeline, ObliqueIsTheOtherSlantedFontStyle)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources("<div class=\"slant\">slant</div>",
+                                      application,
+                                      Sheet(".slant { font-style: oblique }"),
+                                      error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+    const ElementIndex index = StyledElement(document);
+    ROBO_CHECK(index != NoElement);
+
+    const CompiledStyle& style = document.styles[document.elements[index].styleIndex];
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagFontStyle));
+    ROBO_CHECK(style.fontStyle == FontSlantKind::Italic);
+}
+
+ROBO_TEST(CssPipeline, TheDeprecatedWritingModeAndTextOrientationSpellingsComputeToTheirModernValues)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"a\">a</div><div class=\"b\">b</div>"
+        "<div class=\"c\">c</div><div class=\"d\">d</div>",
+        application,
+        Sheet(".a { writing-mode: tb-rl }"
+              ".b { writing-mode: lr-tb }"
+              ".c { text-orientation: sideways-right }"
+              ".d { text-orientation: use-glyph-orientation }"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    const ElementIndex verticalRl = StyledElement(document, 0);
+    const ElementIndex horizontalTb = StyledElement(document, 1);
+    const ElementIndex sideways = StyledElement(document, 2);
+    const ElementIndex mixed = StyledElement(document, 3);
+
+    ROBO_CHECK(verticalRl != NoElement);
+    ROBO_CHECK(horizontalTb != NoElement);
+    ROBO_CHECK(sideways != NoElement);
+    ROBO_CHECK(mixed != NoElement);
+
+    ROBO_CHECK(document.styles[document.elements[verticalRl].styleIndex].writingMode ==
+               WritingModeKind::VerticalRl);
+    ROBO_CHECK(document.styles[document.elements[horizontalTb].styleIndex].writingMode ==
+               WritingModeKind::HorizontalTb);
+    ROBO_CHECK(document.styles[document.elements[sideways].styleIndex].textOrientation ==
+               TextOrientationKind::Sideways);
+    ROBO_CHECK(document.styles[document.elements[mixed].styleIndex].textOrientation ==
+               TextOrientationKind::Mixed);
+}
+
+ROBO_TEST(CssPipeline, OverflowOverlayComputesToAuto)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources("<div class=\"scroller\">text</div>",
+                                      application,
+                                      Sheet(".scroller { overflow: overlay }"),
+                                      error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+    const ElementIndex index = StyledElement(document);
+    ROBO_CHECK(index != NoElement);
+
+    const CompiledStyle& style = document.styles[document.elements[index].styleIndex];
+
+    // `overlay` is the deprecated spelling of `auto`, which is a scroll
+    // container that reveals its scrollbars only when they are needed.
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagOverflowX));
+    ROBO_CHECK(style.overflowX == OverflowKind::Scroll);
+    ROBO_CHECK(style.overflowY == OverflowKind::Scroll);
+}
+
+ROBO_TEST(CssPipeline, WordBreakAutoPhraseAndTextJustifyDistributeAreAccepted)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources("<div class=\"a\">a b</div><div class=\"b\">a b</div>",
+                                      application,
+                                      Sheet(".a { word-break: auto-phrase }"
+                                            ".b { text-align: justify; text-justify: distribute }"),
+                                      error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    const ElementIndex phrase = StyledElement(document, 0);
+    const ElementIndex distribute = StyledElement(document, 1);
+    ROBO_CHECK(phrase != NoElement);
+    ROBO_CHECK(distribute != NoElement);
+
+    const CompiledStyle& phraseStyle = document.styles[document.elements[phrase].styleIndex];
+    ROBO_CHECK(IsSpecified(phraseStyle.specified, StyleFlagWordBreak));
+    ROBO_CHECK(phraseStyle.wordBreak == WordBreakKind::Normal);
+
+    const CompiledStyle& distributeStyle = document.styles[document.elements[distribute].styleIndex];
+    ROBO_CHECK(IsSpecified(distributeStyle.specified, StyleFlagTextJustify));
+    ROBO_CHECK(distributeStyle.textJustify == TextJustifyKind::InterWord);
+}
+
+ROBO_TEST(CssPipeline, TheNumericFunctionsReachTheCompiledStyle)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    // A function that folds during compilation is a plain length by the time the
+    // style is compiled, and the layout engine never sees it. The nested call is
+    // the point: a function inside a function used to truncate the declaration.
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"box\">x</div>",
+        application,
+        Sheet(".box { width: calc(round(up, 1.5px) * 2 + hypot(2px, 2px)); "
+              "height: min(20px, 30px); "
+              "padding-left: clamp(1px, 0px, 5px); "
+              "margin-top: calc(abs(-4px)); "
+              "border-top-width: sqrt(9px) }"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+    const ElementIndex index = StyledElement(document);
+    ROBO_CHECK(index != NoElement);
+
+    if (index == NoElement)
+    {
+        return;
+    }
+
+    const CompiledStyle& style = document.styles[document.elements[index].styleIndex];
+
+    // 2px * 2 + sqrt(8)px, which is the value a browser computes.
+    ROBO_CHECK(style.width.type == LayoutValueType::Fixed);
+    ROBO_CHECK(std::fabs(style.width.value - (4.0f + 2.8284271f)) < 0.001f);
+    ROBO_CHECK(style.height.type == LayoutValueType::Fixed);
+    ROBO_CHECK(std::fabs(style.height.value - 20.0f) < 0.001f);
+    ROBO_CHECK(std::fabs(style.padding.left - 1.0f) < 0.001f);
+    ROBO_CHECK(std::fabs(style.margin.top - 4.0f) < 0.001f);
+    ROBO_CHECK(std::fabs(style.borderWidth.top - 3.0f) < 0.001f);
+}
+
+ROBO_TEST(CssPipeline, AMathExpressionTheRuntimeCannotFoldIsReportedNotApplied)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    // A length times a length is an area, which is not a value any property this
+    // compiler lowers takes. A browser refuses the declaration and the compiler
+    // reports it rather than storing a number nothing can resolve.
+    ROBO_CHECK(CompileBodyWithSources("<div class=\"box\">x</div>", application,
+                                      Sheet(".box { width: calc(2px * 3px); height: 12px }"), error));
+
+    const std::string diagnostics = application.Diagnostics();
+    ROBO_CHECK(diagnostics.find("width") != std::string::npos);
+
+    const CompiledDocument& document = application.Document();
+    const ElementIndex index = StyledElement(document);
+    ROBO_CHECK(index != NoElement);
+
+    if (index == NoElement)
+    {
+        return;
+    }
+
+    const CompiledStyle& style = document.styles[document.elements[index].styleIndex];
+
+    // The refused declaration set nothing, so the box keeps its automatic width,
+    // and the declaration beside it still applied.
+    ROBO_CHECK(style.width.type == LayoutValueType::Auto);
+    ROBO_CHECK(std::fabs(style.height.value - 12.0f) < 0.001f);
+}
+
+ROBO_TEST(CssPipeline, CustomPropertiesFeedTheFunctionsAndInherit)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    // A custom property is substituted before the value is parsed, so it can
+    // stand in for an operand of a function, a whole function, or a fallback -
+    // and it inherits from the element it is declared on, which is what makes
+    // `var()` a variable rather than an alias for a constant.
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"outer\" id=\"outer\"><div class=\"inner\" id=\"inner\">x</div></div>",
+        application,
+        Sheet(".outer { --gap: 8px; --twice: calc(var(--gap) * 2); width: var(--twice); "
+              "height: hypot(3px, 4px) }"
+              ".inner { width: calc(var(--gap) / 2); height: var(--missing, 7px) }"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    if (!error.empty())
+    {
+        RoboTest::Fail(error, __FILE__, __LINE__);
+        return;
+    }
+
+    const CompiledDocument& document = application.Document();
+
+    const ElementIndex outer = FindElementById(document, "outer");
+    const ElementIndex inner = FindElementById(document, "inner");
+
+    ROBO_CHECK(outer != NoElement);
+    ROBO_CHECK(inner != NoElement);
+
+    if (outer == NoElement || inner == NoElement)
+    {
+        return;
+    }
+
+    const CompiledStyle& outerStyle = document.styles[document.elements[outer].styleIndex];
+    const CompiledStyle& innerStyle = document.styles[document.elements[inner].styleIndex];
+
+    // `calc(var(--gap) * 2)` is 16px, and `hypot(3px, 4px)` is 5px.
+    ROBO_CHECK(std::fabs(outerStyle.width.value - 16.0f) < 0.001f);
+    ROBO_CHECK(std::fabs(outerStyle.height.value - 5.0f) < 0.001f);
+
+    // The child inherits `--gap`, and the fallback covers the name that is never
+    // declared anywhere.
+    ROBO_CHECK(std::fabs(innerStyle.width.value - 4.0f) < 0.001f);
+    ROBO_CHECK(std::fabs(innerStyle.height.value - 7.0f) < 0.001f);
+}

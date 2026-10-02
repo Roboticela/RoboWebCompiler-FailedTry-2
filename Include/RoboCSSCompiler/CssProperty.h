@@ -221,6 +221,11 @@ namespace RoboCSSCompiler
         Display,
         /// `visible | hidden | clip | scroll | auto`
         Overflow,
+        /// One or two keywords: the reference's five classic `white-space`
+        /// keywords, or a `white-space-collapse` value and/or a
+        /// `text-wrap-mode` value, which the parser canonicalises to one of the
+        /// five.
+        WhiteSpace,
         /// `auto | <integer>`
         ZIndex,
         /// A single `<number>`, as `flex-grow` and `flex-shrink` are written.

@@ -255,6 +255,33 @@ which a run walks down a column and the columns advance right to left
 (`vertical-rl`) or left to right (`vertical-lr`); `text-orientation` records how
 the glyphs stand in that column.
 
+**Verified against MDN.** `Reference/MDN` is a second reference, walked page by
+page: a property page is read, the property is compiled to match what it says,
+and the page is then deleted and recorded in `CompilerKnowledge/MdnReferenceAudit.json`
+so the reference shrinks while the record of what it stated does not. That leaves
+the pages for properties this compiler already had, which were implemented from
+the Working Group draft before MDN arrived and were never read against it. Those
+pages were read one by one, and every value, initial value, inherited flag and
+specification citation was checked against the compiler. The pass changed real
+things rather than confirming everything: `white-space` now takes the
+`white-space-collapse` and `text-wrap-mode` keywords the page gives it, with the
+parser canonicalising one or two of them to one of the five classic keywords, so
+`break-spaces` and `preserve` keep the spaces and wrap; `font-style` accepts
+`oblique`; `overflow` accepts the deprecated `overlay` and computes it to `auto`;
+`writing-mode` accepts `lr`, `lr-tb`, `rl`, `tb` and `tb-rl`; `text-orientation`
+accepts `sideways-right` and `use-glyph-orientation`; `word-break` accepts
+`auto-phrase`; and `text-justify` accepts the deprecated `distribute`.
+`text-decoration-thickness` and `text-underline-offset` now cite
+`css-text-decor-4`, which is the module the reference states them in, rather than
+`css-text-decor-3`. Each change is asserted in `Tests/Integration/CssPipelineTests.cpp`,
+and the 34 pages the pass verified are retired. A page is *not* retired while a
+value on it still has no answer, which is why `display` (its `grid`, `flow-root`,
+`list-item`, `table` and multi-keyword forms), `font-size` (`math`),
+`text-indent` (`each-line`, `hanging`), `text-transform` (`full-width`,
+`full-size-kana`, `math-auto`) and `text-decoration-line` (`spelling-error`,
+`grammar-error`) stay in the reference, along with the size and background
+shorthands whose `stretch`, `anchor-size()` and image values have no answer yet.
+
 `all` is the one property that is about the other properties rather than about
 the element: it takes a CSS-wide keyword and hands it to every property at once.
 It is expanded in the cascade, before inheritance is applied, so
@@ -263,6 +290,38 @@ initial value, and `all: inherit` copies the parent's computed value onto every
 property including the ones that do not inherit. It completed `css-cascade-3`,
 `css-cascade-4` and `css-cascade-5`, which are the first three reference modules
 this compiler has retired.
+
+**The numeric functions.** `calc()`, `min()`, `max()` and `clamp()` are the
+reference's arithmetic, and the rest of the family runs on the same machinery:
+`abs`, `sign`, `sqrt`, `hypot`, `pow`, `log`, `exp`, `mod`, `rem`, `round` and the
+trigonometric set (`sin`, `cos`, `tan`, `asin`, `acos`, `atan`, `atan2`). Each is a
+step in the compiled math program, and a program whose operands are all absolute
+folds at compile time into a number, a length or an angle, so `hypot(3px, 4px)` is
+`5px` before the runtime ever sees it. The type rules are the reference's rather
+than the arithmetic's: `sin(30deg)` is the number 0.5 and not a length, `atan2(1, 1)`
+is an angle, and `calc(2px * 3px)` is refused because a length times a length is an
+area no property here takes. `round()` carries the strategy it was written with,
+and absolute units are brought to one unit per family, so `calc(1in + 1px)` is 97px
+rather than 97 inches. Their pages, and `var()`'s, are retired in
+`MdnReferenceAudit.json`, which leaves the functions that need a document or a
+runtime rather than arithmetic — `anchor()`, `attr()`, `calc-size()`, `counter()`,
+`element()`, `env()`, `if()`, `progress()`, `random()`, `sibling-index()` and the
+image and grid functions — in the reference until they have an answer.
+
+**Custom properties.** `var()` substitutes before the value is parsed, so a
+reference can stand in for a whole value, for an operand of a function, or for a
+fallback (`var(--missing, 7px)`), and the substitution descends into a function's
+arguments instead of treating `calc(var(--gap) * 2)` as opaque. Custom properties
+inherit, and a chain longer than sixteen links is reported as a cycle.
+
+**Two parser bugs fell out of this work.** A function nested inside another function
+was never parsed: the block reader counted the nested block and then consumed it
+recursively, so `calc(abs(-1px))` lost the `)` that closes `calc(` and the whole
+declaration was reported as an unclosed function. And a `var()` inside a function
+was never substituted, so the most ordinary way of writing a variable in CSS —
+`calc(var(--gap) * 2)` — did not compile at all. Both are fixed, and both are
+asserted in `Tests/CSS/CssCascadeTests.cpp` and
+`Tests/Integration/CssPipelineTests.cpp`.
 
 Reported rather than pretended, each with the reason:
 
@@ -356,8 +415,9 @@ two identifiers. A carried property is given an id at or above
 without a compiled slot to index; its value grammar is `Dynamic`, the one grammar
 that judges nothing.
 
-The **81 compiled names** are the 65 longhand definitions and 16 shorthands the
-renderer can actually draw — the box, border, background, colour, font, text and
+The **81 compiled names** were the 65 longhand definitions and 16 shorthands the
+renderer could actually draw when the reference was consumed; the out-of-flow,
+float and flex slices have taken that to 99 — the box, border, background, colour, font, text and
 overflow families. The **640 carried names** are everything else, and carrying is
 not dropping: `opacity: 0.5` and `animation-name: fade` are valid CSS, so they are
 accepted, kept, inherited where the specification says they inherit, and printed

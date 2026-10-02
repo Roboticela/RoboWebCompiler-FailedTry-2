@@ -393,6 +393,25 @@ namespace RoboCSSCompiler
                 return false;
             }
 
+            // A function or a block keeps a reference in its arguments, which is
+            // where `calc(var(--gap) * 2)` and `rgb(var(--r) 0 0)` keep theirs,
+            // so the substitution descends into it rather than treating the
+            // whole function as opaque.
+            if (!value.children.empty())
+            {
+                CSSComponentValue container = value;
+                container.children.clear();
+
+                if (!SubstituteVariables(value.children, lookup, container.children, diagnostics, location,
+                                         unresolvedName, depth))
+                {
+                    return false;
+                }
+
+                output.push_back(std::move(container));
+                continue;
+            }
+
             output.push_back(value);
         }
 
@@ -863,13 +882,447 @@ namespace RoboCSSCompiler
 
     namespace
     {
+        /// One slot of the evaluator's stack: a number, a length or an angle.
+        /// `None` is a plain number, which is what the reference calls
+        /// `<number>`; a percentage never reaches a slot, because its reference
+        /// is a runtime fact.
+        struct MathSlot
+        {
+            double value = 0.0;
+            CSSUnit unit = CSSUnit::None;
+            CSSUnitFamily family = CSSUnitFamily::None;
+        };
+
+        /// The absolute units land on one canonical unit per family, so a sum of
+        /// mixed units is one number in one unit. `1in + 1px` is 97px, which is
+        /// what a browser computes; keeping the left operand's unit would make it
+        /// 97 inches.
+        void CanonicalizeAbsoluteUnit(double& value, CSSUnit& unit, CSSUnitFamily family)
+        {
+            if (family == CSSUnitFamily::Length)
+            {
+                value *= AbsoluteUnitScale(unit);
+                unit = CSSUnit::Px;
+            }
+            else if (family == CSSUnitFamily::Angle)
+            {
+                value *= AbsoluteUnitScale(unit);
+                unit = CSSUnit::Deg;
+            }
+        }
+
+        /// How many operands a step consumes. The operators with a fixed count
+        /// answer for themselves; the variadic functions carry their own count.
+        int MathStepOperands(const CSSMathProgram::Step& step)
+        {
+            switch (step.op)
+            {
+            case CSSMathOperator::Clamp:
+                return 3;
+            case CSSMathOperator::Add:
+            case CSSMathOperator::Subtract:
+            case CSSMathOperator::Multiply:
+            case CSSMathOperator::Divide:
+            case CSSMathOperator::Min:
+            case CSSMathOperator::Max:
+            case CSSMathOperator::Pow:
+            case CSSMathOperator::Mod:
+            case CSSMathOperator::Rem:
+            case CSSMathOperator::Atan2:
+                return 2;
+            case CSSMathOperator::Hypot:
+            case CSSMathOperator::Log:
+            case CSSMathOperator::Round:
+                return step.operands;
+            case CSSMathOperator::Abs:
+            case CSSMathOperator::Sign:
+            case CSSMathOperator::Sqrt:
+            case CSSMathOperator::Exp:
+            case CSSMathOperator::Sin:
+            case CSSMathOperator::Cos:
+            case CSSMathOperator::Tan:
+            case CSSMathOperator::Asin:
+            case CSSMathOperator::Acos:
+            case CSSMathOperator::Atan:
+                return 1;
+            default:
+                return 0;
+            }
+        }
+
+        /// True when every operand names the same family, which is what the
+        /// reference requires of a sum, a comparison and the functions that keep
+        /// their argument's type.
+        bool SameMathFamily(const MathSlot* operands, int count)
+        {
+            for (int index = 1; index < count; ++index)
+            {
+                if (operands[index].family != operands[0].family)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        const MathSlot* NumberOperand(const MathSlot* operands, int count)
+        {
+            for (int index = 0; index < count; ++index)
+            {
+                if (operands[index].family != CSSUnitFamily::None)
+                {
+                    return nullptr;
+                }
+            }
+
+            return operands;
+        }
+
+        /// The degrees of one angle operand.
+        bool AngleOperand(const MathSlot& slot, double& out)
+        {
+            if (slot.family != CSSUnitFamily::Angle)
+            {
+                return false;
+            }
+
+            out = slot.value;
+            return true;
+        }
+
+        /// The reference's rounding strategies, as `round()` applies them.
+        double ApplyRounding(CSSRoundingStrategy strategy, double value, double step)
+        {
+            if (step == 0.0)
+            {
+                return value;
+            }
+
+            const double quotient = value / step;
+
+            switch (strategy)
+            {
+            case CSSRoundingStrategy::Up:
+                return std::ceil(quotient) * step;
+            case CSSRoundingStrategy::Down:
+                return std::floor(quotient) * step;
+            case CSSRoundingStrategy::ToZero:
+                return std::trunc(quotient) * step;
+            case CSSRoundingStrategy::Nearest:
+            default:
+                // A tie goes to the larger of the two, which is what the
+                // reference calls "the closest whole number, with ties rounding
+                // up" - and for a negative value, "up" still means away from
+                // zero, so the same expression on the quotient answers both.
+                return std::floor(quotient + 0.5) * step;
+            }
+        }
+
+        /// Applies one operator or function to the operands the stack holds.
+        bool ApplyMathStep(const CSSMathProgram::Step& step,
+                           const MathSlot* operands,
+                           int count,
+                           MathSlot& out)
+        {
+            out = operands[0];
+
+            switch (step.op)
+            {
+            case CSSMathOperator::Add:
+                if (!SameMathFamily(operands, 2))
+                {
+                    return false;
+                }
+                out.value = operands[0].value + operands[1].value;
+                return true;
+
+            case CSSMathOperator::Subtract:
+                if (!SameMathFamily(operands, 2))
+                {
+                    return false;
+                }
+                out.value = operands[0].value - operands[1].value;
+                return true;
+
+            case CSSMathOperator::Multiply:
+                // One side has to be a plain number: `2px * 3px` would be an
+                // area, which no property this compiler lowers takes.
+                if (operands[0].family != CSSUnitFamily::None && operands[1].family != CSSUnitFamily::None)
+                {
+                    return false;
+                }
+                out = operands[0].family != CSSUnitFamily::None ? operands[0] : operands[1];
+                out.value = operands[0].value * operands[1].value;
+                return true;
+
+            case CSSMathOperator::Divide:
+            {
+                if (operands[1].value == 0.0)
+                {
+                    return false;
+                }
+
+                if (operands[1].family == CSSUnitFamily::None)
+                {
+                    // A number divides a typed value and keeps its type.
+                    out = operands[0];
+                }
+                else if (operands[0].family == operands[1].family)
+                {
+                    // A value divided by its own kind is a plain ratio.
+                    out = MathSlot{};
+                }
+                else
+                {
+                    return false;
+                }
+
+                out.value = operands[0].value / operands[1].value;
+                return true;
+            }
+
+            case CSSMathOperator::Min:
+            case CSSMathOperator::Max:
+            case CSSMathOperator::Clamp:
+            {
+                const int used = step.op == CSSMathOperator::Clamp ? 3 : 2;
+
+                if (!SameMathFamily(operands, used))
+                {
+                    return false;
+                }
+
+                if (step.op == CSSMathOperator::Clamp)
+                {
+                    out.value = Clamp(operands[1].value, operands[0].value, operands[2].value);
+                }
+                else if (step.op == CSSMathOperator::Min)
+                {
+                    out.value = std::min(operands[0].value, operands[1].value);
+                }
+                else
+                {
+                    out.value = std::max(operands[0].value, operands[1].value);
+                }
+
+                return true;
+            }
+
+            case CSSMathOperator::Abs:
+                out.value = std::fabs(operands[0].value);
+                return true;
+
+            case CSSMathOperator::Sign:
+            {
+                const double value = operands[0].value;
+                out = MathSlot{};
+                out.value = value > 0.0 ? 1.0 : (value < 0.0 ? -1.0 : 0.0);
+                return true;
+            }
+
+            case CSSMathOperator::Sqrt:
+                if (operands[0].value < 0.0)
+                {
+                    return false;
+                }
+                out.value = std::sqrt(operands[0].value);
+                return true;
+
+            case CSSMathOperator::Hypot:
+            {
+                if (!SameMathFamily(operands, count))
+                {
+                    return false;
+                }
+
+                double sum = 0.0;
+                for (int index = 0; index < count; ++index)
+                {
+                    sum += operands[index].value * operands[index].value;
+                }
+
+                out.value = std::sqrt(sum);
+                return true;
+            }
+
+            case CSSMathOperator::Pow:
+            {
+                if (NumberOperand(operands, 2) == nullptr)
+                {
+                    return false;
+                }
+
+                out = MathSlot{};
+                out.value = std::pow(operands[0].value, operands[1].value);
+
+                if (!std::isfinite(out.value))
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            case CSSMathOperator::Log:
+            {
+                if (NumberOperand(operands, count) == nullptr || operands[0].value <= 0.0)
+                {
+                    return false;
+                }
+
+                double result = std::log(operands[0].value);
+                if (count == 2)
+                {
+                    if (operands[1].value <= 0.0 || operands[1].value == 1.0)
+                    {
+                        return false;
+                    }
+
+                    result /= std::log(operands[1].value);
+                }
+
+                out = MathSlot{};
+                out.value = result;
+                return true;
+            }
+
+            case CSSMathOperator::Exp:
+                if (NumberOperand(operands, 1) == nullptr)
+                {
+                    return false;
+                }
+
+                out = MathSlot{};
+                out.value = std::exp(operands[0].value);
+
+                if (!std::isfinite(out.value))
+                {
+                    return false;
+                }
+
+                return true;
+
+            case CSSMathOperator::Mod:
+            case CSSMathOperator::Rem:
+            {
+                if (!SameMathFamily(operands, 2) || operands[1].value == 0.0)
+                {
+                    return false;
+                }
+
+                const double left = operands[0].value;
+                const double right = operands[1].value;
+                const double quotient = std::trunc(left / right);
+
+                // `mod` keeps the sign of the divisor, `rem` the sign of the
+                // dividend, which is the one difference between them.
+                out.value = step.op == CSSMathOperator::Rem ? left - quotient * right
+                                                            : left - std::floor(left / right) * right;
+                return true;
+            }
+
+            case CSSMathOperator::Round:
+            {
+                if (!SameMathFamily(operands, count))
+                {
+                    return false;
+                }
+
+                // One operand is the value; the optional second is the step.
+                out.value = ApplyRounding(step.rounding, operands[0].value,
+                                          count == 2 ? operands[1].value : 1.0);
+                return true;
+            }
+
+            case CSSMathOperator::Sin:
+            case CSSMathOperator::Cos:
+            case CSSMathOperator::Tan:
+            {
+                double degrees = 0.0;
+                if (!AngleOperand(operands[0], degrees))
+                {
+                    return false;
+                }
+
+                const double radians = degrees * Pi / 180.0;
+                double result = step.op == CSSMathOperator::Sin
+                                    ? std::sin(radians)
+                                    : (step.op == CSSMathOperator::Cos ? std::cos(radians)
+                                                                       : std::tan(radians));
+
+                // A right angle has no tangent, and the reference makes that
+                // value infinity rather than a number.
+                if (!std::isfinite(result))
+                {
+                    return false;
+                }
+
+                // The reference states these to the precision of a double.
+                if (std::fabs(result) < 1e-15)
+                {
+                    result = 0.0;
+                }
+
+                out = MathSlot{};
+                out.value = result;
+                return true;
+            }
+
+            case CSSMathOperator::Asin:
+            case CSSMathOperator::Acos:
+            case CSSMathOperator::Atan:
+            {
+                if (NumberOperand(operands, 1) == nullptr)
+                {
+                    return false;
+                }
+
+                const double value = operands[0].value;
+
+                if ((step.op == CSSMathOperator::Asin || step.op == CSSMathOperator::Acos) &&
+                    (value < -1.0 || value > 1.0))
+                {
+                    return false;
+                }
+
+                const double radians = step.op == CSSMathOperator::Asin
+                                           ? std::asin(value)
+                                           : (step.op == CSSMathOperator::Acos ? std::acos(value)
+                                                                               : std::atan(value));
+
+                out = MathSlot{};
+                out.unit = CSSUnit::Deg;
+                out.family = CSSUnitFamily::Angle;
+                out.value = radians * 180.0 / Pi;
+                return true;
+            }
+
+            case CSSMathOperator::Atan2:
+            {
+                if (NumberOperand(operands, 2) == nullptr)
+                {
+                    return false;
+                }
+
+                out = MathSlot{};
+                out.unit = CSSUnit::Deg;
+                out.family = CSSUnitFamily::Angle;
+                out.value = std::atan2(operands[0].value, operands[1].value) * 180.0 / Pi;
+                return true;
+            }
+
+            default:
+                return false;
+            }
+        }
+
         /// Evaluates a math program whose operands are all absolute. Returns
-        /// false when an operand needs a runtime context.
+        /// false when an operand needs a runtime context, or when the expression
+        /// is not a value CSS defines - a length times a length, say.
         bool EvaluateAbsoluteProgram(const CSSMathProgram& program, double& out, bool& isLength, CSSUnit& unit)
         {
-            double stack[4] = { 0.0, 0.0, 0.0, 0.0 };
-            bool lengthStack[4] = { false, false, false, false };
-            CSSUnit unitStack[4] = { CSSUnit::None, CSSUnit::None, CSSUnit::None, CSSUnit::None };
+            MathSlot stack[8];
             int depth = 0;
 
             for (const CSSMathProgram::Step& step : program.steps)
@@ -881,110 +1334,46 @@ namespace RoboCSSCompiler
                         return false;
                     }
 
-                    if (step.unit != CSSUnit::None)
+                    MathSlot slot;
+                    slot.value = step.value;
+                    slot.unit = step.unit;
+                    slot.family = step.unit == CSSUnit::None ? CSSUnitFamily::None : UnitFamily(step.unit);
+
+                    if (slot.family != CSSUnitFamily::None)
                     {
                         if (!IsAbsoluteUnit(step.unit))
                         {
                             return false;
                         }
 
-                        if (depth >= 4)
-                        {
-                            return false;
-                        }
-
-                        stack[depth] = step.value * AbsoluteUnitScale(step.unit);
-                        lengthStack[depth] = true;
-                        unitStack[depth] = step.unit;
-                        ++depth;
-                        continue;
+                        CanonicalizeAbsoluteUnit(slot.value, slot.unit, slot.family);
                     }
 
-                    if (depth >= 4)
+                    if (depth >= 8)
                     {
                         return false;
                     }
 
-                    stack[depth] = step.value;
-                    lengthStack[depth] = false;
-                    unitStack[depth] = CSSUnit::None;
-                    ++depth;
+                    stack[depth++] = slot;
                     continue;
                 }
 
-                if (step.op == CSSMathOperator::Min || step.op == CSSMathOperator::Max ||
-                    step.op == CSSMathOperator::Clamp)
-                {
-                    const int count = step.op == CSSMathOperator::Clamp ? 3 : 2;
-                    if (depth < count)
-                    {
-                        return false;
-                    }
+                const int operands = MathStepOperands(step);
 
-                    const double first = stack[depth - count];
-
-                    if (step.op == CSSMathOperator::Clamp)
-                    {
-                        const double lower = first;
-                        const double value = stack[depth - 2];
-                        const double upper = stack[depth - 1];
-                        stack[depth - count] = Clamp(value, lower, upper);
-                    }
-                    else
-                    {
-                        const double second = stack[depth - 1];
-                        stack[depth - count] = step.op == CSSMathOperator::Min ? std::min(first, second)
-                                                                               : std::max(first, second);
-                    }
-
-                    depth -= count - 1;
-                    continue;
-                }
-
-                if (depth < 2)
+                if (operands <= 0 || depth < operands)
                 {
                     return false;
                 }
 
-                const double left = stack[depth - 2];
-                const double right = stack[depth - 1];
-                const bool leftLength = lengthStack[depth - 2];
-                const bool rightLength = lengthStack[depth - 1];
+                MathSlot result;
 
-                double result = 0.0;
-
-                switch (step.op)
+                if (!ApplyMathStep(step, stack + depth - operands, operands, result))
                 {
-                case CSSMathOperator::Add:
-                case CSSMathOperator::Subtract:
-                    if (leftLength != rightLength)
-                    {
-                        return false;
-                    }
-
-                    result = step.op == CSSMathOperator::Add ? left + right : left - right;
-                    break;
-
-                case CSSMathOperator::Multiply:
-                    result = left * right;
-                    break;
-
-                case CSSMathOperator::Divide:
-                    if (right == 0.0)
-                    {
-                        return false;
-                    }
-                    result = left / right;
-                    break;
-
-                default:
                     return false;
                 }
 
-                stack[depth - 2] = result;
-                lengthStack[depth - 2] = leftLength || rightLength;
-                unitStack[depth - 2] = leftLength ? unitStack[depth - 2] : unitStack[depth - 1];
-                --depth;
+                depth -= operands - 1;
+                stack[depth - 1] = result;
             }
 
             if (depth != 1)
@@ -992,10 +1381,86 @@ namespace RoboCSSCompiler
                 return false;
             }
 
-            out = stack[0];
-            isLength = lengthStack[0];
-            unit = unitStack[0];
+            out = stack[0].value;
+            isLength = stack[0].family != CSSUnitFamily::None;
+            unit = stack[0].unit;
             return true;
+        }
+        /// The functions a `<calc-sum>` may contain: the ones this compiler can
+        /// give a value to. Everything else the reference defines (`env()`,
+        /// `attr()`, `anchor()`, `random()`, the tree counters) needs a document
+        /// or a runtime it does not have, and is reported where it is used.
+        bool IsMathFunctionName(const std::string& name)
+        {
+            static const char* const names[] = { "calc",  "min",   "max",    "clamp", "abs",
+                                                 "sign",  "sqrt",  "hypot",  "pow",   "log",
+                                                 "exp",   "mod",   "rem",    "round", "sin",
+                                                 "cos",   "tan",   "asin",   "acos",  "atan",
+                                                 "atan2" };
+
+            for (const char* candidate : names)
+            {
+                if (name == candidate)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// Pushes the operands a finished math value contributes. A function
+        /// whose operands are all absolute has already folded to a number or a
+        /// length by the time it gets here, so the two cases are one step and a
+        /// spliced program.
+        bool AppendMathValue(const CSSValue& value,
+                             CSSMathProgram& program,
+                             const CSSSourceLocation& location,
+                             CSSDiagnosticSink& diagnostics,
+                             const std::string& name)
+        {
+            if (value.kind == CSSValueKind::Math)
+            {
+                for (const CSSMathProgram::Step& step : value.math.steps)
+                {
+                    program.steps.push_back(step);
+                }
+
+                return true;
+            }
+
+            CSSMathProgram::Step step;
+
+            if (value.kind == CSSValueKind::Number)
+            {
+                step.value = value.number;
+                program.steps.push_back(step);
+                return true;
+            }
+
+            if (value.kind == CSSValueKind::Dimension)
+            {
+                step.value = value.number;
+                step.unit = value.unit;
+                program.steps.push_back(step);
+                return true;
+            }
+
+            if (value.kind == CSSValueKind::Percentage)
+            {
+                step.value = value.number;
+                step.isPercentage = true;
+                program.steps.push_back(step);
+                return true;
+            }
+
+            diagnostics.Error(CSSDiagnosticCode::InvalidFunction,
+                              location,
+                              name + "() is not a number, a length or an angle.",
+                              "a math function has to produce one of those to be an operand",
+                              "Check what the function was given.",
+                              name + "()");
+            return false;
         }
 
         /// Parses an operand of a math function.
@@ -1145,14 +1610,19 @@ namespace RoboCSSCompiler
             if (value.token.type == CSSTokenType::Dimension)
             {
                 CSSUnit unit = CSSUnit::None;
+                const CSSUnitFamily family =
+                    ParseUnit(value.token.unit, unit) ? UnitFamily(unit) : CSSUnitFamily::None;
 
-                if (!ParseUnit(value.token.unit, unit) || UnitFamily(unit) != CSSUnitFamily::Length)
+                // A math expression carries a length or an angle, which are the
+                // two families the functions this compiler implements accept. A
+                // time or a resolution has no property here to be a value of.
+                if (family != CSSUnitFamily::Length && family != CSSUnitFamily::Angle)
                 {
                     diagnostics.Error(CSSDiagnosticCode::InvalidUnit,
                                       location,
                                       "Unknown unit in a math expression: " + value.token.unit + ".",
                                       std::string("'") + value.token.raw + "'",
-                                      "Use a length unit.",
+                                      "Use a length unit, or an angle unit with a trigonometric function.",
                                       value.token.unit);
                     return false;
                 }
@@ -1178,6 +1648,20 @@ namespace RoboCSSCompiler
                 {
                     return ParseMathExpression(value, program, diagnostics, location);
                 }
+
+                // Every other function is an operand of its own: nesting one
+                // inside a calc() is the same as calling it there.
+                if (IsMathFunctionName(name))
+                {
+                    CSSValue inner;
+
+                    if (!ParseMathFunction(value, inner, location, diagnostics))
+                    {
+                        return false;
+                    }
+
+                    return AppendMathValue(inner, program, location, diagnostics, name);
+                }
             }
 
             // A var() has already been substituted by this point; anything else
@@ -1188,6 +1672,150 @@ namespace RoboCSSCompiler
                               value.token.raw.empty() ? value.token.text : value.token.raw,
                               "Use a number, a length or a percentage.",
                               "calc()");
+            return false;
+        }
+
+        /// Splits a function's comma-separated arguments, each one a program of
+        /// its own. The reference writes every function this way, so the split
+        /// is shared by all of them.
+        bool CollectMathArguments(const CSSComponentValue& functionValue,
+                                  std::vector<CSSMathProgram>& programs,
+                                  CSSDiagnosticSink& diagnostics,
+                                  const CSSSourceLocation& location)
+        {
+            CSSMathProgram current;
+
+            for (const CSSComponentValue& child : functionValue.children)
+            {
+                if (child.token.type == CSSTokenType::Whitespace)
+                {
+                    continue;
+                }
+
+                if (child.token.type == CSSTokenType::Comma)
+                {
+                    if (!current.steps.empty())
+                    {
+                        programs.push_back(current);
+                        current.steps.clear();
+                    }
+                    continue;
+                }
+
+                if (!ParseMathOperand(child, current, diagnostics, location))
+                {
+                    return false;
+                }
+            }
+
+            // An empty argument cannot be left out: `clamp(1px,,2px)` is not a
+            // value, and the count check below is what reports it.
+            if (!current.steps.empty())
+            {
+                programs.push_back(current);
+            }
+
+            return true;
+        }
+
+        /// The rounding strategy `round()` may be written with, as its first
+        /// argument.
+        bool ParseRoundingStrategy(const CSSComponentValue& value, CSSRoundingStrategy& out)
+        {
+            if (value.token.type != CSSTokenType::Ident)
+            {
+                return false;
+            }
+
+            const std::string name = LowerCase(value.token.text);
+
+            if (name == "nearest")
+            {
+                out = CSSRoundingStrategy::Nearest;
+                return true;
+            }
+            if (name == "up")
+            {
+                out = CSSRoundingStrategy::Up;
+                return true;
+            }
+            if (name == "down")
+            {
+                out = CSSRoundingStrategy::Down;
+                return true;
+            }
+            if (name == "to-zero")
+            {
+                out = CSSRoundingStrategy::ToZero;
+                return true;
+            }
+
+            return false;
+        }
+
+        /// Wraps a program in a comma-list of arguments and reduces it with the
+        /// function's operator, then gives the folded result a value.
+        bool FinishMathFunction(const std::string& name,
+                                const std::vector<CSSMathProgram>& programs,
+                                const CSSMathProgram::Step* functionStep,
+                                CSSValue& out,
+                                CSSDiagnosticSink& diagnostics,
+                                const CSSSourceLocation& location)
+        {
+            CSSMathProgram combined;
+
+            for (const CSSMathProgram& program : programs)
+            {
+                for (const CSSMathProgram::Step& step : program.steps)
+                {
+                    combined.steps.push_back(step);
+                }
+            }
+
+            if (functionStep != nullptr)
+            {
+                combined.steps.push_back(*functionStep);
+            }
+
+            double value = 0.0;
+            bool isLength = false;
+            CSSUnit unit = CSSUnit::None;
+
+            if (EvaluateAbsoluteProgram(combined, value, isLength, unit))
+            {
+                out = isLength ? CSSValue::MakeDimension(value, unit) : CSSValue::MakeNumber(value);
+                return true;
+            }
+
+            // One operand that the runtime has to resolve: the function is kept
+            // as an expression for the runtime, exactly as `calc()` is.
+            if (combined.steps.size() == 1)
+            {
+                const CSSMathProgram::Step& step = combined.steps.front();
+
+                if (step.isPercentage)
+                {
+                    out = CSSValue::MakePercentage(step.value);
+                    return true;
+                }
+
+                if (step.unit != CSSUnit::None)
+                {
+                    out = CSSValue::MakeDimension(step.value, step.unit);
+                    return true;
+                }
+
+                out = CSSValue::MakeNumber(step.value);
+                return true;
+            }
+
+            diagnostics.Warning(CSSDiagnosticCode::UnsupportedFeature,
+                                location,
+                                name + "() has no compile-time value.",
+                                "a compiled native length carries one dimension, and this expression mixes a "
+                                "relative operand with an absolute one",
+                                "Use one unit.",
+                                name + "()");
             return false;
         }
     }
@@ -1285,39 +1913,13 @@ namespace RoboCSSCompiler
 
         if (name == "min" || name == "max" || name == "clamp")
         {
-            const std::vector<const CSSComponentValue*> arguments = FunctionArguments(functionValue);
-
             // The arguments are separated by commas; build one program per
             // argument and reduce them with the operator.
             std::vector<CSSMathProgram> programs;
-            CSSMathProgram current;
 
-            for (const CSSComponentValue& child : functionValue.children)
+            if (!CollectMathArguments(functionValue, programs, diagnostics, location))
             {
-                if (child.token.type == CSSTokenType::Whitespace)
-                {
-                    continue;
-                }
-
-                if (child.token.type == CSSTokenType::Comma)
-                {
-                    if (!current.steps.empty())
-                    {
-                        programs.push_back(current);
-                        current.steps.clear();
-                    }
-                    continue;
-                }
-
-                if (!ParseMathOperand(child, current, diagnostics, location))
-                {
-                    return false;
-                }
-            }
-
-            if (!current.steps.empty())
-            {
-                programs.push_back(current);
+                return false;
             }
 
             const std::size_t required = name == "clamp" ? 3 : 2;
@@ -1333,6 +1935,16 @@ namespace RoboCSSCompiler
                 return false;
             }
 
+            if (name == "clamp")
+            {
+                CSSMathProgram::Step functionStep;
+                functionStep.op = CSSMathOperator::Clamp;
+                return FinishMathFunction(name, programs, &functionStep, out, diagnostics, location);
+            }
+
+            // `min` and `max` take as many arguments as they are given; the
+            // program reduces them pairwise, which is the same value and keeps
+            // the operator at a fixed arity.
             CSSMathProgram combined = programs.front();
 
             for (std::size_t index = 1; index < programs.size(); ++index)
@@ -1343,51 +1955,175 @@ namespace RoboCSSCompiler
                 }
 
                 CSSMathProgram::Step operatorStep;
-                operatorStep.op = name == "min" ? CSSMathOperator::Min
-                                                : (name == "max" ? CSSMathOperator::Max : CSSMathOperator::Clamp);
+                operatorStep.op = name == "min" ? CSSMathOperator::Min : CSSMathOperator::Max;
                 combined.steps.push_back(operatorStep);
             }
 
-            double value = 0.0;
-            bool isLength = false;
-            CSSUnit unit = CSSUnit::None;
+            std::vector<CSSMathProgram> folded;
+            folded.push_back(combined);
 
-            if (EvaluateAbsoluteProgram(combined, value, isLength, unit))
+            return FinishMathFunction(name, folded, nullptr, out, diagnostics, location);
+        }
+
+        // The numeric functions. Each is a pure function of its arguments, so
+        // its whole value is decided here when they are absolute.
+        if (IsMathFunctionName(name) && name != "calc" && name != "min" && name != "max" &&
+            name != "clamp")
+        {
+            std::vector<CSSMathProgram> programs;
+
+            CSSMathProgram::Step functionStep;
+            std::size_t required = 1;
+            std::size_t maximum = 1;
+            bool variadic = false;
+
+            if (name == "round")
             {
-                out = isLength ? CSSValue::MakeDimension(value, unit) : CSSValue::MakeNumber(value);
-                return true;
-            }
+                // The optional leading keyword names the strategy rather than an
+                // operand, so it is taken off before the arguments are read.
+                CSSRoundingStrategy strategy = CSSRoundingStrategy::Nearest;
+                std::vector<const CSSComponentValue*> items;
 
-            if (combined.steps.size() == 1)
-            {
-                const CSSMathProgram::Step& step = combined.steps.front();
-
-                if (step.isPercentage)
+                for (const CSSComponentValue& child : functionValue.children)
                 {
-                    out = CSSValue::MakePercentage(step.value);
-                    return true;
+                    if (child.token.type != CSSTokenType::Whitespace)
+                    {
+                        items.push_back(&child);
+                    }
                 }
 
-                if (step.unit != CSSUnit::None)
+                std::size_t start = 0;
+
+                if (!items.empty() && ParseRoundingStrategy(*items[0], strategy))
                 {
-                    out = CSSValue::MakeDimension(step.value, step.unit);
-                    return true;
+                    functionStep.rounding = strategy;
+                    start = 1;
+                }
+
+                CSSMathProgram current;
+
+                for (std::size_t index = start; index < items.size(); ++index)
+                {
+                    const CSSComponentValue& item = *items[index];
+
+                    if (item.token.type == CSSTokenType::Comma)
+                    {
+                        if (!current.steps.empty())
+                        {
+                            programs.push_back(current);
+                            current.steps.clear();
+                        }
+                        continue;
+                    }
+
+                    if (!ParseMathOperand(item, current, diagnostics, location))
+                    {
+                        return false;
+                    }
+                }
+
+                if (!current.steps.empty())
+                {
+                    programs.push_back(current);
+                }
+
+                required = 1;
+                maximum = 2;
+            }
+            else if (name == "log")
+            {
+                if (!CollectMathArguments(functionValue, programs, diagnostics, location))
+                {
+                    return false;
+                }
+
+                required = 1;
+                maximum = 2;
+            }
+            else if (name == "hypot")
+            {
+                if (!CollectMathArguments(functionValue, programs, diagnostics, location))
+                {
+                    return false;
+                }
+
+                required = 1;
+                maximum = 0;
+                variadic = true;
+            }
+            else if (name == "pow" || name == "mod" || name == "rem" || name == "atan2")
+            {
+                if (!CollectMathArguments(functionValue, programs, diagnostics, location))
+                {
+                    return false;
+                }
+
+                required = 2;
+                maximum = 2;
+            }
+            else
+            {
+                if (!CollectMathArguments(functionValue, programs, diagnostics, location))
+                {
+                    return false;
+                }
+
+                required = 1;
+                maximum = 1;
+            }
+
+            static const struct
+            {
+                const char* name;
+                CSSMathOperator op;
+            } FunctionOperators[] = {
+                { "abs", CSSMathOperator::Abs },       { "sign", CSSMathOperator::Sign },
+                { "sqrt", CSSMathOperator::Sqrt },     { "hypot", CSSMathOperator::Hypot },
+                { "pow", CSSMathOperator::Pow },       { "log", CSSMathOperator::Log },
+                { "exp", CSSMathOperator::Exp },       { "mod", CSSMathOperator::Mod },
+                { "rem", CSSMathOperator::Rem },       { "round", CSSMathOperator::Round },
+                { "sin", CSSMathOperator::Sin },       { "cos", CSSMathOperator::Cos },
+                { "tan", CSSMathOperator::Tan },       { "asin", CSSMathOperator::Asin },
+                { "acos", CSSMathOperator::Acos },     { "atan", CSSMathOperator::Atan },
+                { "atan2", CSSMathOperator::Atan2 }
+            };
+
+            for (const auto& entry : FunctionOperators)
+            {
+                if (name == entry.name)
+                {
+                    functionStep.op = entry.op;
+                    break;
                 }
             }
 
-            diagnostics.Warning(CSSDiagnosticCode::UnsupportedFeature,
-                                location,
-                                name + "() has no compile-time value.",
-                                "the operands mix relative and absolute lengths",
-                                "Use one unit.",
-                                name + "()");
-            return false;
+            functionStep.operands = static_cast<std::uint8_t>(programs.size());
+
+            if (programs.size() < required || (!variadic && programs.size() > maximum))
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidFunction,
+                                  location,
+                                  name + "() was given " + std::to_string(programs.size()) +
+                                      " arguments.",
+                                  variadic ? std::string("it takes one or more")
+                                           : (required == maximum
+                                                  ? ("it takes exactly " + std::to_string(required))
+                                                  : ("it takes " + std::to_string(required) + " or " +
+                                                     std::to_string(maximum))),
+                                  "Write the arguments separated by commas.",
+                                  name + "()");
+                return false;
+            }
+
+            return FinishMathFunction(name, programs, &functionStep, out, diagnostics, location);
         }
 
         diagnostics.Warning(CSSDiagnosticCode::UnsupportedFeature,
                             location,
                             "Unknown math function: " + name + "().",
-                            "the reference defines calc(), min(), max() and clamp()",
+                            "this compiler implements the numeric functions the reference defines "
+                            "(calc, min, max, clamp, abs, sign, sqrt, hypot, pow, log, exp, mod, rem, "
+                            "round and the trigonometric set), and has no value for this one",
                             "Use one of those.",
                             name + "()");
         return false;
@@ -1558,9 +2294,29 @@ namespace RoboCSSCompiler
             {
                 const std::string name = LowerCase(value.token.text);
 
-                if (name == "calc" || name == "min" || name == "max" || name == "clamp")
+                if (IsMathFunctionName(name))
                 {
-                    return ParseMathFunction(value, out, location, diagnostics);
+                    if (!ParseMathFunction(value, out, location, diagnostics))
+                    {
+                        return false;
+                    }
+
+                    // A function can compute to an angle (`atan`, `atan2`) or to
+                    // a plain number (`sin`, `sqrt` of a number). Neither is a
+                    // length, and the reference would not apply one here either.
+                    if (out.kind == CSSValueKind::Dimension && UnitFamily(out.unit) != CSSUnitFamily::Length)
+                    {
+                        diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                                          location,
+                                          name + "() computed to an angle.",
+                                          "this property takes a length",
+                                          "Use the angle with a function that turns it into a length, such as "
+                                          "calc() multiplying it by 1px.",
+                                          name + "()");
+                        return false;
+                    }
+
+                    return true;
                 }
 
                 if (name == "var")
@@ -1573,7 +2329,10 @@ namespace RoboCSSCompiler
                 diagnostics.Warning(CSSDiagnosticCode::UnsupportedFeature,
                                     location,
                                     "Unknown function in a length: " + name + "().",
-                                    "the reference defines calc(), min(), max() and clamp() here",
+                                    "this compiler implements the numeric functions the reference defines, "
+                                    "which is calc(), min(), max(), clamp() and the abs/sign/sqrt/hypot/pow/log/"
+                                    "exp/mod/rem/round and trigonometric set; the rest need a document or a "
+                                    "runtime it does not have",
                                     "Use a length or one of those functions.",
                                     name + "()");
                 return false;
@@ -1745,9 +2504,14 @@ namespace RoboCSSCompiler
 
             const std::string name = LowerCase(values[0]->token.text);
 
-            if (name == "visible" || name == "hidden" || name == "clip" || name == "scroll" || name == "auto")
+            // `overlay` is the reference's deprecated spelling of `auto` and
+            // computes to it, so it is stored as `auto`.
+            const std::string keyword = name == "overlay" ? "auto" : name;
+
+            if (keyword == "visible" || keyword == "hidden" || keyword == "clip" || keyword == "scroll" ||
+                keyword == "auto")
             {
-                out = CSSValue::MakeKeyword(name);
+                out = CSSValue::MakeKeyword(keyword);
                 return true;
             }
 
@@ -1758,6 +2522,135 @@ namespace RoboCSSCompiler
                               "Write 'visible', 'hidden', 'clip', 'scroll' or 'auto'.",
                               values[0]->token.text);
             return false;
+        }
+
+        /// `white-space`: the five classic keywords, or one or two keywords that
+        /// name a `white-space-collapse` value and a `text-wrap-mode` value. The
+        /// reference makes the property a shorthand for those two, and every
+        /// combination computes to one of the five classic keywords, which is the
+        /// keyword the parser stores.
+        bool ParseWhiteSpaceValue(const std::vector<CSSComponentValue>& components,
+                                  CSSValue& out,
+                                  const CSSSourceLocation& location,
+                                  CSSDiagnosticSink& diagnostics)
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.empty() || values.size() > 2)
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidGrammar,
+                                  location,
+                                  "white-space takes one or two keywords.",
+                                  std::to_string(values.size()) + " values given",
+                                  "Write 'normal', 'pre-wrap' or 'preserve nowrap'.",
+                                  ComponentsToText(components));
+                return false;
+            }
+
+            std::string collapse;
+            std::string wrapMode;
+
+            for (const CSSComponentValue* value : values)
+            {
+                if (value->token.type != CSSTokenType::Ident)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidGrammar,
+                                      location,
+                                      "white-space takes keywords.",
+                                      ComponentsToText(components),
+                                      "Write 'normal', 'pre-wrap' or 'preserve nowrap'.",
+                                      "white-space");
+                    return false;
+                }
+
+                const std::string name = LowerCase(value->token.text);
+
+                // The four keywords the shorthand kept for itself are whole-value
+                // spellings of a collapse value and a wrap mode.
+                if (name == "normal" || name == "pre" || name == "pre-wrap" || name == "pre-line")
+                {
+                    if (values.size() != 1)
+                    {
+                        diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                                          location,
+                                          "'" + name + "' is a whole white-space value, not one half of one.",
+                                          "the reference spells one or two of the collapse and wrap keywords",
+                                          "Write just '" + name + "'.",
+                                          name);
+                        return false;
+                    }
+
+                    out = CSSValue::MakeKeyword(name);
+                    return true;
+                }
+
+                if (name == "collapse" || name == "preserve" || name == "preserve-breaks" ||
+                    name == "preserve-spaces" || name == "break-spaces")
+                {
+                    if (!collapse.empty())
+                    {
+                        diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                          "white-space names the whitespace collapse once.",
+                                          "'" + collapse + "' was already given",
+                                          "Write one collapse keyword and one wrap keyword.", name);
+                        return false;
+                    }
+
+                    collapse = name;
+                    continue;
+                }
+
+                if (name == "wrap" || name == "nowrap")
+                {
+                    if (!wrapMode.empty())
+                    {
+                        diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                          "white-space names the wrap mode once.",
+                                          "'" + wrapMode + "' was already given",
+                                          "Write one collapse keyword and one wrap keyword.", name);
+                        return false;
+                    }
+
+                    wrapMode = name;
+                    continue;
+                }
+
+                diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                                  location,
+                                  "Unknown white-space value: '" + value->token.text + "'.",
+                                  "not a white-space, white-space-collapse or text-wrap-mode keyword",
+                                  "Write 'normal', 'pre', 'pre-wrap', 'pre-line', 'nowrap' or 'break-spaces'.",
+                                  value->token.text);
+                return false;
+            }
+
+            // Each half defaults to its initial value as the two longhands do,
+            // so `white-space: collapse` is collapse plus wrap and
+            // `white-space: nowrap` is collapse plus nowrap.
+            const std::string collapseValue = collapse.empty() ? "collapse" : collapse;
+            const std::string wrapValue = wrapMode.empty() ? "wrap" : wrapMode;
+            const bool preserveBreaks = collapseValue == "preserve-breaks";
+            const bool preserveSpaces = collapseValue == "preserve" || collapseValue == "preserve-spaces" ||
+                                        collapseValue == "break-spaces";
+
+            if (preserveBreaks)
+            {
+                // Collapse the spaces, honour the newlines, wrap.
+                out = CSSValue::MakeKeyword("pre-line");
+                return true;
+            }
+
+            if (preserveSpaces)
+            {
+                // Keep the spaces; wrapping is what tells `pre` from `pre-wrap`.
+                out = CSSValue::MakeKeyword(wrapValue == "nowrap" ? "pre" : "pre-wrap");
+                return true;
+            }
+
+            // The spaces collapse, so only the wrap mode survives: `nowrap` is
+            // the one classic keyword that does not wrap.
+            out = CSSValue::MakeKeyword(wrapValue == "nowrap" ? "nowrap" : "normal");
+            return true;
         }
 
         /// `z-index`: an integer or the keyword `auto`. A number that is not an
@@ -2750,6 +3643,9 @@ namespace RoboCSSCompiler
 
         case CSSValueGrammar::Overflow:
             return ParseOverflowValue(components, out, location, diagnostics);
+
+        case CSSValueGrammar::WhiteSpace:
+            return ParseWhiteSpaceValue(components, out, location, diagnostics);
 
         case CSSValueGrammar::ZIndex:
             return ParseZIndexValue(components, out, location, diagnostics);

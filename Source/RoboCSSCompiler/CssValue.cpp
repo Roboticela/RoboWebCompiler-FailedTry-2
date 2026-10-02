@@ -386,6 +386,23 @@ namespace RoboCSSCompiler
         case CSSMathOperator::Min: return "min";
         case CSSMathOperator::Max: return "max";
         case CSSMathOperator::Clamp: return "clamp";
+        case CSSMathOperator::Abs: return "abs";
+        case CSSMathOperator::Sign: return "sign";
+        case CSSMathOperator::Sqrt: return "sqrt";
+        case CSSMathOperator::Hypot: return "hypot";
+        case CSSMathOperator::Pow: return "pow";
+        case CSSMathOperator::Log: return "log";
+        case CSSMathOperator::Exp: return "exp";
+        case CSSMathOperator::Mod: return "mod";
+        case CSSMathOperator::Rem: return "rem";
+        case CSSMathOperator::Round: return "round";
+        case CSSMathOperator::Sin: return "sin";
+        case CSSMathOperator::Cos: return "cos";
+        case CSSMathOperator::Tan: return "tan";
+        case CSSMathOperator::Asin: return "asin";
+        case CSSMathOperator::Acos: return "acos";
+        case CSSMathOperator::Atan: return "atan";
+        case CSSMathOperator::Atan2: return "atan2";
         case CSSMathOperator::Invalid: break;
         }
 
@@ -403,7 +420,9 @@ namespace RoboCSSCompiler
         {
             if (steps[index].op != other.steps[index].op || steps[index].value != other.steps[index].value ||
                 steps[index].unit != other.steps[index].unit ||
-                steps[index].isPercentage != other.steps[index].isPercentage)
+                steps[index].isPercentage != other.steps[index].isPercentage ||
+                steps[index].operands != other.steps[index].operands ||
+                steps[index].rounding != other.steps[index].rounding)
             {
                 return false;
             }

@@ -322,13 +322,697 @@
       "covered": true,
       "retired": true,
       "note": "Lowered to a native AlignItemsKind plus a presence flag; auto defers to the container's align-items."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/direction",
+      "kind": "css property",
+      "names": [
+        "direction"
+      ],
+      "compiled": true,
+      "spec": "css-writing-modes-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native text direction and honoured by the line breaker; it is inherited."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/font-family",
+      "kind": "css property",
+      "names": [
+        "font-family"
+      ],
+      "compiled": true,
+      "spec": "css-fonts-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to an interned family list. Every generic name the page lists is answered, including the `ui-*` families, `system-ui`, `math` and `emoji`."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/font-feature-settings",
+      "kind": "css property",
+      "names": [
+        "font-feature-settings"
+      ],
+      "compiled": true,
+      "spec": "css-fonts-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered onto the OpenType feature channel the shaper drives, together with the `font-variant-*` longhands. `normal` and a list of tag/value pairs are accepted."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/font-kerning",
+      "kind": "css property",
+      "names": [
+        "font-kerning"
+      ],
+      "compiled": true,
+      "spec": "css-fonts-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to the shaper's kerning mode. `auto`, `normal` and `none` match the page."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/font-style",
+      "kind": "css property",
+      "names": [
+        "font-style"
+      ],
+      "compiled": true,
+      "spec": "css-fonts-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native font slant. The page's `oblique` is accepted and selects the same slanted face as `italic`, because the runtime has one slant per family; the `oblique <angle>` form is not a keyword and is reported."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/font-variant",
+      "kind": "css shorthand property",
+      "names": [
+        "font-variant"
+      ],
+      "compiled": true,
+      "spec": "css-fonts-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Expanded to the five `font-variant-*` longhands; `normal` and `none` are accepted, and the longhands carry the behavior."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/font-variant-caps",
+      "kind": "css property",
+      "names": [
+        "font-variant-caps"
+      ],
+      "compiled": true,
+      "spec": "css-fonts-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to OpenType small-caps and unicase features; the page's keyword set is the registry's."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/font-variant-east-asian",
+      "kind": "css property",
+      "names": [
+        "font-variant-east-asian"
+      ],
+      "compiled": true,
+      "spec": "css-fonts-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to the OpenType east-asian feature set."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/font-variant-ligatures",
+      "kind": "css property",
+      "names": [
+        "font-variant-ligatures"
+      ],
+      "compiled": true,
+      "spec": "css-fonts-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to OpenType ligature features; every keyword the page names, and their `no-` forms, are in the registry."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/font-variant-numeric",
+      "kind": "css property",
+      "names": [
+        "font-variant-numeric"
+      ],
+      "compiled": true,
+      "spec": "css-fonts-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to OpenType figure, spacing and fraction features; the page's keyword set is the registry's."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/font-variant-position",
+      "kind": "css property",
+      "names": [
+        "font-variant-position"
+      ],
+      "compiled": true,
+      "spec": "css-fonts-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to the OpenType `subs`/`sups` features, which is how the page says the value is realised."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/font-weight",
+      "kind": "css property",
+      "names": [
+        "font-weight"
+      ],
+      "compiled": true,
+      "spec": "css-fonts-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a numeric weight. `normal`, `bold`, `bolder`, `lighter` and the 1..1000 numbers are all accepted, and `bolder`/`lighter` resolve against the inherited weight in the cascade."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/hyphens",
+      "kind": "css property",
+      "names": [
+        "hyphens"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native hyphenation mode and honoured by the line breaker."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/letter-spacing",
+      "kind": "css property",
+      "names": [
+        "letter-spacing"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native tracking value. `normal` and lengths and percentages are accepted; it is inherited."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/line-break",
+      "kind": "css property",
+      "names": [
+        "line-break"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to the line breaker's strictness; `anywhere` additionally permits a break between any two characters."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/line-height",
+      "kind": "css property",
+      "names": [
+        "line-height"
+      ],
+      "compiled": true,
+      "spec": "css-inline-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a length, a multiple of the font size, or the `normal` multiplier. It is inherited, as the page states."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/overflow",
+      "kind": "css shorthand property",
+      "names": [
+        "overflow"
+      ],
+      "compiled": true,
+      "spec": "css-overflow-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Expanded to the two longhands. The page's deprecated `overlay` is accepted and computes to `auto`, a scroll container that reveals its scrollbars when they are needed."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/overflow-wrap",
+      "kind": "css property",
+      "names": [
+        "overflow-wrap"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native wrapping rule: `break-word` and `anywhere` both permit breaking inside a word, which the breaker applies when a word does not fit."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/overflow-x",
+      "kind": "css property",
+      "names": [
+        "overflow-x"
+      ],
+      "compiled": true,
+      "spec": "css-overflow-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native overflow kind. `visible`, `hidden` and `clip` clip, while `scroll` and `auto` make a scroll container."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/overflow-y",
+      "kind": "css property",
+      "names": [
+        "overflow-y"
+      ],
+      "compiled": true,
+      "spec": "css-overflow-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native overflow kind, the same five values as the page's."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/tab-size",
+      "kind": "css property",
+      "names": [
+        "tab-size"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a tab stop, as a count of spaces or as a length. A percentage is refused, as the page says it is not a tab size."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-align",
+      "kind": "css property",
+      "names": [
+        "text-align"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native alignment, with `left`/`right` canonicalised to `start`/`end` for direction-awareness. The page's `match-parent` is reported as an unimplemented value: the native text engine has no parent writing mode to inherit one from."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-align-last",
+      "kind": "css property",
+      "names": [
+        "text-align-last"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native alignment for the last line of a block."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-decoration",
+      "kind": "css shorthand property",
+      "names": [
+        "text-decoration"
+      ],
+      "compiled": true,
+      "spec": "css-text-decor-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Expanded onto the decoration channels. The line keywords and the colour are lowered; the style and thickness are carried by their own longhands."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-decoration-color",
+      "kind": "css property",
+      "names": [
+        "text-decoration-color"
+      ],
+      "compiled": true,
+      "spec": "css-text-decor-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native decoration colour. The page's initial value is `currentcolor`, which the runtime resolves when it paints."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-decoration-style",
+      "kind": "css property",
+      "names": [
+        "text-decoration-style"
+      ],
+      "compiled": true,
+      "spec": "css-text-decor-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native decoration style; `solid`, `double`, `dotted`, `dashed` and `wavy` are all painted. The page also lists the Mozilla-only `-moz-none`, which no other browser defines and the compiler does not compile."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-decoration-thickness",
+      "kind": "css property",
+      "names": [
+        "text-decoration-thickness"
+      ],
+      "compiled": true,
+      "spec": "css-text-decor-4",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native thickness. The citation was corrected to `css-text-decor-4`, which is the module the reference now carries the property in; `auto`, `from-font`, lengths and percentages are accepted."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-justify",
+      "kind": "css property",
+      "names": [
+        "text-justify"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native justification method. The page's deprecated `distribute` is accepted and compiles to spreading the slack between words."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-orientation",
+      "kind": "css property",
+      "names": [
+        "text-orientation"
+      ],
+      "compiled": true,
+      "spec": "css-writing-modes-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native glyph orientation. The page's deprecated `sideways-right` and `use-glyph-orientation` are accepted and compute to `sideways` and `mixed`."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-underline-offset",
+      "kind": "css property",
+      "names": [
+        "text-underline-offset"
+      ],
+      "compiled": true,
+      "spec": "css-text-decor-4",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native offset from the alphabetic baseline. The citation was corrected to `css-text-decor-4` for the same reason; `auto`, lengths and percentages are accepted."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/white-space",
+      "kind": "css property",
+      "names": [
+        "white-space"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native white-space kind. The page now makes the property a shorthand for `white-space-collapse` and `text-wrap-mode`, so the parser accepts one or two of those keywords and canonicalises the pair to one of the five classic keywords; `break-spaces` and `preserve` compile to the keep-the-spaces, wrap kind."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/word-break",
+      "kind": "css property",
+      "names": [
+        "word-break"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native breaking rule. The page's `auto-phrase` is accepted and compiles to the ordinary word breaking, which is where the runtime breaks phrases."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/word-spacing",
+      "kind": "css property",
+      "names": [
+        "word-spacing"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native advance added to each space. `normal`, lengths and percentages are accepted; it is inherited."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/writing-mode",
+      "kind": "css property",
+      "names": [
+        "writing-mode"
+      ],
+      "compiled": true,
+      "spec": "css-writing-modes-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled to a native writing mode. The page's deprecated `lr`, `lr-tb`, `rl`, `tb` and `tb-rl` are accepted and compute to `horizontal-tb` and `vertical-rl`."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/abs",
+      "kind": "css function",
+      "names": [
+        "abs()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The magnitude of a number, a length or an angle, with the argument's own type."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/acos",
+      "kind": "css function",
+      "names": [
+        "acos()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The arccosine of a number between -1 and 1, as an angle in degrees."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/asin",
+      "kind": "css function",
+      "names": [
+        "asin()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The arcsine of a number between -1 and 1, as an angle in degrees."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/atan",
+      "kind": "css function",
+      "names": [
+        "atan()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The arctangent of a number, as an angle in degrees."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/atan2",
+      "kind": "css function",
+      "names": [
+        "atan2()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The angle from the positive x-axis to the point (x, y) the two numbers name, in degrees."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/calc",
+      "kind": "css function",
+      "names": [
+        "calc()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "Arithmetic over numbers, lengths and angles, with the reference's type rules: a sum needs one family, a product needs one plain number, and a typed value divided by its own kind is a ratio. Absolute units are brought to one canonical unit per family, so `calc(1in + 1px)` is 97px. A program that mixes a relative operand with an absolute one is kept for the runtime or reported, never silently resolved."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/clamp",
+      "kind": "css function",
+      "names": [
+        "clamp()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "Three arguments of one family; the middle one is kept to the closed range the other two set."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/cos",
+      "kind": "css function",
+      "names": [
+        "cos()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The cosine of an angle, as a plain number."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/exp",
+      "kind": "css function",
+      "names": [
+        "exp()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "e raised to a number, which is a number; an overflow is reported."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/hypot",
+      "kind": "css function",
+      "names": [
+        "hypot()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The square root of the sum of the squares of one or more values of one family, which is the distance the arguments spell."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/log",
+      "kind": "css function",
+      "names": [
+        "log()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The natural logarithm, or the logarithm to a stated base, of a positive number."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/max",
+      "kind": "css function",
+      "names": [
+        "max()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "Takes any number of arguments of one family and folds to the largest."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/min",
+      "kind": "css function",
+      "names": [
+        "min()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "Takes any number of arguments of one family and folds to the smallest."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/mod",
+      "kind": "css function",
+      "names": [
+        "mod()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The remainder of a division that keeps the sign of the divisor, which is what makes it differ from `rem` for a negative operand."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/pow",
+      "kind": "css function",
+      "names": [
+        "pow()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "A base raised to an exponent, both plain numbers, so the result is a number."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/rem",
+      "kind": "css function",
+      "names": [
+        "rem()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The remainder of a division that keeps the sign of the dividend."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/round",
+      "kind": "css function",
+      "names": [
+        "round()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "Rounds a value to the nearest whole number or to a stated step, with each of the reference's four strategies: `nearest`, `up`, `down` and `to-zero`."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/sign",
+      "kind": "css function",
+      "names": [
+        "sign()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The sign of a number, a length or an angle, as the plain number -1, 0 or 1."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/sin",
+      "kind": "css function",
+      "names": [
+        "sin()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The sine of an angle, as a plain number."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/sqrt",
+      "kind": "css function",
+      "names": [
+        "sqrt()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The square root of a non-negative number, length or angle; a negative argument is reported rather than given a NaN."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/tan",
+      "kind": "css function",
+      "names": [
+        "tan()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "The tangent of an angle, as a plain number; a right angle is reported rather than made infinite."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/values/var",
+      "kind": "css function",
+      "names": [
+        "var()"
+      ],
+      "implemented": true,
+      "covered": true,
+      "retired": true,
+      "note": "Custom properties are substituted before a declaration's value is parsed, so a reference can stand in for a whole value, an operand of a function, or a fallback: `calc(var(--gap) * 2)` and `var(--missing, 7px)` both compile. The substitution descends into a function's arguments and is inherited by descendants, and a chain longer than sixteen links is reported as a cycle rather than followed."
     }
   ],
   "remainingByArea": {
-    "cssProperties": 557,
+    "cssProperties": 523,
     "cssSelectors": 166,
     "cssAtRules": 23,
-    "cssValuesAndFunctions": 123,
+    "cssValuesAndFunctions": 101,
     "htmlElements": 126,
     "htmlAttributes": 22,
     "htmlGlobalAttributes": 32
@@ -346,6 +1030,8 @@
     "The 59 CSS property names MDN has that no draft of the reference defined are the vendor-prefixed set, the legacy flexbox box-* set, the SVG presentation attributes (which are SVG attribute vocabulary, not CSS properties) and touch-action, math-*, corner-*-shape, user-modify and font-smooth.",
     "The out-of-flow model (position, top, right, bottom, left, inset, z-index) was the first slice of the layout machinery: the offsets and the shorthand are compiled and lowered, layout shifts relative and sticky boxes and places absolute and fixed boxes against their containing block, and a fixed box is pinned to the viewport through scrolling in paint, hit testing and bounds.",
     "The float model (float, clear) was the second slice of the layout machinery: both are compiled and lowered, a float is placed shrink-to-fit against its side and its container grows to contain it, the line boxes crossing it lose its width, and clear drops a box below the floats it names.",
-    "The single-line flex model (display: flex, flex-direction, justify-content, align-items, align-self, flex-grow, flex-shrink, flex-basis and order) was the third slice of the layout machinery. The container lays its items along one axis, distributes free space by the growth factors, shrinks when they overflow, and sorts them by order. flex-wrap, flex-flow, align-content, the flex shorthand and gap are not part of this slice and their pages stay."
+    "The single-line flex model (display: flex, flex-direction, justify-content, align-items, align-self, flex-grow, flex-shrink, flex-basis and order) was the third slice of the layout machinery. The container lays its items along one axis, distributes free space by the growth factors, shrinks when they overflow, and sorts them by order. flex-wrap, flex-flow, align-content, the flex shorthand and gap are not part of this slice and their pages stay.",
+    "The compiled property pages that predate the MDN walk were then read one by one and checked against the compiler, because a property implemented before the reference arrived was implemented from the specification, not from MDN. Every value, initial value, inherited flag and specification citation was compared. The pass found real divergences and they were fixed: `white-space` had no answer for the collapse and wrap keywords the page now gives, `font-style` refused `oblique`, `overflow` refused `overlay`, `writing-mode` and `text-orientation` refused their deprecated spellings, and `text-decoration-thickness` and `text-underline-offset` cited `css-text-decor-3` where the reference now states them in `css-text-decor-4`. The pages whose values are still partly unanswered -- display, which names the grid values the compiler does not compile; text-indent, whose `each-line` and `hanging` are not implemented; text-transform, whose `full-width`, `full-size-kana` and `math-auto` are not; and text-decoration-line, whose `spelling-error` and `grammar-error` are not -- stay in the reference until those values have an answer.",
+    "The numeric functions are the reference's second family of values that are not properties. They are implemented in the same compiled math program as calc(): a step names the function and the number of operands it takes, and a program whose operands are all absolute folds at compile time to a number, a length or an angle. The type rules are the reference's, so `sin(30deg)` is the number 0.5, `hypot(3px, 4px)` is 5px, `atan2(1, 1)` is an angle and `calc(2px * 3px)` is refused. Two bugs were found and fixed while implementing them: a function nested inside another function was never parsed (the parser counted the nested block twice and reported the outer one as unclosed), and a var() inside a function was never substituted, so `calc(var(--gap) * 2)` did not compile. The functions the reference defines that need a document or a runtime rather than arithmetic -- anchor(), anchor-size(), attr(), calc-size(), counter(), counters(), element(), env(), if(), progress(), random(), sibling-count(), sibling-index(), the image functions and the grid functions minmax(), repeat() and fit-content() outside a size -- stay in the reference until they have an answer."
   ]
 }

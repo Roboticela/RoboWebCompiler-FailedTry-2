@@ -224,30 +224,19 @@ namespace RoboCSSCompiler
         value.block = block;
         value.isFunction = function;
 
-        int depth = 0;
-
+        // Every nested block is consumed by the recursive call below, closer
+        // included, so the first closer seen here is this block's own. Counting
+        // depth as well would count a nested function twice: `calc(abs(-1px))`
+        // would never see the `)` that closes `calc(`, and the whole declaration
+        // would be reported as an unclosed function.
         while (index < end)
         {
             const CSSToken& token = tokens[index];
 
-            if (token.type == closer && depth == 0)
+            if (token.type == closer)
             {
                 ++index;
                 return value;
-            }
-
-            if (token.type == CSSTokenType::LeftParen || token.type == CSSTokenType::LeftSquare ||
-                token.type == CSSTokenType::LeftCurly || token.type == CSSTokenType::Function)
-            {
-                ++depth;
-            }
-            else if (token.type == CSSTokenType::RightParen || token.type == CSSTokenType::RightSquare ||
-                     token.type == CSSTokenType::RightCurly)
-            {
-                if (depth > 0)
-                {
-                    --depth;
-                }
             }
 
             value.children.push_back(ConsumeComponentValue(index, end));

@@ -2,12 +2,14 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-direction: row;
+
     flex-wrap: no-wrap;
     gap: 20px;
 }
 
 .container div {
     padding: 20px;
-    background: lightblue;
+    background: rgb(0, 255, 0);
     width: 40px;
 }
