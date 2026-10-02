@@ -993,6 +993,25 @@ namespace RoboRenderer
         {
             target.clearKind = authored.clearKind;
         }
+
+        // The flex model. None of these properties is inherited, so a box that
+        // declares one of them gets the initial value for the rest whether or
+        // not the cascade wrote it. Copying the group together is therefore the
+        // same as copying each field under its own flag: the authored defaults
+        // for the unwritten fields are the initial values.
+        if (IsSpecified(specified, StyleFlagFlex))
+        {
+            target.flexDirection = authored.flexDirection;
+            target.justifyContent = authored.justifyContent;
+            target.alignItems = authored.alignItems;
+            target.alignSelf = authored.alignSelf;
+            target.hasAlignSelf = authored.hasAlignSelf;
+            target.flexGrow = authored.flexGrow;
+            target.flexShrink = authored.flexShrink;
+            target.flexBasis = authored.flexBasis;
+            target.hasFlexBasis = authored.hasFlexBasis;
+            target.flexOrder = authored.flexOrder;
+        }
         if (IsSpecified(specified, StyleFlagOverflowX))
         {
             target.overflowX = authored.overflowX;

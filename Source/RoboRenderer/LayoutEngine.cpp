@@ -29,7 +29,7 @@ namespace RoboRenderer
         bool IsBlockDisplay(DisplayKind display)
         {
             return display == DisplayKind::Block || display == DisplayKind::TableRow ||
-                   display == DisplayKind::TableCell;
+                   display == DisplayKind::TableCell || display == DisplayKind::Flex;
         }
 
         float ClampPositive(float value)
@@ -1854,6 +1854,333 @@ namespace RoboRenderer
         }
     }
 
+    float LayoutEngine::ArrangeFlex(ElementIndex index,
+                                    float x,
+                                    float y,
+                                    float availableWidth,
+                                    float availableHeight,
+                                    const CompiledStyle& style,
+                                    const Rect& clip,
+                                    std::uint32_t depth,
+                                    bool measureOnly)
+    {
+        const CompiledElement* element = ElementAt(document, index);
+        if (element == nullptr)
+        {
+            lastInlineWidth = 0.0f;
+            return 0.0f;
+        }
+
+        const FlexDirectionKind direction = style.flexDirection;
+        const bool row = direction == FlexDirectionKind::Row || direction == FlexDirectionKind::RowReverse;
+        const bool reverse =
+            direction == FlexDirectionKind::RowReverse || direction == FlexDirectionKind::ColumnReverse;
+
+        // The main axis is the one items run along; the cross axis is the other.
+        const float mainAvailable = row ? availableWidth : availableHeight;
+        const float crossAvailable = row ? availableHeight : availableWidth;
+
+        struct FlexItem
+        {
+            ElementIndex element = NoElement;
+            std::int32_t order = 0;
+            float baseMain = 0.0f;
+            float main = 0.0f;
+            float cross = 0.0f;
+            Edges margin;
+            float grow = 0.0f;
+            float shrink = 1.0f;
+            bool hasCrossSize = false;
+            AlignItemsKind align = AlignItemsKind::Stretch;
+        };
+
+        std::vector<FlexItem> items;
+        std::vector<ElementIndex> outOfFlow;
+
+        for (ElementIndex child = element->firstChild; child != NoElement;)
+        {
+            const CompiledElement* node = ElementAt(document, child);
+            if (node == nullptr)
+            {
+                break;
+            }
+
+            if (!IsDisplayed(child) || IsCollapsedByDisclosure(child))
+            {
+                if (!measureOnly)
+                {
+                    result.elements[child].flags |= LayoutFlagDisplayNone;
+                }
+
+                child = node->nextSibling;
+                continue;
+            }
+
+            const CompiledStyle& childStyle = stylesCache[child];
+
+            if (IsOutOfFlow(childStyle.position) || childStyle.floatKind != FloatKind::None)
+            {
+                // Neither an absolutely positioned box nor a float is a flex
+                // item; both are arranged after the line at the content origin
+                // so they have geometry for positioning to build on.
+                outOfFlow.push_back(child);
+                child = node->nextSibling;
+                continue;
+            }
+
+            FlexItem item;
+            item.element = child;
+            item.order = childStyle.flexOrder;
+            item.margin = childStyle.margin;
+            item.grow = childStyle.flexGrow;
+            item.shrink = childStyle.flexShrink;
+            item.align = childStyle.hasAlignSelf != 0 ? childStyle.alignSelf : style.alignItems;
+
+            const float declaredMain =
+                row ? ResolveDeclaredLength(childStyle.width, availableWidth)
+                    : ResolveDeclaredLength(childStyle.height, 0.0f);
+            const float declaredCross =
+                row ? ResolveDeclaredLength(childStyle.height, 0.0f)
+                    : ResolveDeclaredLength(childStyle.width, availableWidth);
+
+            // The intrinsic size is a border box plus its margins, so the
+            // margins are taken back out here and added again where they belong.
+            const IntrinsicSize intrinsic = MeasureElement(child, 0.0f);
+            const float intrinsicMain =
+                row ? ClampPositive(intrinsic.width - item.margin.Horizontal())
+                    : ClampPositive(intrinsic.height - item.margin.Vertical());
+            const float intrinsicCross =
+                row ? ClampPositive(intrinsic.height - item.margin.Vertical())
+                    : ClampPositive(intrinsic.width - item.margin.Horizontal());
+
+            // A declared `flex-basis` of zero is a real basis, not an absent
+            // one: only `auto` (or nothing) falls back to the item's own size.
+            bool hasBasis = false;
+            float basis = 0.0f;
+
+            if (childStyle.hasFlexBasis != 0 && childStyle.flexBasis.type != LayoutValueType::Auto)
+            {
+                basis = ResolveDeclaredLength(childStyle.flexBasis, mainAvailable > 0.0f ? mainAvailable : 0.0f);
+                hasBasis = true;
+            }
+
+            if (hasBasis)
+            {
+                item.baseMain = basis;
+            }
+            else if (declaredMain > 0.0f)
+            {
+                item.baseMain = declaredMain;
+            }
+            else
+            {
+                item.baseMain = intrinsicMain;
+            }
+
+            if (declaredCross > 0.0f)
+            {
+                item.cross = declaredCross;
+                item.hasCrossSize = true;
+            }
+            else
+            {
+                item.cross = intrinsicCross;
+            }
+
+            items.push_back(item);
+            child = node->nextSibling;
+        }
+
+        if (items.empty())
+        {
+            for (const ElementIndex flow : outOfFlow)
+            {
+                ArrangeElement(flow, x, y, availableWidth, clip, depth, measureOnly);
+            }
+
+            lastInlineWidth = 0.0f;
+            return 0.0f;
+        }
+
+        // `order` sorts the items; a stable sort keeps tree order for ties.
+        std::stable_sort(items.begin(), items.end(), [](const FlexItem& left, const FlexItem& right) {
+            return left.order < right.order;
+        });
+
+        const auto outerMain = [row](const FlexItem& item) {
+            return item.main + (row ? item.margin.Horizontal() : item.margin.Vertical());
+        };
+
+        float sumBase = 0.0f;
+        float sumGrow = 0.0f;
+        float sumShrinkWeight = 0.0f;
+
+        for (const FlexItem& item : items)
+        {
+            sumBase += item.baseMain + (row ? item.margin.Horizontal() : item.margin.Vertical());
+            sumGrow += item.grow;
+            sumShrinkWeight += item.shrink * item.baseMain;
+        }
+
+        const float free = mainAvailable > 0.0f ? mainAvailable - sumBase : 0.0f;
+
+        for (FlexItem& item : items)
+        {
+            if (free > 0.0f && sumGrow > 0.0f)
+            {
+                item.main = item.baseMain + free * (item.grow / sumGrow);
+            }
+            else if (free < 0.0f && sumShrinkWeight > 0.0f)
+            {
+                const float scaled = free * (item.shrink * item.baseMain) / sumShrinkWeight;
+                item.main = std::max(0.0f, item.baseMain + scaled);
+            }
+            else
+            {
+                item.main = item.baseMain;
+            }
+        }
+
+        float usedMain = 0.0f;
+        for (const FlexItem& item : items)
+        {
+            usedMain += outerMain(item);
+        }
+
+        const float leftover = mainAvailable > 0.0f ? std::max(0.0f, mainAvailable - usedMain) : 0.0f;
+        const float count = static_cast<float>(items.size());
+
+        float leading = 0.0f;
+        float between = 0.0f;
+
+        switch (style.justifyContent)
+        {
+        case JustifyContentKind::FlexEnd:
+            leading = leftover;
+            break;
+        case JustifyContentKind::Center:
+            leading = leftover * 0.5f;
+            break;
+        case JustifyContentKind::SpaceBetween:
+            between = items.size() > 1 ? leftover / (count - 1.0f) : 0.0f;
+            break;
+        case JustifyContentKind::SpaceAround:
+            between = leftover / count;
+            leading = between * 0.5f;
+            break;
+        case JustifyContentKind::SpaceEvenly:
+            between = leftover / (count + 1.0f);
+            leading = between;
+            break;
+        case JustifyContentKind::FlexStart:
+        default:
+            break;
+        }
+
+        // The single line's cross size, and whether any item stretches to it.
+        float lineCross = 0.0f;
+        bool stretches = false;
+
+        for (const FlexItem& item : items)
+        {
+            lineCross = std::max(lineCross, item.cross + (row ? item.margin.Vertical() : item.margin.Horizontal()));
+
+            if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize)
+            {
+                stretches = true;
+            }
+        }
+
+        if (crossAvailable > 0.0f && stretches)
+        {
+            lineCross = std::max(lineCross, crossAvailable);
+        }
+
+        float mainCursor = leading;
+
+        for (const FlexItem& item : items)
+        {
+            const float marginMainStart = row ? item.margin.left : item.margin.top;
+            const float marginMainEnd = row ? item.margin.right : item.margin.bottom;
+
+            float mainOffset = mainCursor + marginMainStart;
+
+            // `*-reverse` lays the line out from the other end: the forward
+            // positions are mirrored inside the container's main size.
+            if (reverse && mainAvailable > 0.0f)
+            {
+                mainOffset = mainAvailable - (mainOffset + item.main);
+            }
+
+            float crossSize = item.cross;
+            if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize && crossAvailable > 0.0f)
+            {
+                crossSize = std::max(item.cross,
+                                     lineCross - (row ? item.margin.Vertical() : item.margin.Horizontal()));
+            }
+
+            const float crossOuter = crossSize + (row ? item.margin.Vertical() : item.margin.Horizontal());
+            float crossOffset = 0.0f;
+
+            switch (item.align)
+            {
+            case AlignItemsKind::FlexEnd:
+                crossOffset = lineCross - crossOuter;
+                break;
+            case AlignItemsKind::Center:
+                crossOffset = (lineCross - crossOuter) * 0.5f;
+                break;
+            default:
+                crossOffset = 0.0f;
+                break;
+            }
+
+            float boxX = x;
+            float boxY = y;
+            float forcedWidth = 0.0f;
+            float forcedHeight = 0.0f;
+
+            if (row)
+            {
+                boxX = x + mainOffset;
+                boxY = y + crossOffset + item.margin.top;
+                forcedWidth = item.main;
+
+                if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize && crossAvailable > 0.0f)
+                {
+                    forcedHeight = crossSize;
+                }
+            }
+            else
+            {
+                boxY = y + mainOffset;
+                boxX = x + crossOffset + item.margin.left;
+                forcedHeight = item.main;
+
+                if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize && crossAvailable > 0.0f)
+                {
+                    forcedWidth = crossSize;
+                }
+            }
+
+            ArrangeElement(item.element, boxX, boxY, row ? item.main : availableWidth, clip, depth,
+                           measureOnly, false, forcedWidth, forcedHeight);
+
+            mainCursor += item.main + marginMainStart + marginMainEnd + between;
+        }
+
+        for (const ElementIndex flow : outOfFlow)
+        {
+            ArrangeElement(flow, x, y, availableWidth, clip, depth, measureOnly);
+        }
+
+        lastInlineWidth = row ? usedMain : lineCross;
+
+        // The content height is the line's cross size for a row, and the main
+        // extent for a column.
+        return row ? lineCross : usedMain;
+    }
+
     float LayoutEngine::ArrangeTable(ElementIndex index,
                                      float x,
                                      float y,
@@ -2059,7 +2386,9 @@ namespace RoboRenderer
                                        const Rect& clip,
                                        std::uint32_t depth,
                                        bool measureOnly,
-                                       bool shrinkToFit)
+                                       bool shrinkToFit,
+                                       float forcedWidth,
+                                       float forcedHeight)
     {
         const CompiledElement* element = ElementAt(document, index);
         if (element == nullptr)
@@ -2230,6 +2559,13 @@ namespace RoboRenderer
             boxWidth = extraWidth;
         }
 
+        // A flex item's main or stretched cross size is decided by the flex
+        // arranger, which has the surrounding items to distribute space between.
+        if (forcedWidth > 0.0f)
+        {
+            boxWidth = forcedWidth;
+        }
+
         const float contentWidth = ClampPositive(boxWidth - extraWidth);
         const float contentX = boxX + border.left + padding.left;
         const float contentY = boxY + border.top + padding.top;
@@ -2278,6 +2614,16 @@ namespace RoboRenderer
                 boxWidth = tableWidth + extraWidth;
             }
         }
+        else if (style.display == DisplayKind::Flex)
+        {
+            // A flex container arranges its children along an axis rather than
+            // stacking them; the declared inner height, when there is one, is
+            // what the cross axis stretches to.
+            const float declaredContentHeight =
+                declaredHeight > 0.0f ? ClampPositive(declaredHeight - extraHeight) : 0.0f;
+            contentHeight = ArrangeFlex(index, contentX, contentY, contentWidth, declaredContentHeight,
+                                        style, clip, depth + 1, measureOnly);
+        }
         else if (StacksChildren(index))
         {
             contentHeight = ArrangeBlockChildren(index, contentX, contentY, contentWidth, clip, depth + 1,
@@ -2323,6 +2669,11 @@ namespace RoboRenderer
             // A text field is one line tall even when its value is empty.
             const float lineHeight = textLayout.LineHeight(style.fontSize, style.fontWeight);
             boxHeight = std::max(boxHeight, lineHeight + extraHeight);
+        }
+
+        if (forcedHeight > 0.0f)
+        {
+            boxHeight = forcedHeight;
         }
 
         const float minimumHeight = ResolveDeclaredLength(style.minimumHeight, availableWidth);

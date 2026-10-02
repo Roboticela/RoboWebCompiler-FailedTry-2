@@ -174,7 +174,11 @@ namespace RoboRenderer
         TableRow = 3,
         TableCell = 4,
         /// Participates in layout but paints nothing (head-like elements).
-        Hidden = 5
+        Hidden = 5,
+        /// A flex container: its children are laid out along one axis rather
+        /// than stacked or flowed inline. `inline-flex` maps here too, so a
+        /// flex container is always a block-level box in this runtime.
+        Flex = 6
     };
 
     enum class OverflowKind : std::uint8_t
@@ -239,6 +243,42 @@ namespace RoboRenderer
         Left = 1,
         Right = 2,
         Both = 3
+    };
+
+    /// `flex-direction`. The main axis of a flex container and which end it
+    /// starts from.
+    enum class FlexDirectionKind : std::uint8_t
+    {
+        Row = 0,
+        RowReverse = 1,
+        Column = 2,
+        ColumnReverse = 3
+    };
+
+    /// `justify-content` (and the alignment values shared with alignment): how
+    /// space is distributed along the main axis. `FlexStart` is what `normal`
+    /// behaves as for a flex container.
+    enum class JustifyContentKind : std::uint8_t
+    {
+        FlexStart = 0,
+        FlexEnd = 1,
+        Center = 2,
+        SpaceBetween = 3,
+        SpaceAround = 4,
+        SpaceEvenly = 5
+    };
+
+    /// `align-items` / `align-self`: where an item sits on the cross axis.
+    /// `Stretch` is what `normal` behaves as for a flex item.
+    enum class AlignItemsKind : std::uint8_t
+    {
+        Stretch = 0,
+        FlexStart = 1,
+        FlexEnd = 2,
+        Center = 3,
+        /// Treated as the item's own flex-start, because this runtime has one
+        /// baseline per line box rather than a shared baseline across items.
+        Baseline = 4
     };
 
     enum class TextAlignKind : std::uint8_t
@@ -552,6 +592,14 @@ namespace RoboRenderer
         StyleFlagFloat = 1ull << 57,
         StyleFlagClear = 1ull << 58,
 
+        // The flex model. One flag covers the whole group: none of these
+        // properties is inherited, so a box that declares none of them takes
+        // the initial values, which are exactly the defaults an authored style
+        // carries for the ones it did not write. Copying the group together is
+        // therefore the same as copying each field under its own flag, without
+        // spending a bit per property on a mask that is already full.
+        StyleFlagFlex = 1ull << 59,
+
         /// Every inset, for an `inset` shorthand that set all four.
         StyleFlagInset = StyleFlagTop | StyleFlagRight | StyleFlagBottom | StyleFlagLeft,
 
@@ -673,6 +721,32 @@ namespace RoboRenderer
         /// `clear`. `None` lets the box sit beside a float, which is the initial
         /// value.
         ClearKind clearKind = ClearKind::None;
+
+        /// `flex-direction`. `Row` is the initial value.
+        FlexDirectionKind flexDirection = FlexDirectionKind::Row;
+
+        /// `justify-content` / `align-items`. Their initial value is `normal`,
+        /// which behaves as `flex-start` on the main axis and `stretch` on the
+        /// cross axis, and that is what these defaults are.
+        JustifyContentKind justifyContent = JustifyContentKind::FlexStart;
+        AlignItemsKind alignItems = AlignItemsKind::Stretch;
+
+        /// `align-self`. Only read when `hasAlignSelf` is set: `auto` defers to
+        /// the container's `align-items`, so the two have to be told apart.
+        AlignItemsKind alignSelf = AlignItemsKind::Stretch;
+        std::uint8_t hasAlignSelf = 0;
+
+        /// `flex-grow` / `flex-shrink`. The initial values are 0 and 1.
+        float flexGrow = 0.0f;
+        float flexShrink = 1.0f;
+
+        /// `flex-basis`, unresolved like every other declared length. `Auto`
+        /// means "fall back to the item's own main size", which is also `auto`.
+        LayoutValue flexBasis;
+        std::uint8_t hasFlexBasis = 0;
+
+        /// `order`. Items are placed in ascending order, ties in tree order.
+        std::int32_t flexOrder = 0;
 
         /// `font-kerning`. `Auto` leaves the font's kerning on, which is the
         /// shaper's own default.

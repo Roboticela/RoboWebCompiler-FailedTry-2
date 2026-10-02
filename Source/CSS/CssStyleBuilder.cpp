@@ -25,12 +25,16 @@ namespace RoboHTMLCompiler
         using RoboCSSCompiler::CSSValue;
         using RoboCSSCompiler::CSSValueKind;
 
+        using RoboRenderer::AlignItemsKind;
         using RoboRenderer::ClearKind;
         using RoboRenderer::CompiledStyle;
         using RoboRenderer::DisplayKind;
+        using RoboRenderer::FlexDirectionKind;
         using RoboRenderer::FloatKind;
+        using RoboRenderer::JustifyContentKind;
         using RoboRenderer::PositionKind;
         using RoboRenderer::StyleFlagClear;
+        using RoboRenderer::StyleFlagFlex;
         using RoboRenderer::StyleFlagFloat;
         using RoboRenderer::StyleFlagBottom;
         using RoboRenderer::StyleFlagLeft;
@@ -532,6 +536,14 @@ namespace RoboHTMLCompiler
                 LowerZIndex(computed, location, out);
                 LowerFloat(computed, location, out);
                 LowerClear(computed, location, out);
+                LowerFlexDirection(computed, location, out);
+                LowerJustifyContent(computed, location, out);
+                LowerAlignItems(computed, location, out);
+                LowerAlignSelf(computed, location, out);
+                LowerFlexGrow(computed, location, out);
+                LowerFlexShrink(computed, location, out);
+                LowerFlexBasis(computed, location, elementFontSize, out);
+                LowerOrder(computed, location, out);
                 LowerSize(computed, CSSPropertyId::Width, StyleFlagWidth, location, elementFontSize, out.width, out);
                 LowerSize(computed, CSSPropertyId::Height, StyleFlagHeight, location, elementFontSize, out.height,
                           out);
@@ -622,12 +634,16 @@ namespace RoboHTMLCompiler
                 {
                     out.display = DisplayKind::Hidden;
                 }
+                else if (value->text == "flex")
+                {
+                    out.display = DisplayKind::Flex;
+                }
                 else
                 {
                     ReportNotLowered(computed, CSSPropertyId::Display, location,
-                                     "the native layout engine has four display "
+                                     "the native layout engine has five display "
                                                                       "kinds",
-                                     "Use block, inline, inline-block or none.");
+                                     "Use block, inline, inline-block, flex or none.");
                     return;
                 }
 
@@ -863,6 +879,307 @@ namespace RoboHTMLCompiler
                 }
 
                 out.specified |= StyleFlagClear;
+            }
+
+            /// `flex-direction`: which axis a flex container's items run along.
+            void LowerFlexDirection(const CSSComputedStyle& computed, const SourceLocation& location,
+                                    CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::FlexDirection);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->IsKeyword("row"))
+                {
+                    out.flexDirection = FlexDirectionKind::Row;
+                }
+                else if (value->IsKeyword("row-reverse"))
+                {
+                    out.flexDirection = FlexDirectionKind::RowReverse;
+                }
+                else if (value->IsKeyword("column"))
+                {
+                    out.flexDirection = FlexDirectionKind::Column;
+                }
+                else if (value->IsKeyword("column-reverse"))
+                {
+                    out.flexDirection = FlexDirectionKind::ColumnReverse;
+                }
+                else
+                {
+                    ReportNotLowered(computed, CSSPropertyId::FlexDirection, location,
+                                     "the native layout engine runs items along one of four axes",
+                                     "Use row, row-reverse, column or column-reverse.");
+                    return;
+                }
+
+                out.specified |= StyleFlagFlex;
+            }
+
+            /// `justify-content`: how the free space on the main axis is used.
+            /// `normal` behaves as `flex-start`, which is what a flex container's
+            /// default does.
+            void LowerJustifyContent(const CSSComputedStyle& computed, const SourceLocation& location,
+                                     CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::JustifyContent);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->IsKeyword("normal") || value->IsKeyword("flex-start") ||
+                    value->IsKeyword("start") || value->IsKeyword("left"))
+                {
+                    out.justifyContent = JustifyContentKind::FlexStart;
+                }
+                else if (value->IsKeyword("flex-end") || value->IsKeyword("end") ||
+                         value->IsKeyword("right"))
+                {
+                    out.justifyContent = JustifyContentKind::FlexEnd;
+                }
+                else if (value->IsKeyword("center"))
+                {
+                    out.justifyContent = JustifyContentKind::Center;
+                }
+                else if (value->IsKeyword("space-between"))
+                {
+                    out.justifyContent = JustifyContentKind::SpaceBetween;
+                }
+                else if (value->IsKeyword("space-around"))
+                {
+                    out.justifyContent = JustifyContentKind::SpaceAround;
+                }
+                else if (value->IsKeyword("space-evenly"))
+                {
+                    out.justifyContent = JustifyContentKind::SpaceEvenly;
+                }
+                else
+                {
+                    ReportNotLowered(computed, CSSPropertyId::JustifyContent, location,
+                                     "the native layout engine distributes space six ways",
+                                     "Use flex-start, flex-end, center, space-between, space-around or "
+                                     "space-evenly.");
+                    return;
+                }
+
+                out.specified |= StyleFlagFlex;
+            }
+
+            /// Maps the keyword set `align-items` and `align-self` share.
+            bool LowerAlignKeyword(const CSSValue& value, AlignItemsKind& target)
+            {
+                if (value.IsKeyword("normal") || value.IsKeyword("stretch"))
+                {
+                    target = AlignItemsKind::Stretch;
+                }
+                else if (value.IsKeyword("flex-start") || value.IsKeyword("start") || value.IsKeyword("left"))
+                {
+                    target = AlignItemsKind::FlexStart;
+                }
+                else if (value.IsKeyword("flex-end") || value.IsKeyword("end") || value.IsKeyword("right"))
+                {
+                    target = AlignItemsKind::FlexEnd;
+                }
+                else if (value.IsKeyword("center"))
+                {
+                    target = AlignItemsKind::Center;
+                }
+                else if (value.IsKeyword("baseline"))
+                {
+                    target = AlignItemsKind::Baseline;
+                }
+                else
+                {
+                    return false;
+                }
+
+                return true;
+            }
+
+            void LowerAlignItems(const CSSComputedStyle& computed, const SourceLocation& location,
+                                 CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::AlignItems);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (!LowerAlignKeyword(*value, out.alignItems))
+                {
+                    ReportNotLowered(computed, CSSPropertyId::AlignItems, location,
+                                     "the native layout engine aligns items five ways",
+                                     "Use stretch, flex-start, flex-end, center or baseline.");
+                    return;
+                }
+
+                out.specified |= StyleFlagFlex;
+            }
+
+            void LowerAlignSelf(const CSSComputedStyle& computed, const SourceLocation& location,
+                                CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::AlignSelf);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->IsKeyword("auto"))
+                {
+                    // `auto` defers to the container's `align-items`, so the
+                    // presence flag stays clear rather than naming a value.
+                    out.hasAlignSelf = 0;
+                    out.specified |= StyleFlagFlex;
+                    return;
+                }
+
+                if (!LowerAlignKeyword(*value, out.alignSelf))
+                {
+                    ReportNotLowered(computed, CSSPropertyId::AlignSelf, location,
+                                     "the native layout engine aligns items five ways",
+                                     "Use auto, stretch, flex-start, flex-end, center or baseline.");
+                    return;
+                }
+
+                out.hasAlignSelf = 1;
+                out.specified |= StyleFlagFlex;
+            }
+
+            void LowerFlexGrow(const CSSComputedStyle& computed, const SourceLocation& location,
+                               CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::FlexGrow);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->kind == CSSValueKind::Number)
+                {
+                    // A negative growth factor is invalid; the specification
+                    // clamps it to zero rather than refusing the declaration.
+                    out.flexGrow = value->number > 0.0 ? static_cast<float>(value->number) : 0.0f;
+                    out.specified |= StyleFlagFlex;
+                    return;
+                }
+
+                ReportNotLowered(computed, CSSPropertyId::FlexGrow, location,
+                                 "flex-grow is a single number", "Write a number such as 0, 1 or 2.");
+            }
+
+            void LowerFlexShrink(const CSSComputedStyle& computed, const SourceLocation& location,
+                                 CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::FlexShrink);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->kind == CSSValueKind::Number)
+                {
+                    out.flexShrink = value->number > 0.0 ? static_cast<float>(value->number) : 0.0f;
+                    out.specified |= StyleFlagFlex;
+                    return;
+                }
+
+                ReportNotLowered(computed, CSSPropertyId::FlexShrink, location,
+                                 "flex-shrink is a single number", "Write a number such as 0, 1 or 2.");
+            }
+
+            void LowerFlexBasis(const CSSComputedStyle& computed,
+                                const SourceLocation& location,
+                                float elementFontSize,
+                                CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::FlexBasis);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->IsKeyword("auto") || value->IsKeyword("content"))
+                {
+                    // `auto` and `content` both mean "use the item's own main
+                    // size", which is what `Auto` says to the arranger.
+                    out.flexBasis = LayoutValue::Auto();
+                    out.hasFlexBasis = 1;
+                    out.specified |= StyleFlagFlex;
+                    return;
+                }
+
+                if (value->kind == CSSValueKind::Percentage)
+                {
+                    out.flexBasis = LayoutValue{ static_cast<float>(value->number) / 100.0f,
+                                                 LayoutValueType::ParentRelative };
+                    out.hasFlexBasis = 1;
+                    out.specified |= StyleFlagFlex;
+                    return;
+                }
+
+                if (value->kind == CSSValueKind::Dimension && IsViewportUnit(value->unit))
+                {
+                    const float fraction =
+                        ViewportFraction(value->unit, static_cast<float>(value->number), context);
+
+                    if (fraction < 0.0f)
+                    {
+                        ReportNotLowered(computed, CSSPropertyId::FlexBasis, location,
+                                         "this viewport unit has no native equivalent",
+                                         "Use vw, vh, vmin, vmax or a length.");
+                        return;
+                    }
+
+                    out.flexBasis = LayoutValue{ fraction, LayoutValueType::ViewportRelative };
+                    out.hasFlexBasis = 1;
+                    out.specified |= StyleFlagFlex;
+                    return;
+                }
+
+                const LengthResolution resolved =
+                    ResolveLength(*value, context, elementFontSize, PropertyName(CSSPropertyId::FlexBasis),
+                                  diagnostics, location);
+
+                if (!resolved.resolved)
+                {
+                    return;
+                }
+
+                out.flexBasis = LayoutValue::Fixed(resolved.value);
+                out.hasFlexBasis = 1;
+                out.specified |= StyleFlagFlex;
+            }
+
+            void LowerOrder(const CSSComputedStyle& computed, const SourceLocation& location,
+                            CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::FlexOrder);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->kind == CSSValueKind::Number)
+                {
+                    out.flexOrder = static_cast<std::int32_t>(value->number);
+                    out.specified |= StyleFlagFlex;
+                    return;
+                }
+
+                ReportNotLowered(computed, CSSPropertyId::FlexOrder, location,
+                                 "order is a single integer", "Write an integer such as -1, 0 or 2.");
             }
 
             void LowerSize(const CSSComputedStyle& computed,
@@ -2545,6 +2862,31 @@ namespace RoboHTMLCompiler
             appendField(lowered.hasForeground);
             appendField(lowered.hasBorder);
             appendField(lowered.hasFontSize);
+
+            // The out-of-flow, float and flex models. Two boxes that declare
+            // the same *set* of properties but different values for them have
+            // the same `specified` mask, so the values themselves have to name
+            // the style or the two would be interned together.
+            appendField(lowered.position);
+            appendField(lowered.insetTop);
+            appendField(lowered.insetRight);
+            appendField(lowered.insetBottom);
+            appendField(lowered.insetLeft);
+            appendField(lowered.zIndex);
+            appendField(lowered.hasZIndex);
+            appendField(lowered.floatKind);
+            appendField(lowered.clearKind);
+            appendField(lowered.flexDirection);
+            appendField(lowered.justifyContent);
+            appendField(lowered.alignItems);
+            appendField(lowered.alignSelf);
+            appendField(lowered.hasAlignSelf);
+            appendField(lowered.flexGrow);
+            appendField(lowered.flexShrink);
+            appendField(lowered.flexBasis);
+            appendField(lowered.hasFlexBasis);
+            appendField(lowered.flexOrder);
+
             key += '|';
             key += fontFamily;
             key += '|';

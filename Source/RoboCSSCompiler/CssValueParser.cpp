@@ -1694,7 +1694,16 @@ namespace RoboCSSCompiler
                 return true;
             }
 
-            if (name == "flex" || name == "grid" || name == "table" || name == "inline-flex" ||
+            // `inline-flex` differs from `flex` only in the container's own
+            // outer display type, which this runtime models as a block-level
+            // box either way, so both become the same keyword.
+            if (name == "flex" || name == "inline-flex")
+            {
+                out = CSSValue::MakeKeyword("flex");
+                return true;
+            }
+
+            if (name == "grid" || name == "table" ||
                 name == "inline-grid" || name == "contents" || name == "flow-root" || name == "list-item" ||
                 name == "table-row" || name == "table-cell")
             {
@@ -1790,6 +1799,54 @@ namespace RoboCSSCompiler
                               "Invalid z-index value: '" + ComponentsToText(components) + "'.",
                               "z-index is an integer or the keyword 'auto'",
                               "Write 'auto' or an integer such as 0, 1 or -1.",
+                              ComponentsToText(components));
+            return false;
+        }
+
+        /// A single `<number>`, as `flex-grow` and `flex-shrink` are written.
+        /// A percentage is not a number, and neither is a bare ident.
+        bool ParseNumberValue(const std::vector<CSSComponentValue>& components,
+                              CSSValue& out,
+                              const CSSSourceLocation& location,
+                              CSSDiagnosticSink& diagnostics)
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.size() == 1 && values[0]->token.type == CSSTokenType::Number)
+            {
+                out = CSSValue::MakeNumber(values[0]->token.number, values[0]->token.isInteger);
+                return true;
+            }
+
+            diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                              location,
+                              "Invalid number value: '" + ComponentsToText(components) + "'.",
+                              "the property takes a single number",
+                              "Write a number such as 0, 1 or 2.5.",
+                              ComponentsToText(components));
+            return false;
+        }
+
+        /// A single `<integer>`, as `order` is written.
+        bool ParseIntegerValue(const std::vector<CSSComponentValue>& components,
+                               CSSValue& out,
+                               const CSSSourceLocation& location,
+                               CSSDiagnosticSink& diagnostics)
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.size() == 1 && values[0]->token.type == CSSTokenType::Number &&
+                values[0]->token.isInteger)
+            {
+                out = CSSValue::MakeNumber(values[0]->token.number, true);
+                return true;
+            }
+
+            diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                              location,
+                              "Invalid integer value: '" + ComponentsToText(components) + "'.",
+                              "the property takes a single integer",
+                              "Write an integer such as -1, 0 or 2.",
                               ComponentsToText(components));
             return false;
         }
@@ -2696,6 +2753,12 @@ namespace RoboCSSCompiler
 
         case CSSValueGrammar::ZIndex:
             return ParseZIndexValue(components, out, location, diagnostics);
+
+        case CSSValueGrammar::Number:
+            return ParseNumberValue(components, out, location, diagnostics);
+
+        case CSSValueGrammar::Integer:
+            return ParseIntegerValue(components, out, location, diagnostics);
 
         case CSSValueGrammar::TextAlign:
             return ParseTextAlignValue(components, out, location, diagnostics);

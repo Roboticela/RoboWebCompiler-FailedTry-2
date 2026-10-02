@@ -207,6 +207,17 @@ testing the value's sign, and `auto` is a real value rather than an unsupported
 one, so it is stored as `Auto` and the engine reads it as "the static position on
 this axis" rather than as an offset of zero.
 
+The single-line flex model is compiled and applied: `display: flex` (and
+`inline-flex`, which this runtime models as block-level either way),
+`flex-direction`, `justify-content`, `align-items`, `align-self`, `flex-grow`,
+`flex-shrink`, `flex-basis` and `order`. The container is laid out by
+`ArrangeFlex`, which measures each item's base main size, shares the free space
+by the growth factors or shrinks by factor times base size, distributes what is
+left by `justify-content`, and places each item on the cross axis by
+`align-items`/`align-self`. `order` sorts the items before any of that, a stable
+sort so ties keep tree order. `flex-wrap`, `flex-flow`, `align-content`, the
+`flex` shorthand and `gap` are not part of this slice.
+
 The float model is compiled and applied too: `float` lowers to one of three
 kinds (`none`, `left`, `right`, with the logical keywords mapped to the physical
 sides because the native flow is left to right) and `clear` to one of four

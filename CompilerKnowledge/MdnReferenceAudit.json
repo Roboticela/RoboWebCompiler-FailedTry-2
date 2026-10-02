@@ -218,10 +218,114 @@
       "covered": true,
       "retired": true,
       "note": "Lowered to a native ClearKind; a cleared block is pushed below the floats on the side it names before it is placed."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/flex-direction",
+      "kind": "css property",
+      "names": [
+        "flex-direction"
+      ],
+      "compiled": true,
+      "spec": "css-flexbox-1",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native FlexDirectionKind; row, row-reverse, column and column-reverse select the main axis."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/flex-grow",
+      "kind": "css property",
+      "names": [
+        "flex-grow"
+      ],
+      "compiled": true,
+      "spec": "css-flexbox-1",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native flex factor; a positive factor shares the free main-axis space with its siblings."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/flex-shrink",
+      "kind": "css property",
+      "names": [
+        "flex-shrink"
+      ],
+      "compiled": true,
+      "spec": "css-flexbox-1",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native shrink factor; when the items overflow, each shrinks in proportion to factor times base size."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/flex-basis",
+      "kind": "css property",
+      "names": [
+        "flex-basis"
+      ],
+      "compiled": true,
+      "spec": "css-flexbox-1",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to an unresolved LayoutValue; it is the item's initial main size, with auto falling back to its own size and a zero basis respected as a real basis."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/order",
+      "kind": "css property",
+      "names": [
+        "order"
+      ],
+      "compiled": true,
+      "spec": "css-flexbox-1",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native integer; items are laid out in ascending order, ties in tree order."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/justify-content",
+      "kind": "css property",
+      "names": [
+        "justify-content"
+      ],
+      "compiled": true,
+      "spec": "css-align-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native JustifyContentKind; flex-start, flex-end, center, space-between, space-around and space-evenly distribute the free main-axis space."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/align-items",
+      "kind": "css property",
+      "names": [
+        "align-items"
+      ],
+      "compiled": true,
+      "spec": "css-align-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native AlignItemsKind; stretch, flex-start, flex-end, center and baseline place items on the cross axis."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/align-self",
+      "kind": "css property",
+      "names": [
+        "align-self"
+      ],
+      "compiled": true,
+      "spec": "css-align-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native AlignItemsKind plus a presence flag; auto defers to the container's align-items."
     }
   ],
   "remainingByArea": {
-    "cssProperties": 565,
+    "cssProperties": 557,
     "cssSelectors": 166,
     "cssAtRules": 23,
     "cssValuesAndFunctions": 123,
@@ -230,7 +334,7 @@
     "htmlGlobalAttributes": 32
   },
   "accountedFor": {
-    "cssPropertiesCompiled": 75,
+    "cssPropertiesCompiled": 83,
     "cssPropertiesCarriedOnly": 442,
     "cssPropertyNamesNotAccountedFor": 59,
     "htmlElementDefinitions": 239,
@@ -241,6 +345,7 @@
     "A property name the compiler carries is known, parsed and stored but not compiled: it keeps its declared value and is reported as an unimplemented feature (RCC010) rather than refused. Implementing one means compiling it and giving it its rendering behaviour.",
     "The 59 CSS property names MDN has that no draft of the reference defined are the vendor-prefixed set, the legacy flexbox box-* set, the SVG presentation attributes (which are SVG attribute vocabulary, not CSS properties) and touch-action, math-*, corner-*-shape, user-modify and font-smooth.",
     "The out-of-flow model (position, top, right, bottom, left, inset, z-index) was the first slice of the layout machinery: the offsets and the shorthand are compiled and lowered, layout shifts relative and sticky boxes and places absolute and fixed boxes against their containing block, and a fixed box is pinned to the viewport through scrolling in paint, hit testing and bounds.",
-    "The float model (float, clear) was the second slice of the layout machinery: both are compiled and lowered, a float is placed shrink-to-fit against its side and its container grows to contain it, the line boxes crossing it lose its width, and clear drops a box below the floats it names."
+    "The float model (float, clear) was the second slice of the layout machinery: both are compiled and lowered, a float is placed shrink-to-fit against its side and its container grows to contain it, the line boxes crossing it lose its width, and clear drops a box below the floats it names.",
+    "The single-line flex model (display: flex, flex-direction, justify-content, align-items, align-self, flex-grow, flex-shrink, flex-basis and order) was the third slice of the layout machinery. The container lays its items along one axis, distributes free space by the growth factors, shrinks when they overflow, and sorts them by order. flex-wrap, flex-flow, align-content, the flex shorthand and gap are not part of this slice and their pages stay."
   ]
 }

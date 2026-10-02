@@ -295,6 +295,21 @@ The behaviours worth naming, because each one is a decision:
   against the float's own band, which is exact for the common case of a float at
   the top of its container; and a float in a nested block does not reach a
   sibling block's lines, because exclusions are tracked per formatting context.
+* **The flex model.** `display: flex` makes a container arrange its children
+  along one axis instead of stacking or flowing them. `ArrangeFlex` sorts the
+  items by `order` (a stable sort, so ties keep tree order), measures each item's
+  base main size (`flex-basis`, else its declared size, else its max-content
+  size), then resolves the flexible lengths: spare space is shared by
+  `flex-grow`, and an overflow shrinks each item in proportion to `flex-shrink`
+  times its base size. Whatever is left is distributed by `justify-content`, and
+  each item is placed on the cross axis by its `align-self` (which falls back to
+  the container's `align-items`) — with `stretch` filling the line when the
+  container has a definite cross size. `row-reverse` and `column-reverse` lay the
+  line out from the other end by mirroring the forward positions.
+
+  This is deliberately a single line: `flex-wrap`, `flex-flow`, `align-content`,
+  the `flex` shorthand and `gap` are not modelled yet, so a container that asks
+  for them keeps its items on one line rather than wrapping.
 * **The root fills the viewport** vertically, so a short document paints a page
   rather than a stripe.
 

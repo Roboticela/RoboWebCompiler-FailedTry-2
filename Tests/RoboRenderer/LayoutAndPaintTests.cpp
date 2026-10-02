@@ -913,7 +913,148 @@ ROBO_TEST(Layout, ClearMovesABlockBelowTheFloatItNames)
     // The cleared block sits below the float...
     ROBO_CHECK(blockBoxA.y >= floatBoxA.Bottom() - 1.0f);
 
-    // ...whereas without [H[2J[3J the block would flow past it, because a float
+    // ...whereas without clearing, the block would flow past it, because a float
     // reserves no room in the flow.
     ROBO_CHECK(blockBoxB.y < floatBoxB.Bottom() - 1.0f);
+}
+
+// A flex container lays its children along one axis rather than stacking or
+// flowing them. These tests pin the four promises the compiled model makes:
+// items sit side by side in order, justify-content distributes the free space,
+// flex-grow shares it by the growth factors, and a column runs down the page.
+// ---------------------------------------------------------------------------
+
+ROBO_TEST(Flex, RowItemsSitSideBySideInTreeOrder)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"row\"><div id=\"a\">A</div><div id=\"b\">B</div><div id=\"c\">C</div></div>",
+        application,
+        { { "probe.css",
+            "#row { display: flex; width: 300px; height: 100px; }\n"
+            "#a, #b, #c { width: 50px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 500.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex row = FindElementById(document, "row");
+    const ElementIndex a = FindElementById(document, "a");
+    const ElementIndex b = FindElementById(document, "b");
+    const ElementIndex c = FindElementById(document, "c");
+    ROBO_CHECK(row != NoElement && a != NoElement && b != NoElement && c != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+    const Rect rowBox = BoxOf(layout, row);
+    const Rect aBox = BoxOf(layout, a);
+    const Rect bBox = BoxOf(layout, b);
+    const Rect cBox = BoxOf(layout, c);
+
+    ROBO_CHECK_EQ(static_cast<int>(aBox.x), static_cast<int>(rowBox.x));
+    ROBO_CHECK_EQ(static_cast<int>(bBox.x), static_cast<int>(aBox.x + 50));
+    ROBO_CHECK_EQ(static_cast<int>(cBox.x), static_cast<int>(bBox.x + 50));
+    ROBO_CHECK(aBox.width > 49.0f && aBox.width < 51.0f);
+
+    // The default `align-items: stretch` fills the container's cross size.
+    ROBO_CHECK(aBox.height > 99.0f);
+}
+
+ROBO_TEST(Flex, JustifyContentCentersTheItems)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"row\"><div id=\"a\">A</div><div id=\"b\">B</div></div>",
+        application,
+        { { "probe.css",
+            "#row { display: flex; width: 300px; justify-content: center; }\n"
+            "#a, #b { width: 50px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 500.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex row = FindElementById(document, "row");
+    const ElementIndex a = FindElementById(document, "a");
+    ROBO_CHECK(row != NoElement && a != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+    const Rect rowBox = BoxOf(layout, row);
+    const Rect aBox = BoxOf(layout, a);
+
+    // 100 of 300 used, so 200 is free and centering puts 100 in front.
+    ROBO_CHECK_EQ(static_cast<int>(aBox.x), static_cast<int>(rowBox.x + 100));
+}
+
+ROBO_TEST(Flex, GrowSharesTheFreeSpaceByTheGrowthFactors)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"row\"><div id=\"a\">A</div><div id=\"b\">B</div></div>",
+        application,
+        { { "probe.css",
+            "#row { display: flex; width: 300px; }\n"
+            "#a { flex-grow: 1; flex-basis: 0px; }\n"
+            "#b { flex-grow: 3; flex-basis: 0px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 500.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex a = FindElementById(document, "a");
+    const ElementIndex b = FindElementById(document, "b");
+    ROBO_CHECK(a != NoElement && b != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+    const Rect aBox = BoxOf(layout, a);
+    const Rect bBox = BoxOf(layout, b);
+
+    // A zero basis leaves the whole 300 to share one to three.
+    ROBO_CHECK_EQ(static_cast<int>(aBox.width), 75);
+    ROBO_CHECK_EQ(static_cast<int>(bBox.width), 225);
+    ROBO_CHECK_EQ(static_cast<int>(bBox.x), static_cast<int>(aBox.x + 75));
+}
+
+ROBO_TEST(Flex, ColumnStacksItemsVerticallyAndOrderReordersThem)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"col\"><div id=\"a\">A</div><div id=\"b\">B</div></div>",
+        application,
+        { { "probe.css",
+            "#col { display: flex; flex-direction: column; width: 200px; }\n"
+            "#a { height: 40px; order: 2; }\n"
+            "#b { height: 30px; order: 1; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 500.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex col = FindElementById(document, "col");
+    const ElementIndex a = FindElementById(document, "a");
+    const ElementIndex b = FindElementById(document, "b");
+    ROBO_CHECK(col != NoElement && a != NoElement && b != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+    const Rect colBox = BoxOf(layout, col);
+    const Rect aBox = BoxOf(layout, a);
+    const Rect bBox = BoxOf(layout, b);
+
+    // Order 1 comes first, so `b` is above `a` despite being second in the tree.
+    ROBO_CHECK_EQ(static_cast<int>(bBox.y), static_cast<int>(colBox.y));
+    ROBO_CHECK_EQ(static_cast<int>(aBox.y), static_cast<int>(bBox.y + 30));
+
+    // The cross axis stretches both items to the container's width.
+    ROBO_CHECK(bBox.width > 199.0f && aBox.width > 199.0f);
 }

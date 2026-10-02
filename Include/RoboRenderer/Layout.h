@@ -446,7 +446,9 @@ namespace RoboRenderer
                              const Rect& clip,
                              std::uint32_t depth,
                              bool measureOnly,
-                             bool shrinkToFit = false);
+                             bool shrinkToFit = false,
+                             float forcedWidth = 0.0f,
+                             float forcedHeight = 0.0f);
 
         float ArrangeBlockChildren(ElementIndex index,
                                    float x,
@@ -455,6 +457,19 @@ namespace RoboRenderer
                                    const Rect& clip,
                                    std::uint32_t depth,
                                    bool measureOnly);
+
+        /// Lays out a flex container's items along its main axis and returns the
+        /// used height of its content area. `availableHeight` is the declared
+        /// inner height, or zero when the container sizes to its content.
+        float ArrangeFlex(ElementIndex index,
+                          float x,
+                          float y,
+                          float availableWidth,
+                          float availableHeight,
+                          const CompiledStyle& style,
+                          const Rect& clip,
+                          std::uint32_t depth,
+                          bool measureOnly);
 
         /// Flows inline content into line boxes. `restriction` limits the flow to
         /// a specific run of children, which is how an anonymous inline row is

@@ -180,6 +180,29 @@ namespace RoboCSSCompiler
             { Id::Clear, "clear", Cat::Position, false, "none", Grammar::Keyword,
               "none left right both inline-start inline-end", true, false, false, true, true, "css2" },
 
+            // The flex model. The container properties pick the main axis and
+            // how items are placed on it; the item properties decide how much
+            // room each item takes and in what order.
+            { Id::FlexDirection, "flex-direction", Cat::Layout, false, "row", Grammar::Keyword,
+              "row row-reverse column column-reverse", true, false, false, true, true, "css-flexbox-1" },
+            { Id::JustifyContent, "justify-content", Cat::Layout, false, "normal", Grammar::Keyword,
+              "normal flex-start flex-end start end center space-between space-around space-evenly", true, false,
+              false, true, true, "css-align-3" },
+            { Id::AlignItems, "align-items", Cat::Layout, false, "normal", Grammar::Keyword,
+              "normal stretch flex-start flex-end start end center baseline", true, false, false, true, true,
+              "css-align-3" },
+            { Id::AlignSelf, "align-self", Cat::Layout, false, "auto", Grammar::Keyword,
+              "auto normal stretch flex-start flex-end start end center baseline", true, false, false, true, true,
+              "css-align-3" },
+            { Id::FlexGrow, "flex-grow", Cat::Layout, false, "0", Grammar::Number, nullptr, true, false, false,
+              true, true, "css-flexbox-1" },
+            { Id::FlexShrink, "flex-shrink", Cat::Layout, false, "1", Grammar::Number, nullptr, true, false, false,
+              true, true, "css-flexbox-1" },
+            { Id::FlexBasis, "flex-basis", Cat::Layout, false, "auto", Grammar::Size, nullptr, true, false, false,
+              true, true, "css-flexbox-1" },
+            { Id::FlexOrder, "order", Cat::Layout, false, "0", Grammar::Integer, nullptr, true, false, false, true,
+              true, "css-flexbox-1" },
+
             { Id::BorderTopWidth, "border-top-width", Cat::Border, false, "medium", Grammar::BorderWidth, nullptr, true, true, false, true, true, "css-backgrounds-3" },
             { Id::BorderRightWidth, "border-right-width", Cat::Border, false, "medium", Grammar::BorderWidth, nullptr, true, true, false, true, true, "css-backgrounds-3" },
             { Id::BorderBottomWidth, "border-bottom-width", Cat::Border, false, "medium", Grammar::BorderWidth, nullptr, true, true, false, true, true, "css-backgrounds-3" },

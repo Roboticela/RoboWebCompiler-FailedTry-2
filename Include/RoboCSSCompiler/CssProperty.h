@@ -64,6 +64,19 @@ namespace RoboCSSCompiler
         Float,
         Clear,
 
+        // --- flex -----------------------------------------------------------
+        // A flex container lays its children out along one axis. The container
+        // properties pick the axis and how the items sit on it; the item
+        // properties decide how much room each item takes and in what order.
+        FlexDirection,
+        JustifyContent,
+        AlignItems,
+        AlignSelf,
+        FlexGrow,
+        FlexShrink,
+        FlexBasis,
+        FlexOrder,
+
         // --- borders --------------------------------------------------------
         BorderTopWidth,
         BorderRightWidth,
@@ -210,6 +223,10 @@ namespace RoboCSSCompiler
         Overflow,
         /// `auto | <integer>`
         ZIndex,
+        /// A single `<number>`, as `flex-grow` and `flex-shrink` are written.
+        Number,
+        /// A single `<integer>`, as `order` is written.
+        Integer,
         /// `start | end | left | right | center | justify`
         TextAlign,
         /// `none | underline | overline | line-through` or several of them.
