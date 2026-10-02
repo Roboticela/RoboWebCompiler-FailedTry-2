@@ -1486,6 +1486,41 @@ p {
     flex-flow: column nowrap;
 }
 
+.flex-demo-container {
+    display: flex;
+    width: 240px;
+    padding: 4px;
+    background-color: #f1f5f9;
+    border-width: 1px;
+    border-style: solid;
+    border-color: #cbd5e1;
+}
+
+.flex-demo-container .demo {
+    height: 20px;
+    margin-right: 4px;
+}
+
+.flex-shorthand-one {
+    flex: 1;
+}
+
+.flex-shorthand-none {
+    flex: none;
+}
+
+.flex-shorthand-auto {
+    flex: auto;
+}
+
+.flex-shorthand-three {
+    flex: 2 0 40px;
+}
+
+.flex-shorthand-basis {
+    flex: 30px;
+}
+
 .flex-flow-row {
     flex-flow: row;
 }

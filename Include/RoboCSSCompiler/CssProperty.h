@@ -205,6 +205,10 @@ namespace RoboCSSCompiler
         LengthPercentageOrAuto,
         /// `<length-percentage>`
         LengthPercentage,
+        /// `<length-percentage>` that must be zero or more: the `padding`
+        /// longhands, where a negative value is invalid rather than merely
+        /// odd. `LengthPercentage` is the any-sign form `text-indent` uses.
+        NonNegativeLengthPercentage,
         /// `<length> | thin | medium | thick`
         BorderWidth,
         /// A length that may also be `normal`.

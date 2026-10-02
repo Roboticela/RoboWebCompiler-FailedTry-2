@@ -1636,6 +1636,117 @@ namespace RoboCSSCompiler
             return true;
         }
 
+        if (rule == "flex")
+        {
+            // `flex: none | [ <'flex-grow'> <'flex-shrink'>? || <'flex-basis'> ]`.
+            // `none` and `auto` are whole-shorthand keywords; otherwise up to two
+            // numbers set the grow and the shrink and one value sets the basis, in
+            // either order. A number with no basis leaves the basis at zero,
+            // which is what the reference says `flex: 1` means.
+            const std::vector<const CSSComponentValue*> items = TopLevelItems(value);
+
+            if (items.empty())
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidShorthand, location, "flex needs a value.",
+                                  "no value given", "Write 'flex: 1' or 'flex: none'.", "flex");
+                return false;
+            }
+
+            const auto emit = [&](double grow, double shrink, const CSSValue& basis) {
+                out.emplace_back(shorthand.targets.top, CSSValue::MakeNumber(grow));
+                out.emplace_back(shorthand.targets.right, CSSValue::MakeNumber(shrink));
+                out.emplace_back(shorthand.targets.bottom, basis);
+            };
+
+            if (items.size() == 1 && items[0]->token.type == CSSTokenType::Ident)
+            {
+                const std::string name = LowerCase(items[0]->token.text);
+
+                if (name == "none")
+                {
+                    emit(0.0, 0.0, CSSValue::MakeKeyword("auto"));
+                    return true;
+                }
+
+                if (name == "auto")
+                {
+                    emit(1.0, 1.0, CSSValue::MakeKeyword("auto"));
+                    return true;
+                }
+            }
+
+            double grow = 1.0;
+            double shrink = 1.0;
+            bool hasGrow = false;
+            bool hasShrink = false;
+            bool hasBasis = false;
+            CSSValue basis;
+
+            for (const CSSComponentValue* item : items)
+            {
+                if (item->token.type == CSSTokenType::Number)
+                {
+                    if (!hasGrow)
+                    {
+                        grow = item->token.number;
+                        hasGrow = true;
+                        continue;
+                    }
+
+                    if (!hasShrink)
+                    {
+                        shrink = item->token.number;
+                        hasShrink = true;
+                        continue;
+                    }
+
+                    diagnostics.Error(CSSDiagnosticCode::InvalidShorthand, location,
+                                      "flex takes at most two numbers.",
+                                      "a third number has no longhand to set",
+                                      "Write 'flex: 1 0 30px'.", "flex");
+                    return false;
+                }
+
+                if (hasBasis)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidShorthand, location,
+                                      "flex takes one basis.",
+                                      "a second value sets the basis again", "Write 'flex: 1 0 30px'.",
+                                      "flex");
+                    return false;
+                }
+
+                // The basis is judged by the longhand's own grammar, so the
+                // shorthand and `flex-basis` cannot disagree about what a basis
+                // is.
+                if (!parseAgainst(shorthand.targets.bottom, std::vector<CSSComponentValue>{ *item }, basis,
+                                  "flex-basis"))
+                {
+                    return false;
+                }
+
+                hasBasis = true;
+            }
+
+            if (grow < 0.0 || shrink < 0.0)
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                  "flex-grow and flex-shrink cannot be negative.",
+                                  "a growth or shrink factor is zero or more", "Write 'flex: 0 1 auto'.",
+                                  "flex");
+                return false;
+            }
+
+            if (hasGrow && !hasBasis)
+            {
+                // `flex: 1` and `flex: 1 2` both put the basis at zero.
+                basis = CSSValue::MakeDimension(0.0, CSSUnit::Px);
+            }
+
+            emit(grow, shrink, basis);
+            return true;
+        }
+
         if (rule == "flex-flow")
         {
             // `<'flex-direction'> || <'flex-wrap'>` -- either order. No keyword

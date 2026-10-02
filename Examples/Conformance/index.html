@@ -697,6 +697,47 @@ and a run of them at the end of a line does not hang.</p>
         </div>
         <p class="caption">order: 1, -1 and 0 — sorted before anything is placed</p>
 
+        <h3>the flex shorthand</h3>
+        <div class="row">
+            <div class="item">
+                <div class="flex-demo-container">
+                    <div class="demo flex-shorthand-one">1</div>
+                    <div class="demo flex-shorthand-one">1</div>
+                </div>
+                <p class="caption">flex: 1 (grow 1, shrink 1, basis 0)</p>
+            </div>
+            <div class="item">
+                <div class="flex-demo-container">
+                    <div class="demo flex-shorthand-auto">auto</div>
+                    <div class="demo flex-shorthand-auto">auto</div>
+                </div>
+                <p class="caption">flex: auto (grow 1, shrink 1, basis auto)</p>
+            </div>
+            <div class="item">
+                <div class="flex-demo-container">
+                    <div class="demo flex-shorthand-none">none</div>
+                    <div class="demo flex-shorthand-none">none</div>
+                </div>
+                <p class="caption">flex: none (grow 0, shrink 0, basis auto)</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="item">
+                <div class="flex-demo-container">
+                    <div class="demo flex-shorthand-three">2 0 40px</div>
+                    <div class="demo flex-shorthand-one">1</div>
+                </div>
+                <p class="caption">flex: 2 0 40px beside flex: 1</p>
+            </div>
+            <div class="item">
+                <div class="flex-demo-container">
+                    <div class="demo flex-shorthand-basis">30px</div>
+                    <div class="demo flex-shorthand-basis">30px</div>
+                </div>
+                <p class="caption">flex: 30px (a bare basis: grow 1, shrink 1)</p>
+            </div>
+        </div>
+
         <h3>flex-wrap and flex-flow</h3>
         <div class="row">
             <div class="item">
@@ -885,13 +926,12 @@ and a run of them at the end of a line does not hang.</p>
             <li><span class="mono">background-color: currentcolor</span> without an explicit <span class="mono">color</span> — there is no native colour to borrow. With a <span class="mono">color</span> set it resolves to it, as in section 6.</li>
             <li><span class="mono">border-radius</span> with more than one value, or the elliptical <span class="mono">/</span> form — the native radius is one circular length. The four corner longhands are accepted and the single value paints every corner.</li>
             <li><span class="mono">stretch, fit-content(&lt;length&gt;) and anchor-size()</span> on the size properties — a length, a percentage, <span class="mono">auto</span>, <span class="mono">none</span> and <span class="mono">min-content</span>/<span class="mono">max-content</span>/<span class="mono">fit-content</span> are implemented, these three need an intrinsic-size pass or an anchor to measure against.</li>
-            <li><span class="mono">percentages in margin, padding, border-width and font-size</span> — the native box holds resolved lengths; they are supported in width, height and min-*.</li>
+            <li><span class="mono">percentages in margin, padding and font-size</span> — the native box holds resolved lengths; they are supported in width, height and min-*. A percentage in <span class="mono">border-width</span> is invalid CSS and is refused as an error, not reported.</li>
             <li><span class="mono">text-align: match-parent</span> — there is no parent writing mode to inherit one from.</li>
             <li><span class="mono">text-transform: full-width, full-size-kana, math-auto</span> — the case transforms are implemented, these are not.</li>
             <li><span class="mono">text-indent: each-line, hanging</span> — the indent itself is implemented.</li>
             <li><span class="mono">text-decoration-line: spelling-error, grammar-error</span> — underline, overline, line-through and blink are.</li>
             <li><span class="mono">font-size: math</span>, and the font shorthand's family, line-height, weight, style and variant halves.</li>
-            <li><span class="mono">flex</span> — the shorthand over flex-grow, flex-shrink and flex-basis is carried, not expanded into the three longhands. The rest of the flex model, wrapping and gaps included, is implemented above.</li>
             <li><span class="mono">z-index</span> is compiled and accepted, and does not yet reorder painting.</li>
             <li><span class="mono">sticky</span> takes its offsets like a relative box; the scrollport clamp is not modelled.</li>
             <li><span class="mono">env(), attr(), counter(), counters(), anchor(), anchor-size(), calc-size(), element(), if(), progress(), random(), sibling-index(), sibling-count()</span> and the image and grid functions — the numeric functions and var() are implemented, these need a document or a runtime.</li>

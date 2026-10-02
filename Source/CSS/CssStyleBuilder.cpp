@@ -1155,8 +1155,8 @@ namespace RoboHTMLCompiler
 
                 if (value->kind == CSSValueKind::Number)
                 {
-                    // A negative growth factor is invalid; the specification
-                    // clamps it to zero rather than refusing the declaration.
+                    // The parser has already refused a negative factor, so the
+                    // number here is zero or more.
                     out.flexGrow = value->number > 0.0 ? static_cast<float>(value->number) : 0.0f;
                     out.specified |= StyleFlagFlex;
                     return;

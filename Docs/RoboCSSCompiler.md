@@ -193,8 +193,8 @@ border widths, `border-style`, the four border colours, `border-radius`,
 `tab-size`, `white-space`, `direction`, `writing-mode`, `text-orientation`,
 `overflow-x`/`overflow-y`, `all`, and the `margin`, `padding`, `border-width`,
 `border-style`, `border-color`, `border`, `border-<side>`, `border-radius`,
-`overflow`, `background`, `font`, `font-variant` and `text-decoration`
-shorthands.
+`overflow`, `background`, `font`, `font-variant`, `text-decoration`, `inset`,
+`flex-flow`, `flex` and `gap` shorthands.
 
 The out-of-flow model is compiled and applied: `position`, the four offsets
 `top`, `right`, `bottom` and `left`, `z-index`, and the `inset` shorthand, which
@@ -212,17 +212,18 @@ The flex model is compiled and applied: `display: flex` (and `inline-flex`,
 which this runtime models as block-level either way), `flex-direction`,
 `flex-wrap`, `flex-flow`, `justify-content`, `align-items`, `align-content`,
 `align-self`, `flex-grow`, `flex-shrink`, `flex-basis`, `order`, `gap`,
-`row-gap` and `column-gap`. The container is laid out by `ArrangeFlex`, which
-measures each item's base main size, breaks the items into lines when
-`flex-wrap` allows it, shares the free space by the growth factors or shrinks by
-factor times base size, distributes what is left by `justify-content`, places
-each item on the cross axis by `align-items`/`align-self`, and shares the free
-cross space between the lines by `align-content`. A percentage `row-gap`,
-`column-gap` or `gap` resolves against the container's content box on the axis
-the gap runs along. `order` sorts the items before any of that, a stable sort so
-ties keep tree order. The one part of the model still carried rather than
-compiled is the `flex` shorthand over `flex-grow`, `flex-shrink` and
-`flex-basis`.
+`row-gap`, `column-gap` and the `flex` shorthand. The container is laid out by
+`ArrangeFlex`, which measures each item's base main size, breaks the items into
+lines when `flex-wrap` allows it, shares the free space by the growth factors or
+shrinks by factor times base size, distributes what is left by `justify-content`,
+places each item on the cross axis by `align-items`/`align-self`, and shares the
+free cross space between the lines by `align-content`. `flex` expands to its
+three longhands by rule: `none` is `0 0 auto`, `auto` is `1 1 auto`, and
+otherwise up to two numbers set `flex-grow` and `flex-shrink` and one value sets
+`flex-basis`, with a number and no basis leaving the basis at zero. A percentage
+`row-gap`, `column-gap` or `gap` resolves against the container's content box on
+the axis the gap runs along. `order` sorts the items before any of that, a stable
+sort so ties keep tree order.
 
 The float model is compiled and applied too: `float` lowers to one of three
 kinds (`none`, `left`, `right`, with the logical keywords mapped to the physical
@@ -425,10 +426,10 @@ two identifiers. A carried property is given an id at or above
 without a compiled slot to index; its value grammar is `Dynamic`, the one grammar
 that judges nothing.
 
-The **81 compiled names** were the 65 longhand definitions and 16 shorthands the
-renderer could actually draw when the reference was consumed; the out-of-flow,
-float and flex slices have taken that to 99 — the box, border, background, colour, font, text and
-overflow families. The **640 carried names** are everything else, and carrying is
+The **105 compiled names** are the 86 longhand definitions and 19 shorthands the
+renderer can actually draw — the box, border, background, colour, font, text,
+overflow, out-of-flow, float and flex families. The **634 carried names** are
+everything else, and carrying is
 not dropping: `opacity: 0.5` and `animation-name: fade` are valid CSS, so they are
 accepted, kept, inherited where the specification says they inherit, and printed
 back by the coverage report, instead of being refused. A compiler that models a
@@ -441,6 +442,16 @@ lives outside the consumed reference (`touch-action`, `font-stretch`, the
 `math-*` trio), which is reported with the reason support is missing (RCC010).
 That difference used to come from a hand-written list of 218 names, and 465 of the
 reference's properties were reported as if they were typos.
+
+**A compiled value must fit its grammar.** The parser judges every compiled
+property against its own grammar and reports a value it cannot accept as RCC002,
+so a wrong value fails the build exactly like a wrong property (RCC001). A value
+outside the property's range is refused rather than clamped: a negative size,
+padding, border width, gap, font size, line height, radius or
+`flex-grow`/`flex-shrink` is an error, `z-index` and `order` must be integers,
+and `border-width` does not take a percentage. The properties that do allow a
+negative value — `margin`, `text-indent`, `letter-spacing`, `word-spacing` and
+the offsets — still take one.
 
 **Carried values are kept as written.** `transition: opacity 1s ease-in 0.5s`
 becomes a list of the four tokens in order, because the order is part of the

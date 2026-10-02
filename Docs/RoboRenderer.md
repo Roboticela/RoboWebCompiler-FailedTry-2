@@ -320,8 +320,9 @@ The behaviours worth naming, because each one is a decision:
   `stretch` grow them, the rest place them), and the `flex-flow` shorthand sets
   the direction and the wrapping together. `gap`, `row-gap` and `column-gap`
   separate the items on a line and the lines themselves; a percentage gap is a
-  fraction of the container's content box on the axis the gap runs along. The one
-  part of the model still carried rather than expanded is the `flex` shorthand.
+  fraction of the container's content box on the axis the gap runs along. The
+  `flex` shorthand expands to `flex-grow`, `flex-shrink` and `flex-basis` before
+  any of this, so a container never sees it.
 * **The root fills the viewport** vertically, so a short document paints a page
   rather than a stripe.
 

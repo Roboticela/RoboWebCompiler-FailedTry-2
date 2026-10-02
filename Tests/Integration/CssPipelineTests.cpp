@@ -1255,3 +1255,67 @@ ROBO_TEST(CssPipeline, TheMultiLineFlexModelReachesTheCompiledStyle)
     ROBO_CHECK_EQ(static_cast<int>(flowStyle.rowGap.value), 7);
     ROBO_CHECK(flowStyle.columnGap.type == LayoutValueType::Auto);
 }
+
+ROBO_TEST(CssPipeline, TheFlexShorthandSetsTheThreeLonghands)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"one\">1</div><div class=\"two\">2</div><div class=\"three\">3</div>"
+        "<div class=\"four\">4</div><div class=\"five\">5</div><div class=\"six\">6</div>",
+        application,
+        Sheet(".one { flex: 1 }\n"
+              ".two { flex: none }\n"
+              ".three { flex: auto }\n"
+              ".four { flex: 2 0 40px }\n"
+              ".five { flex: 30px }\n"
+              ".six { flex: 1 3 }\n"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer renderer(document);
+    ROBO_CHECK(renderer.initialized);
+
+    const auto styleOf = [&](std::size_t ordinal) -> const CompiledStyle& {
+        return renderer.renderer.Layout().StyleOf(StyledElement(document, ordinal));
+    };
+
+    // `flex: 1` is grow 1, shrink 1 and a zero basis.
+    const CompiledStyle& one = styleOf(0);
+    ROBO_CHECK_EQ(static_cast<int>(one.flexGrow), 1);
+    ROBO_CHECK_EQ(static_cast<int>(one.flexShrink), 1);
+    ROBO_CHECK(one.hasFlexBasis != 0 && one.flexBasis.type == LayoutValueType::Fixed);
+    ROBO_CHECK_EQ(static_cast<int>(one.flexBasis.value), 0);
+
+    // `flex: none` is 0 0 auto; `flex: auto` is 1 1 auto.
+    const CompiledStyle& two = styleOf(1);
+    ROBO_CHECK_EQ(static_cast<int>(two.flexGrow), 0);
+    ROBO_CHECK_EQ(static_cast<int>(two.flexShrink), 0);
+    ROBO_CHECK(two.flexBasis.type == LayoutValueType::Auto);
+
+    const CompiledStyle& three = styleOf(2);
+    ROBO_CHECK_EQ(static_cast<int>(three.flexGrow), 1);
+    ROBO_CHECK_EQ(static_cast<int>(three.flexShrink), 1);
+    ROBO_CHECK(three.flexBasis.type == LayoutValueType::Auto);
+
+    // `flex: 2 0 40px` and `flex: 30px`; the basis is a whole value, not a word.
+    const CompiledStyle& four = styleOf(3);
+    ROBO_CHECK_EQ(static_cast<int>(four.flexGrow), 2);
+    ROBO_CHECK_EQ(static_cast<int>(four.flexShrink), 0);
+    ROBO_CHECK(four.flexBasis.type == LayoutValueType::Fixed);
+    ROBO_CHECK_EQ(static_cast<int>(four.flexBasis.value), 40);
+
+    const CompiledStyle& five = styleOf(4);
+    ROBO_CHECK_EQ(static_cast<int>(five.flexGrow), 1);
+    ROBO_CHECK_EQ(static_cast<int>(five.flexShrink), 1);
+    ROBO_CHECK_EQ(static_cast<int>(five.flexBasis.value), 30);
+
+    // `flex: 1 3` leaves the basis at zero.
+    const CompiledStyle& six = styleOf(5);
+    ROBO_CHECK_EQ(static_cast<int>(six.flexGrow), 1);
+    ROBO_CHECK_EQ(static_cast<int>(six.flexShrink), 3);
+    ROBO_CHECK(six.flexBasis.type == LayoutValueType::Fixed);
+    ROBO_CHECK_EQ(static_cast<int>(six.flexBasis.value), 0);
+}

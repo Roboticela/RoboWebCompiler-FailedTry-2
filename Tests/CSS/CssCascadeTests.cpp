@@ -820,6 +820,82 @@ ROBO_TEST(CssCascade, InvalidValuesFailTheDeclaration)
     ROBO_CHECK(!fixture.Body()->Has(CSSPropertyId::Width));
 }
 
+ROBO_TEST(CssCascade, AnOutOfRangeValueIsAnErrorAndIsNeverApplied)
+{
+    // A wrong value is an error above the declaration, exactly like a wrong
+    // property: these properties do not accept a negative value and border-width
+    // does not accept a percentage, so the declaration is dropped and the build
+    // fails rather than the value being clamped or ignored.
+    struct Case
+    {
+        const char* stylesheet;
+        CSSPropertyId id;
+    };
+
+    static const Case cases[] = {
+        { "body { width: -10px }", CSSPropertyId::Width },
+        { "body { height: -1px }", CSSPropertyId::Height },
+        { "body { min-width: -1px }", CSSPropertyId::MinWidth },
+        { "body { min-height: -1px }", CSSPropertyId::MinHeight },
+        { "body { max-width: -1px }", CSSPropertyId::MaxWidth },
+        { "body { max-height: -1px }", CSSPropertyId::MaxHeight },
+        { "body { padding: -1px }", CSSPropertyId::PaddingTop },
+        { "body { padding-top: -1px }", CSSPropertyId::PaddingTop },
+        { "body { border-top-width: -1px }", CSSPropertyId::BorderTopWidth },
+        { "body { border-top-width: 50% }", CSSPropertyId::BorderTopWidth },
+        { "body { border-radius: -1px }", CSSPropertyId::BorderRadius },
+        { "body { font-size: -1px }", CSSPropertyId::FontSize },
+        { "body { line-height: -1 }", CSSPropertyId::LineHeight },
+        { "body { flex-grow: -1 }", CSSPropertyId::FlexGrow },
+        { "body { flex-shrink: -1 }", CSSPropertyId::FlexShrink },
+        { "body { flex-basis: -1px }", CSSPropertyId::FlexBasis },
+        { "body { row-gap: -1px }", CSSPropertyId::RowGap },
+        { "body { column-gap: -1px }", CSSPropertyId::ColumnGap },
+        { "body { gap: -1px }", CSSPropertyId::RowGap },
+        { "body { text-decoration-thickness: -1px }", CSSPropertyId::TextDecorationThickness },
+        { "body { flex: -1 }", CSSPropertyId::FlexGrow },
+        { "body { flex: 1 2 3 }", CSSPropertyId::FlexBasis },
+    };
+
+    for (const Case& testCase : cases)
+    {
+        Fixture fixture;
+        fixture.Build(testCase.stylesheet);
+
+        ROBO_CHECK(fixture.diagnostics.HasErrors());
+        ROBO_CHECK(!fixture.Body()->Has(testCase.id));
+    }
+}
+
+ROBO_TEST(CssCascade, AValueThatMayBeNegativeIsStillAccepted)
+{
+    // The other half of the rule: a margin, a text indent, a letter or word
+    // space and an offset are allowed to be negative, and still are.
+    struct Case
+    {
+        const char* stylesheet;
+        CSSPropertyId id;
+    };
+
+    static const Case cases[] = {
+        { "body { margin: -5px }", CSSPropertyId::MarginTop },
+        { "body { margin-left: calc(-10px) }", CSSPropertyId::MarginLeft },
+        { "body { text-indent: -20px }", CSSPropertyId::TextIndent },
+        { "body { letter-spacing: -2px }", CSSPropertyId::LetterSpacing },
+        { "body { word-spacing: -2px }", CSSPropertyId::WordSpacing },
+        { "body { position: relative; top: -5px }", CSSPropertyId::Top },
+    };
+
+    for (const Case& testCase : cases)
+    {
+        Fixture fixture;
+        fixture.Build(testCase.stylesheet);
+
+        ROBO_CHECK(!fixture.diagnostics.HasErrors());
+        ROBO_CHECK(fixture.Body()->Has(testCase.id));
+    }
+}
+
 ROBO_TEST(CssCascade, IdenticalStylesAreDeduplicated)
 {
     CSSDiagnosticSink diagnostics;
@@ -970,7 +1046,11 @@ namespace
             return false;
         }
 
-        const CSSPropertyDefinition* definition = CSSPropertyRegistry::Instance().Find(CSSPropertyId::Width);
+        // Parse against the declaration's own property, so a row can use a
+        // property that allows a value another would refuse (a negative length,
+        // for instance).
+        const CSSPropertyDefinition* definition =
+            CSSPropertyRegistry::Instance().Find(declarations[0].property);
 
         if (definition == nullptr)
         {
@@ -1012,7 +1092,9 @@ ROBO_TEST(CssValue, TheNumericFunctionsComputeTheBrowsersValue)
         // abs(), sign().
         { "width: abs(-10px)", 10.0, CSSUnit::Px },
         { "width: abs(10px)", 10.0, CSSUnit::Px },
-        { "width: calc(sign(-3) * 1px)", -1.0, CSSUnit::Px },
+        // A negative result needs a property that accepts one; `width` refuses
+        // it, which is checked separately.
+        { "margin-left: calc(sign(-3) * 1px)", -1.0, CSSUnit::Px },
         { "width: calc(sign(0) * 1px)", 0.0, CSSUnit::Px },
         { "width: calc(sign(3) * 1px)", 1.0, CSSUnit::Px },
 
@@ -1029,8 +1111,8 @@ ROBO_TEST(CssValue, TheNumericFunctionsComputeTheBrowsersValue)
         { "width: mod(10px, 3px)", 1.0, CSSUnit::Px },
         { "width: rem(10px, 3px)", 1.0, CSSUnit::Px },
         { "width: mod(-10px, 3px)", 2.0, CSSUnit::Px },
-        { "width: rem(-10px, 3px)", -1.0, CSSUnit::Px },
-        { "width: mod(10px, -3px)", -2.0, CSSUnit::Px },
+        { "margin-left: rem(-10px, 3px)", -1.0, CSSUnit::Px },
+        { "margin-left: mod(10px, -3px)", -2.0, CSSUnit::Px },
         { "width: rem(10px, -3px)", 1.0, CSSUnit::Px },
 
         // round(), with each of the four strategies the reference defines.
@@ -1039,7 +1121,7 @@ ROBO_TEST(CssValue, TheNumericFunctionsComputeTheBrowsersValue)
         { "width: round(nearest, 10.5px)", 11.0, CSSUnit::Px },
         { "width: round(up, 10.1px)", 11.0, CSSUnit::Px },
         { "width: round(down, 10.9px)", 10.0, CSSUnit::Px },
-        { "width: round(to-zero, -10.9px)", -10.0, CSSUnit::Px },
+        { "margin-left: round(to-zero, -10.9px)", -10.0, CSSUnit::Px },
         { "width: round(nearest, 10px, 3px)", 9.0, CSSUnit::Px },
         { "width: round(up, 10px, 3px)", 12.0, CSSUnit::Px },
 

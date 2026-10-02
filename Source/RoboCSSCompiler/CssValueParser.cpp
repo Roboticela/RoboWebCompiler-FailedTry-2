@@ -2143,6 +2143,38 @@ namespace RoboCSSCompiler
                                    bool allowNumberZero,
                                    const char* subject);
 
+        /// True when the parsed value is a number, length or percentage below
+        /// zero, which the calling property does not allow. CSS names a handful
+        /// of properties that cannot be negative -- a size, a padding, a border
+        /// width, a radius, a gap, a font size, a line height and
+        /// `flex-grow`/`flex-shrink` -- and the parser rejects the value there
+        /// rather than clamping it, so a wrong value is an error above the
+        /// declaration just like a wrong property. `margin`, `text-indent`,
+        /// `letter-spacing` and `word-spacing` do allow a negative value and do
+        /// not call this.
+        bool RejectNegativeValue(const CSSValue& value,
+                                 const CSSSourceLocation& location,
+                                 CSSDiagnosticSink& diagnostics,
+                                 const char* subject)
+        {
+            const bool isNumeric = value.kind == CSSValueKind::Dimension ||
+                                   value.kind == CSSValueKind::Percentage ||
+                                   value.kind == CSSValueKind::Number;
+
+            if (!isNumeric || value.number >= 0.0)
+            {
+                return false;
+            }
+
+            diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                              location,
+                              std::string(subject) + " cannot be negative.",
+                              "a negative value is not valid here",
+                              "Write a value of zero or more.",
+                              subject);
+            return true;
+        }
+
         bool ParseSizeValue(const std::vector<CSSComponentValue>& components,
                             CSSValue& out,
                             const CSSSourceLocation& location,
@@ -2215,7 +2247,12 @@ namespace RoboCSSCompiler
                 return true;
             }
 
-            return ParseLengthPercentage(components, out, location, diagnostics, false, true, "size");
+            if (!ParseLengthPercentage(components, out, location, diagnostics, false, true, "size"))
+            {
+                return false;
+            }
+
+            return !RejectNegativeValue(out, location, diagnostics, "a size");
         }
 
         bool ParseLengthPercentage(const std::vector<CSSComponentValue>& components,
@@ -2383,7 +2420,20 @@ namespace RoboCSSCompiler
                 return false;
             }
 
-            return ParseLengthPercentage(components, out, location, diagnostics, false, false, "border-width");
+            if (!ParseLengthPercentage(components, out, location, diagnostics, false, false, "border-width"))
+            {
+                return false;
+            }
+
+            if (out.kind == CSSValueKind::Percentage)
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                  "border-width does not take a percentage.", "a border width is a length",
+                                  "Write a length such as 2px, or thin, medium or thick.", "border-width");
+                return false;
+            }
+
+            return !RejectNegativeValue(out, location, diagnostics, "a border width");
         }
 
         bool ParseBorderStyleValue(const std::vector<CSSComponentValue>& components,
@@ -3009,7 +3059,12 @@ namespace RoboCSSCompiler
                 }
             }
 
-            return ParseLengthPercentage(components, out, location, diagnostics, false, true, definition.name);
+            if (!ParseLengthPercentage(components, out, location, diagnostics, false, true, definition.name))
+            {
+                return false;
+            }
+
+            return !RejectNegativeValue(out, location, diagnostics, definition.name);
         }
 
         /// `<number> | <length>`. A number is a count of space advances, which
@@ -3312,7 +3367,12 @@ namespace RoboCSSCompiler
                 return false;
             }
 
-            return ParseLengthPercentage(components, out, location, diagnostics, false, false, "font-size");
+            if (!ParseLengthPercentage(components, out, location, diagnostics, false, false, "font-size"))
+            {
+                return false;
+            }
+
+            return !RejectNegativeValue(out, location, diagnostics, "a font size");
         }
 
         bool ParseBorderRadiusValue(const std::vector<CSSComponentValue>& components,
@@ -3352,6 +3412,11 @@ namespace RoboCSSCompiler
 
             if (!ParseLengthPercentage(std::vector<CSSComponentValue>{ *values[0] }, resolved, location, diagnostics,
                                        false, true, "border-radius"))
+            {
+                return false;
+            }
+
+            if (RejectNegativeValue(resolved, location, diagnostics, "a border radius"))
             {
                 return false;
             }
@@ -3577,6 +3642,16 @@ namespace RoboCSSCompiler
         case CSSValueGrammar::LengthPercentage:
             return ParseLengthPercentage(components, out, location, diagnostics, false, true, definition.name);
 
+        case CSSValueGrammar::NonNegativeLengthPercentage:
+        {
+            if (!ParseLengthPercentage(components, out, location, diagnostics, false, true, definition.name))
+            {
+                return false;
+            }
+
+            return !RejectNegativeValue(out, location, diagnostics, definition.name);
+        }
+
         case CSSValueGrammar::BorderWidth:
             return ParseBorderWidthValue(components, out, location, diagnostics);
 
@@ -3613,7 +3688,12 @@ namespace RoboCSSCompiler
                 }
             }
 
-            return ParseLengthPercentage(components, out, location, diagnostics, false, true, definition.name);
+            if (!ParseLengthPercentage(components, out, location, diagnostics, false, true, definition.name))
+            {
+                return false;
+            }
+
+            return !RejectNegativeValue(out, location, diagnostics, definition.name);
         }
 
         case CSSValueGrammar::LineHeight:
@@ -3629,11 +3709,25 @@ namespace RoboCSSCompiler
 
             if (values.size() == 1 && values[0]->token.type == CSSTokenType::Number)
             {
+                if (values[0]->token.number < 0.0)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                      "line-height cannot be negative.",
+                                      "a negative line height is not valid",
+                                      "Write a number or length of zero or more.", "line-height");
+                    return false;
+                }
+
                 out = CSSValue::MakeNumber(values[0]->token.number);
                 return true;
             }
 
-            return ParseLengthPercentage(components, out, location, diagnostics, false, false, "line-height");
+            if (!ParseLengthPercentage(components, out, location, diagnostics, false, false, "line-height"))
+            {
+                return false;
+            }
+
+            return !RejectNegativeValue(out, location, diagnostics, "a line height");
         }
 
         case CSSValueGrammar::Color:
@@ -3669,7 +3763,16 @@ namespace RoboCSSCompiler
             return ParseZIndexValue(components, out, location, diagnostics);
 
         case CSSValueGrammar::Number:
-            return ParseNumberValue(components, out, location, diagnostics);
+        {
+            if (!ParseNumberValue(components, out, location, diagnostics))
+            {
+                return false;
+            }
+
+            // `Number` is the grammar of `flex-grow` and `flex-shrink`, both of
+            // which are a number of zero or more.
+            return !RejectNegativeValue(out, location, diagnostics, definition.name);
+        }
 
         case CSSValueGrammar::Integer:
             return ParseIntegerValue(components, out, location, diagnostics);

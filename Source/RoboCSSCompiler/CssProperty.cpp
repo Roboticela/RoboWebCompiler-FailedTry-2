@@ -153,10 +153,10 @@ namespace RoboCSSCompiler
             { Id::MarginBottom, "margin-bottom", Cat::BoxModel, false, "0", Grammar::LengthPercentageOrAuto, nullptr, true, true, false, true, true, "css-box-3" },
             { Id::MarginLeft, "margin-left", Cat::BoxModel, false, "0", Grammar::LengthPercentageOrAuto, nullptr, true, true, false, true, true, "css-box-3" },
 
-            { Id::PaddingTop, "padding-top", Cat::BoxModel, false, "0", Grammar::LengthPercentage, nullptr, true, true, false, true, true, "css-box-3" },
-            { Id::PaddingRight, "padding-right", Cat::BoxModel, false, "0", Grammar::LengthPercentage, nullptr, true, true, false, true, true, "css-box-3" },
-            { Id::PaddingBottom, "padding-bottom", Cat::BoxModel, false, "0", Grammar::LengthPercentage, nullptr, true, true, false, true, true, "css-box-3" },
-            { Id::PaddingLeft, "padding-left", Cat::BoxModel, false, "0", Grammar::LengthPercentage, nullptr, true, true, false, true, true, "css-box-3" },
+            { Id::PaddingTop, "padding-top", Cat::BoxModel, false, "0", Grammar::NonNegativeLengthPercentage, nullptr, true, true, false, true, true, "css-box-3" },
+            { Id::PaddingRight, "padding-right", Cat::BoxModel, false, "0", Grammar::NonNegativeLengthPercentage, nullptr, true, true, false, true, true, "css-box-3" },
+            { Id::PaddingBottom, "padding-bottom", Cat::BoxModel, false, "0", Grammar::NonNegativeLengthPercentage, nullptr, true, true, false, true, true, "css-box-3" },
+            { Id::PaddingLeft, "padding-left", Cat::BoxModel, false, "0", Grammar::NonNegativeLengthPercentage, nullptr, true, true, false, true, true, "css-box-3" },
 
             // The out-of-flow model. `position` and its four offsets are layout
             // properties: moving a box moves what it contains, and an offset
@@ -428,6 +428,15 @@ namespace RoboCSSCompiler
         // the token rather than by position.
         shorthands.push_back({ "flex-flow", Cat::Layout, pair(Id::FlexDirection, Id::FlexWrap), "flex-flow",
                                true, "css-flexbox-1" });
+        // `flex`: the growth, the shrink and the basis, expanded by rule because
+        // the three can be written in any order and the basis is a whole value
+        // rather than a keyword. The three targets are grow, shrink and basis.
+        CSSShorthandTargets flexTargets;
+        flexTargets.top = Id::FlexGrow;
+        flexTargets.right = Id::FlexShrink;
+        flexTargets.bottom = Id::FlexBasis;
+        flexTargets.count = 3;
+        shorthands.push_back({ "flex", Cat::Layout, flexTargets, "flex", true, "css-flexbox-1" });
         shorthands.push_back({ "overflow", Cat::Overflow, pair(Id::OverflowX, Id::OverflowY), "pair", true,
                                "css-overflow-3" });
         shorthands.push_back({ "background", Cat::Background, single(Id::BackgroundColor), "background", true,
