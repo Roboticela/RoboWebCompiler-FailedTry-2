@@ -255,6 +255,15 @@ namespace RoboRenderer
         ColumnReverse = 3
     };
 
+    /// `flex-wrap`: whether a flex container keeps its items on one line or
+    /// lets them break onto several.
+    enum class FlexWrapKind : std::uint8_t
+    {
+        NoWrap = 0,
+        Wrap = 1,
+        WrapReverse = 2
+    };
+
     /// `justify-content` (and the alignment values shared with alignment): how
     /// space is distributed along the main axis. `FlexStart` is what `normal`
     /// behaves as for a flex container.
@@ -279,6 +288,19 @@ namespace RoboRenderer
         /// Treated as the item's own flex-start, because this runtime has one
         /// baseline per line box rather than a shared baseline across items.
         Baseline = 4
+    };
+
+    /// `align-content`: how the lines of a multi-line flex container are
+    /// distributed on the cross axis. `Stretch` is what `normal` behaves as.
+    enum class AlignContentKind : std::uint8_t
+    {
+        Stretch = 0,
+        FlexStart = 1,
+        FlexEnd = 2,
+        Center = 3,
+        SpaceBetween = 4,
+        SpaceAround = 5,
+        SpaceEvenly = 6
     };
 
     enum class TextAlignKind : std::uint8_t
@@ -592,6 +614,12 @@ namespace RoboRenderer
         StyleFlagFloat = 1ull << 57,
         StyleFlagClear = 1ull << 58,
 
+        /// The maximum bound on the box, the partner of the minimum above. A
+        /// `none` maximum stores as Content, which ResolveDeclaredLength reads
+        /// as "no bound", so an unconstrained box stays unconstrained.
+        StyleFlagMaximumWidth = 1ull << 60,
+        StyleFlagMaximumHeight = 1ull << 61,
+
         // The flex model. One flag covers the whole group: none of these
         // properties is inherited, so a box that declares none of them takes
         // the initial values, which are exactly the defaults an authored style
@@ -634,6 +662,10 @@ namespace RoboRenderer
         LayoutValue height;
         LayoutValue minimumWidth;
         LayoutValue minimumHeight;
+        /// `max-width` and `max-height`. The maximum is applied before the
+        /// minimum, so a minimum larger than a maximum wins, as CSS requires.
+        LayoutValue maximumWidth;
+        LayoutValue maximumHeight;
 
         Edges margin;
         Edges padding;
@@ -747,6 +779,24 @@ namespace RoboRenderer
 
         /// `order`. Items are placed in ascending order, ties in tree order.
         std::int32_t flexOrder = 0;
+
+        /// `flex-wrap`: whether items stay on one line or break onto several
+        /// when they run past the container's main size. `NoWrap` is the
+        /// initial value, so a container that never writes it lays out as one
+        /// line.
+        FlexWrapKind flexWrap = FlexWrapKind::NoWrap;
+
+        /// `align-content`: how the lines are distributed on the cross axis.
+        /// `normal` behaves as `stretch`, which is what this default is; it
+        /// only has an effect on a container with more than one line.
+        AlignContentKind alignContent = AlignContentKind::Stretch;
+
+        /// `row-gap` and `column-gap`, unresolved like every other declared
+        /// length. `normal` stores as `Auto`, which the arranger reads as no
+        /// gap. Row and column are resolved against the container's content box
+        /// on their own axis, so a percentage gap is a fraction of that box.
+        LayoutValue rowGap;
+        LayoutValue columnGap;
 
         /// `font-kerning`. `Auto` leaves the font's kerning on, which is the
         /// shaper's own default.

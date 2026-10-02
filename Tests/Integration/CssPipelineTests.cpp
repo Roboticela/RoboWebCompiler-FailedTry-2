@@ -10,10 +10,13 @@
 #include "../RoboRenderer/RendererTestSupport.h"
 #include "../TestFramework.h"
 
+#include "RoboCSSCompiler/CssProperty.h"
 #include "RoboRenderer/CompiledUi.h"
 #include "RoboRenderer/Layout.h"
 #include "RoboRenderer/Paint.h"
 
+#include <fstream>
+#include <iterator>
 #include <string>
 #include <vector>
 
@@ -1054,4 +1057,201 @@ ROBO_TEST(CssPipeline, CustomPropertiesFeedTheFunctionsAndInherit)
     // declared anywhere.
     ROBO_CHECK(std::fabs(innerStyle.width.value - 4.0f) < 0.001f);
     ROBO_CHECK(std::fabs(innerStyle.height.value - 7.0f) < 0.001f);
+}
+
+ROBO_TEST(CssPipeline, TheConformanceExampleCompilesWithoutADiagnostic)
+{
+    // Examples/Conformance is the list of what this compiler implements: one
+    // document, one stylesheet, every property and every value. It is compiled
+    // here with nothing allowed to be reported, so a value that stops compiling
+    // fails this test instead of quietly dropping out of the sheet. Adding a
+    // property to the compiler means adding its values to that stylesheet.
+    const std::string directory = std::string(ROBO_TEST_SOURCE_DIR) + "/Examples/Conformance";
+
+    std::ifstream documentFile(directory + "/index.html");
+    ROBO_CHECK(documentFile.good());
+
+    if (!documentFile.good())
+    {
+        return;
+    }
+
+    const std::string document((std::istreambuf_iterator<char>(documentFile)),
+                               std::istreambuf_iterator<char>());
+
+    RoboTools::CompiledApplication application;
+    RoboTools::HarnessOptions options;
+    options.applicationName = "Conformance";
+    options.documentPath = directory + "/index.html";
+    options.sourceDirectory = directory;
+
+    std::string error;
+    ROBO_CHECK(application.Build(document, options, error));
+
+    if (!error.empty())
+    {
+        RoboTest::Fail(error, __FILE__, __LINE__);
+    }
+
+    // A warning is as much a gap as an error: the sheet is meant to hold only
+    // what works, so anything reported fails here and gets moved to the list at
+    // the end of the document or implemented.
+    const std::string diagnostics = application.Diagnostics();
+
+    if (!diagnostics.empty())
+    {
+        RoboTest::Fail(diagnostics, __FILE__, __LINE__);
+    }
+
+    // And it lays out and paints, so the sheet is a document rather than a parse.
+    TestRenderer renderer(application.Document(), 1000.0f, 4000.0f);
+    ROBO_CHECK(renderer.initialized);
+    ROBO_CHECK(renderer.Draw());
+
+    // The demo boxes are on the page, not merely parsed.
+    ROBO_CHECK(CountInkPixels(renderer.backend, Rect{ 0.0f, 0.0f, 1000.0f, 4000.0f }) > 20000);
+}
+
+ROBO_TEST(CssPipeline, TheConformanceExampleNamesEveryCompiledProperty)
+{
+    // The example is the list of what works, so a property the compiler adds has
+    // to appear in it or this test fails: the sheet is kept from falling behind
+    // the registry without anyone having to remember to edit it. The registry
+    // itself is the source of the names, shorthands included, so a shorthand the
+    // compiler expands must be shown too.
+    const std::string path = std::string(ROBO_TEST_SOURCE_DIR) + "/Examples/Conformance/app.css";
+
+    std::ifstream sheetFile(path);
+    ROBO_CHECK(sheetFile.good());
+
+    if (!sheetFile.good())
+    {
+        return;
+    }
+
+    const std::string sheet((std::istreambuf_iterator<char>(sheetFile)), std::istreambuf_iterator<char>());
+    const RoboCSSCompiler::CSSPropertyRegistry& registry =
+        RoboCSSCompiler::CSSPropertyRegistry::Instance();
+
+    for (const RoboCSSCompiler::CSSPropertyRegistry::CompiledName& entry : registry.CompiledProperties())
+    {
+        // A name counts when it is written as a declaration, so the match is the
+        // name followed by a colon. That way `color` is found in `color:` and
+        // `background-color` is not accidentally satisfied by `color`.
+        const std::string needle = std::string(entry.name) + ":";
+
+        if (sheet.find(needle) == std::string::npos)
+        {
+            RoboTest::Fail(std::string("Examples/Conformance/app.css never declares the compiled ") +
+                               (entry.shorthand ? "shorthand '" : "property '") + entry.name + "'",
+                           __FILE__, __LINE__);
+        }
+    }
+}
+
+ROBO_TEST(CssPipeline, ACurrentColorBackgroundResolvesToTheElementsOwnColour)
+{
+    // `background-color: currentcolor` is the element's own computed `color`.
+    // With a `color` on the element it resolves; without one there is nothing
+    // native to borrow and the declaration is reported.
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"badge\">Hello</div>",
+        application,
+        Sheet(".badge { color: #7c3aed; background-color: currentcolor; }\n"
+              ".badge { border: 1px solid #000000 }"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+    const ElementIndex index = StyledElement(document);
+    ROBO_CHECK(index != NoElement);
+
+    TestRenderer renderer(document);
+    ROBO_CHECK(renderer.initialized);
+
+    const CompiledStyle& merged = renderer.renderer.Layout().StyleOf(index);
+    ROBO_CHECK(SameColor(merged.background, Color::Rgba(124, 58, 237), 1));
+
+    // With no `color` the compiler cannot see the native default, so it says so.
+    RoboTools::CompiledApplication unresolved;
+    std::string unresolvedError;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"badge\">Hello</div>",
+        unresolved,
+        Sheet(".badge { background-color: currentcolor; border: 1px solid #000000 }\n"),
+        unresolvedError));
+
+    ROBO_CHECK(unresolved.Diagnostics().find("currentColor") != std::string::npos);
+}
+
+ROBO_TEST(CssPipeline, AMaximumSizeReachesTheCompiledStyle)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"box\">Hello</div>",
+        application,
+        Sheet(".box { width: 260px; max-width: 120px; max-height: 80px }\n"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+    const ElementIndex index = StyledElement(document);
+    ROBO_CHECK(index != NoElement);
+
+    TestRenderer renderer(document);
+    ROBO_CHECK(renderer.initialized);
+
+    const CompiledStyle& style = renderer.renderer.Layout().StyleOf(index);
+
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagMaximumWidth));
+    ROBO_CHECK(IsSpecified(style.specified, StyleFlagMaximumHeight));
+    ROBO_CHECK_EQ(static_cast<int>(style.maximumWidth.value), 120);
+    ROBO_CHECK_EQ(static_cast<int>(style.maximumHeight.value), 80);
+}
+
+ROBO_TEST(CssPipeline, TheMultiLineFlexModelReachesTheCompiledStyle)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"row\">A</div><div class=\"flow\">B</div>",
+        application,
+        Sheet(".row { display: flex; flex-wrap: wrap; align-content: space-between; "
+              "gap: 6px 12px }\n"
+              ".flow { flex-flow: wrap column; row-gap: 7px; column-gap: normal }\n"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer renderer(document);
+    ROBO_CHECK(renderer.initialized);
+
+    const ElementIndex row = StyledElement(document, 0);
+    const ElementIndex flow = StyledElement(document, 1);
+    ROBO_CHECK(row != NoElement && flow != NoElement);
+
+    const CompiledStyle& rowStyle = renderer.renderer.Layout().StyleOf(row);
+    ROBO_CHECK(IsSpecified(rowStyle.specified, StyleFlagFlex));
+    ROBO_CHECK(rowStyle.flexWrap == FlexWrapKind::Wrap);
+    ROBO_CHECK(rowStyle.alignContent == AlignContentKind::SpaceBetween);
+    ROBO_CHECK(rowStyle.rowGap.type == LayoutValueType::Fixed);
+    ROBO_CHECK_EQ(static_cast<int>(rowStyle.rowGap.value), 6);
+    ROBO_CHECK_EQ(static_cast<int>(rowStyle.columnGap.value), 12);
+
+    // `flex-flow: wrap column` sets both halves from two keywords in either
+    // order; `column-gap: normal` is the initial value, stored as no length.
+    const CompiledStyle& flowStyle = renderer.renderer.Layout().StyleOf(flow);
+    ROBO_CHECK(flowStyle.flexWrap == FlexWrapKind::Wrap);
+    ROBO_CHECK(flowStyle.flexDirection == FlexDirectionKind::Column);
+    ROBO_CHECK(flowStyle.rowGap.type == LayoutValueType::Fixed);
+    ROBO_CHECK_EQ(static_cast<int>(flowStyle.rowGap.value), 7);
+    ROBO_CHECK(flowStyle.columnGap.type == LayoutValueType::Auto);
 }

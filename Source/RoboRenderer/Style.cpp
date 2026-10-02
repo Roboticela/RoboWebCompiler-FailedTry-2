@@ -45,6 +45,8 @@ namespace RoboRenderer
                 style.height = LayoutValue::Auto();
                 style.minimumWidth = LayoutValue::Auto();
                 style.minimumHeight = LayoutValue::Auto();
+                style.maximumWidth = LayoutValue::Auto();
+                style.maximumHeight = LayoutValue::Auto();
                 style.margin = Edges::Zero();
                 style.padding = Edges::Zero();
                 style.borderWidth = Edges::Zero();
@@ -787,6 +789,14 @@ namespace RoboRenderer
         {
             target.minimumHeight = authored.minimumHeight;
         }
+        if (IsSpecified(specified, StyleFlagMaximumWidth))
+        {
+            target.maximumWidth = authored.maximumWidth;
+        }
+        if (IsSpecified(specified, StyleFlagMaximumHeight))
+        {
+            target.maximumHeight = authored.maximumHeight;
+        }
 
         const auto applyEdge = [&specified](StyleFlags flag, float authored, float& target) {
             if (IsSpecified(specified, flag))
@@ -1002,15 +1012,19 @@ namespace RoboRenderer
         if (IsSpecified(specified, StyleFlagFlex))
         {
             target.flexDirection = authored.flexDirection;
+            target.flexWrap = authored.flexWrap;
             target.justifyContent = authored.justifyContent;
             target.alignItems = authored.alignItems;
             target.alignSelf = authored.alignSelf;
             target.hasAlignSelf = authored.hasAlignSelf;
+            target.alignContent = authored.alignContent;
             target.flexGrow = authored.flexGrow;
             target.flexShrink = authored.flexShrink;
             target.flexBasis = authored.flexBasis;
             target.hasFlexBasis = authored.hasFlexBasis;
             target.flexOrder = authored.flexOrder;
+            target.rowGap = authored.rowGap;
+            target.columnGap = authored.columnGap;
         }
         if (IsSpecified(specified, StyleFlagOverflowX))
         {

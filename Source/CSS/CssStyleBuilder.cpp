@@ -25,11 +25,13 @@ namespace RoboHTMLCompiler
         using RoboCSSCompiler::CSSValue;
         using RoboCSSCompiler::CSSValueKind;
 
+        using RoboRenderer::AlignContentKind;
         using RoboRenderer::AlignItemsKind;
         using RoboRenderer::ClearKind;
         using RoboRenderer::CompiledStyle;
         using RoboRenderer::DisplayKind;
         using RoboRenderer::FlexDirectionKind;
+        using RoboRenderer::FlexWrapKind;
         using RoboRenderer::FloatKind;
         using RoboRenderer::JustifyContentKind;
         using RoboRenderer::PositionKind;
@@ -92,6 +94,8 @@ namespace RoboHTMLCompiler
         using RoboRenderer::StyleFlagMarginLeft;
         using RoboRenderer::StyleFlagMarginRight;
         using RoboRenderer::StyleFlagMarginTop;
+        using RoboRenderer::StyleFlagMaximumHeight;
+        using RoboRenderer::StyleFlagMaximumWidth;
         using RoboRenderer::StyleFlagMinimumHeight;
         using RoboRenderer::StyleFlagMinimumWidth;
         using RoboRenderer::StyleFlagOverflowX;
@@ -537,13 +541,17 @@ namespace RoboHTMLCompiler
                 LowerFloat(computed, location, out);
                 LowerClear(computed, location, out);
                 LowerFlexDirection(computed, location, out);
+                LowerFlexWrap(computed, location, out);
                 LowerJustifyContent(computed, location, out);
                 LowerAlignItems(computed, location, out);
+                LowerAlignContent(computed, location, out);
                 LowerAlignSelf(computed, location, out);
                 LowerFlexGrow(computed, location, out);
                 LowerFlexShrink(computed, location, out);
                 LowerFlexBasis(computed, location, elementFontSize, out);
                 LowerOrder(computed, location, out);
+                LowerGap(computed, CSSPropertyId::RowGap, location, elementFontSize, out.rowGap, out);
+                LowerGap(computed, CSSPropertyId::ColumnGap, location, elementFontSize, out.columnGap, out);
                 LowerSize(computed, CSSPropertyId::Width, StyleFlagWidth, location, elementFontSize, out.width, out);
                 LowerSize(computed, CSSPropertyId::Height, StyleFlagHeight, location, elementFontSize, out.height,
                           out);
@@ -552,18 +560,10 @@ namespace RoboHTMLCompiler
                 LowerSize(computed, CSSPropertyId::MinHeight, StyleFlagMinimumHeight, location, elementFontSize,
                           out.minimumHeight, out);
 
-                // A maximum size has no field in the compiled style, so a
-                // declaration that sets one is reported rather than dropped.
-                for (CSSPropertyId maximum : { CSSPropertyId::MaxWidth, CSSPropertyId::MaxHeight })
-                {
-                    if (Value(computed, maximum) != nullptr)
-                    {
-                        ReportNotLowered(computed, maximum, location,
-                                         "The native box model has a minimum size and no maximum, so a maximum "
-                                         "bound cannot be stored.",
-                                         "Remove the declaration, or use min-width and min-height instead.");
-                    }
-                }
+                LowerSize(computed, CSSPropertyId::MaxWidth, StyleFlagMaximumWidth, location, elementFontSize,
+                          out.maximumWidth, out);
+                LowerSize(computed, CSSPropertyId::MaxHeight, StyleFlagMaximumHeight, location, elementFontSize,
+                          out.maximumHeight, out);
 
                 LowerEdges(computed, CSSPropertyId::MarginTop, CSSPropertyId::MarginRight,
                            CSSPropertyId::MarginBottom, CSSPropertyId::MarginLeft, StyleFlagMarginTop,
@@ -919,6 +919,41 @@ namespace RoboHTMLCompiler
                 out.specified |= StyleFlagFlex;
             }
 
+            /// `flex-wrap`: whether the items stay on one line or break onto
+            /// several. `nowrap` is the initial value.
+            void LowerFlexWrap(const CSSComputedStyle& computed, const SourceLocation& location,
+                               CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::FlexWrap);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->IsKeyword("nowrap"))
+                {
+                    out.flexWrap = FlexWrapKind::NoWrap;
+                }
+                else if (value->IsKeyword("wrap"))
+                {
+                    out.flexWrap = FlexWrapKind::Wrap;
+                }
+                else if (value->IsKeyword("wrap-reverse"))
+                {
+                    out.flexWrap = FlexWrapKind::WrapReverse;
+                }
+                else
+                {
+                    ReportNotLowered(computed, CSSPropertyId::FlexWrap, location,
+                                     "the native layout engine wraps onto one line or two directions",
+                                     "Use nowrap, wrap or wrap-reverse.");
+                    return;
+                }
+
+                out.specified |= StyleFlagFlex;
+            }
+
             /// `justify-content`: how the free space on the main axis is used.
             /// `normal` behaves as `flex-start`, which is what a flex container's
             /// default does.
@@ -1053,6 +1088,61 @@ namespace RoboHTMLCompiler
                 out.specified |= StyleFlagFlex;
             }
 
+            /// `align-content`: how a multi-line flex container distributes its
+            /// lines on the cross axis. `normal` behaves as `stretch`, which is
+            /// what the compiled default is; a single-line container ignores it.
+            void LowerAlignContent(const CSSComputedStyle& computed, const SourceLocation& location,
+                                   CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::AlignContent);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->IsKeyword("normal") || value->IsKeyword("stretch"))
+                {
+                    out.alignContent = AlignContentKind::Stretch;
+                }
+                else if (value->IsKeyword("flex-start") || value->IsKeyword("start") ||
+                         value->IsKeyword("left"))
+                {
+                    out.alignContent = AlignContentKind::FlexStart;
+                }
+                else if (value->IsKeyword("flex-end") || value->IsKeyword("end") ||
+                         value->IsKeyword("right"))
+                {
+                    out.alignContent = AlignContentKind::FlexEnd;
+                }
+                else if (value->IsKeyword("center"))
+                {
+                    out.alignContent = AlignContentKind::Center;
+                }
+                else if (value->IsKeyword("space-between"))
+                {
+                    out.alignContent = AlignContentKind::SpaceBetween;
+                }
+                else if (value->IsKeyword("space-around"))
+                {
+                    out.alignContent = AlignContentKind::SpaceAround;
+                }
+                else if (value->IsKeyword("space-evenly"))
+                {
+                    out.alignContent = AlignContentKind::SpaceEvenly;
+                }
+                else
+                {
+                    ReportNotLowered(computed, CSSPropertyId::AlignContent, location,
+                                     "the native layout engine distributes lines seven ways",
+                                     "Use normal, stretch, flex-start, flex-end, center, space-between, "
+                                     "space-around or space-evenly.");
+                    return;
+                }
+
+                out.specified |= StyleFlagFlex;
+            }
+
             void LowerFlexGrow(const CSSComputedStyle& computed, const SourceLocation& location,
                                CompiledStyle& out)
             {
@@ -1182,9 +1272,73 @@ namespace RoboHTMLCompiler
                                  "order is a single integer", "Write an integer such as -1, 0 or 2.");
             }
 
+            /// `row-gap` / `column-gap`: the space between flex lines and
+            /// between the items on a line. `normal` is no gap; a length or a
+            /// percentage of the container's own box is resolved when the flex
+            /// container is arranged, so the value is kept unresolved here.
+            void LowerGap(const CSSComputedStyle& computed,
+                          CSSPropertyId property,
+                          const SourceLocation& location,
+                          float elementFontSize,
+                          LayoutValue& target,
+                          CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, property);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->IsKeyword("normal"))
+                {
+                    target = LayoutValue::Auto();
+                    out.specified |= StyleFlagFlex;
+                    return;
+                }
+
+                if (value->kind == CSSValueKind::Percentage)
+                {
+                    target = LayoutValue{ static_cast<float>(value->number) / 100.0f,
+                                          LayoutValueType::ParentRelative };
+                    out.specified |= StyleFlagFlex;
+                    return;
+                }
+
+                if (value->kind == CSSValueKind::Dimension && IsViewportUnit(value->unit))
+                {
+                    const float fraction =
+                        ViewportFraction(value->unit, static_cast<float>(value->number), context);
+
+                    if (fraction < 0.0f)
+                    {
+                        ReportNotLowered(computed, property, location,
+                                         "this viewport unit has no native equivalent",
+                                         "Use vw, vh, vmin, vmax or a length.");
+                        return;
+                    }
+
+                    target = LayoutValue{ fraction, LayoutValueType::ViewportRelative };
+                    out.specified |= StyleFlagFlex;
+                    return;
+                }
+
+                const LengthResolution resolved =
+                    ResolveLength(*value, context, elementFontSize, PropertyName(property), diagnostics,
+                                  location);
+
+                if (!resolved.resolved)
+                {
+                    return;
+                }
+
+                target = LayoutValue::Fixed(resolved.value);
+                out.specified |= StyleFlagFlex;
+            }
+
             void LowerSize(const CSSComputedStyle& computed,
                            CSSPropertyId id,
-                           std::uint32_t flag,
+                           std::uint64_t flag,
                            const SourceLocation& location,
                            float elementFontSize,
                            LayoutValue& target,
@@ -1426,6 +1580,15 @@ namespace RoboHTMLCompiler
 
                     if (color->color.kind == CSSColorKind::CurrentColor)
                     {
+                        // Nothing is drawn, so the colour cannot matter: `all:
+                        // initial` sets `border-color` along with every other
+                        // longhand, and reporting every element that resets it
+                        // would be noise rather than a gap.
+                        if (!anyWidth)
+                        {
+                            continue;
+                        }
+
                         // `border-color: currentColor` is the element's own
                         // colour, which the cascade has already resolved for this
                         // element when the stylesheet set one.
@@ -1504,12 +1667,28 @@ namespace RoboHTMLCompiler
 
                 if (value->color.kind == CSSColorKind::CurrentColor)
                 {
-                    WarnAboutStyle(diagnostics,
-                                        location,
-                                        "CSS 'background-color' is currentColor.",
-                                        "the element's colour is the native default, which the compiler does not see",
-                                        "Set an explicit colour.",
-                                        "background-color");
+                    // `currentcolor` is the element's own computed `color`, which
+                    // the cascade has already resolved when the stylesheet set
+                    // one. Without an explicit colour there is nothing native to
+                    // borrow, so that is where the declaration is reported.
+                    const CSSValue* foreground = Value(computed, CSSPropertyId::Color);
+
+                    if (foreground == nullptr || foreground->kind != CSSValueKind::Color ||
+                        foreground->color.kind == CSSColorKind::CurrentColor)
+                    {
+                        WarnAboutStyle(diagnostics,
+                                            location,
+                                            "CSS 'background-color' is currentColor.",
+                                            "the element's colour is the native default, which the compiler does "
+                                            "not see",
+                                            "Set an explicit colour.",
+                                            "background-color");
+                        return;
+                    }
+
+                    out.background = ToNativeColor(foreground->color);
+                    out.hasBackground = 1;
+                    out.specified |= StyleFlagBackground;
                     return;
                 }
 
@@ -2837,6 +3016,8 @@ namespace RoboHTMLCompiler
             appendField(lowered.height);
             appendField(lowered.minimumWidth);
             appendField(lowered.minimumHeight);
+            appendField(lowered.maximumWidth);
+            appendField(lowered.maximumHeight);
             appendField(lowered.margin);
             appendField(lowered.padding);
             appendField(lowered.borderWidth);
@@ -2898,15 +3079,19 @@ namespace RoboHTMLCompiler
             appendField(lowered.floatKind);
             appendField(lowered.clearKind);
             appendField(lowered.flexDirection);
+            appendField(lowered.flexWrap);
             appendField(lowered.justifyContent);
             appendField(lowered.alignItems);
             appendField(lowered.alignSelf);
             appendField(lowered.hasAlignSelf);
+            appendField(lowered.alignContent);
             appendField(lowered.flexGrow);
             appendField(lowered.flexShrink);
             appendField(lowered.flexBasis);
             appendField(lowered.hasFlexBasis);
             appendField(lowered.flexOrder);
+            appendField(lowered.rowGap);
+            appendField(lowered.columnGap);
 
             key += '|';
             key += fontFamily;

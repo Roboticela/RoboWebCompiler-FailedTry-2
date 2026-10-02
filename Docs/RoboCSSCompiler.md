@@ -174,12 +174,13 @@ over it. That is the entire CSS involvement of RoboRenderer.
 Relative lengths are resolved by the layout engine, at the only place that knows
 the answer: `ResolveDeclaredLength` turns `ParentRelative` into a fraction of the
 containing block and `ViewportRelative` into a fraction of the window, and it is
-called for width, height, minimum width and minimum height.
+called for width, height, minimum width, maximum width, minimum height and
+maximum height.
 
 ## 8. What is implemented, and what is reported
 
 Implemented end to end (compiled, lowered, applied, tested): `display`, `width`,
-`height`, `min-width`, `min-height`, the four margins and paddings, the four
+`height`, `min-width`, `min-height`, `max-width`, `max-height`, the four margins and paddings, the four
 border widths, `border-style`, the four border colours, `border-radius`,
 `background-color`, `color`, `font-size`, `font-weight`, `font-family`,
 `font-style`, `font-kerning`, `font-feature-settings`,
@@ -207,16 +208,21 @@ testing the value's sign, and `auto` is a real value rather than an unsupported
 one, so it is stored as `Auto` and the engine reads it as "the static position on
 this axis" rather than as an offset of zero.
 
-The single-line flex model is compiled and applied: `display: flex` (and
-`inline-flex`, which this runtime models as block-level either way),
-`flex-direction`, `justify-content`, `align-items`, `align-self`, `flex-grow`,
-`flex-shrink`, `flex-basis` and `order`. The container is laid out by
-`ArrangeFlex`, which measures each item's base main size, shares the free space
-by the growth factors or shrinks by factor times base size, distributes what is
-left by `justify-content`, and places each item on the cross axis by
-`align-items`/`align-self`. `order` sorts the items before any of that, a stable
-sort so ties keep tree order. `flex-wrap`, `flex-flow`, `align-content`, the
-`flex` shorthand and `gap` are not part of this slice.
+The flex model is compiled and applied: `display: flex` (and `inline-flex`,
+which this runtime models as block-level either way), `flex-direction`,
+`flex-wrap`, `flex-flow`, `justify-content`, `align-items`, `align-content`,
+`align-self`, `flex-grow`, `flex-shrink`, `flex-basis`, `order`, `gap`,
+`row-gap` and `column-gap`. The container is laid out by `ArrangeFlex`, which
+measures each item's base main size, breaks the items into lines when
+`flex-wrap` allows it, shares the free space by the growth factors or shrinks by
+factor times base size, distributes what is left by `justify-content`, places
+each item on the cross axis by `align-items`/`align-self`, and shares the free
+cross space between the lines by `align-content`. A percentage `row-gap`,
+`column-gap` or `gap` resolves against the container's content box on the axis
+the gap runs along. `order` sorts the items before any of that, a stable sort so
+ties keep tree order. The one part of the model still carried rather than
+compiled is the `flex` shorthand over `flex-grow`, `flex-shrink` and
+`flex-basis`.
 
 The float model is compiled and applied too: `float` lowers to one of three
 kinds (`none`, `left`, `right`, with the logical keywords mapped to the physical
@@ -330,8 +336,12 @@ Reported rather than pretended, each with the reason:
   state-variant table is not compiled yet. Structural pseudo-classes
   (`:first-child`, `:nth-child`, `:not`, attribute selectors) are resolved during
   compilation and work.
-- **`max-width`/`max-height`**: the native box model carries a minimum and no
-  maximum.
+- **`max-width: stretch`, `max-width: fit-content(<length>)` and
+  `max-width: anchor-size()`** (and the same values on the other three size
+  properties): the native box model carries a length, a content size or no
+  bound, and none of these three is one of those without an intrinsic-size pass
+  or an anchor to measure against. The plain `none`, lengths, percentages and
+  `min-content`/`max-content`/`fit-content` keywords are implemented.
 - **Percentages and viewport units in margin, padding, border width and
   `font-size`**: the native box model holds resolved lengths, and the window can
   be resized after compilation. They *are* supported in `width`, `height` and
@@ -522,9 +532,18 @@ claimed.
   order, `!important`, inheritance, the CSS-wide keywords, shorthand expansion,
   custom properties, structural pseudo-classes, `@media`, `@supports`, carried
   properties (accepted, kept, inherited, never lowered), interning.
+- `Examples/Conformance/app.css` and `index.html` - one document and one
+  stylesheet holding every property, value and function that is implemented,
+  drawn beside the declaration each demo exercises. It is not documentation that
+  can drift: `CssPipeline.TheConformanceExampleCompilesWithoutADiagnostic`
+  compiles it with nothing allowed to be reported, so a value that stops
+  compiling fails the suite. Adding a property to the compiler means adding its
+  values to that stylesheet; a value with no answer yet belongs in the list of
+  reported features at the end of the document, not in the sheet.
 - `Tests/Integration/CssPipelineTests.cpp` - the whole pipeline, asserted on
   what a user can see: the compiled table's contents, box geometry, a percentage
-  and a viewport unit resolving at runtime, a minimum width, a background colour
+  and a viewport unit resolving at runtime, a minimum width, a maximum width
+  clamping a declared one, a background colour
   in the pixels and in the paint command, specificity, invalid CSS failing the
   build, and unimplemented CSS being reported while the rest applies.
 - `RoboBench` measures compile, initialize, first frame, layout, paint, execute,

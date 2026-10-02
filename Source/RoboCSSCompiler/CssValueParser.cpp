@@ -3598,6 +3598,24 @@ namespace RoboCSSCompiler
             return ParseLengthPercentage(components, out, location, diagnostics, false, false, definition.name);
         }
 
+        case CSSValueGrammar::LengthPercentageOrNormal:
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.size() == 1 && values[0]->token.type == CSSTokenType::Ident)
+            {
+                const std::string name = LowerCase(values[0]->token.text);
+
+                if (name == "normal")
+                {
+                    out = CSSValue::MakeKeyword("normal");
+                    return true;
+                }
+            }
+
+            return ParseLengthPercentage(components, out, location, diagnostics, false, true, definition.name);
+        }
+
         case CSSValueGrammar::LineHeight:
         {
             const std::vector<const CSSComponentValue*> values = Significant(components);

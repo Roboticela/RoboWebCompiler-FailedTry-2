@@ -1636,6 +1636,84 @@ namespace RoboCSSCompiler
             return true;
         }
 
+        if (rule == "flex-flow")
+        {
+            // `<'flex-direction'> || <'flex-wrap'>` -- either order. No keyword
+            // belongs to both longhands, so each token is routed by asking that
+            // longhand's own grammar whether it owns the token, the same way
+            // font-variant routes its keywords. A longhand the shorthand does
+            // not mention keeps its initial value.
+            const std::vector<const CSSComponentValue*> items = TopLevelItems(value);
+            const CSSPropertyId kLonghands[] = { shorthand.targets.top, shorthand.targets.right };
+            constexpr int kLonghandCount = static_cast<int>(sizeof(kLonghands) / sizeof(kLonghands[0]));
+
+            if (items.empty())
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidShorthand, location,
+                                  "flex-flow needs a value.", "no value given",
+                                  "Write 'row wrap' or 'column'.", "flex-flow");
+                return false;
+            }
+
+            const auto parseSilently = [&](CSSPropertyId id, const std::vector<CSSComponentValue>& components,
+                                           CSSValue& parsedValue) -> bool {
+                const CSSPropertyDefinition* definition = registry.Find(id);
+
+                if (definition == nullptr)
+                {
+                    return false;
+                }
+
+                CSSDiagnosticSink probe;
+                return ParsePropertyValue(*definition, components, parsedValue, location, probe);
+            };
+
+            bool assigned[kLonghandCount] = { false };
+            CSSValue parsed[kLonghandCount];
+
+            for (const CSSComponentValue* item : items)
+            {
+                const std::vector<CSSComponentValue> single{ *item };
+                bool handled = false;
+
+                for (int index = 0; index < kLonghandCount; ++index)
+                {
+                    if (assigned[index])
+                    {
+                        continue;
+                    }
+
+                    CSSValue attempt;
+                    if (parseSilently(kLonghands[index], single, attempt))
+                    {
+                        parsed[index] = attempt;
+                        assigned[index] = true;
+                        handled = true;
+                        break;
+                    }
+                }
+
+                if (!handled)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                      "flex-flow does not understand '" + ComponentsToText(single) + "'.",
+                                      "a flow is a flex-direction or a flex-wrap keyword",
+                                      "Write 'row wrap' or 'column'.", "flex-flow");
+                    return false;
+                }
+            }
+
+            for (int index = 0; index < kLonghandCount; ++index)
+            {
+                if (assigned[index])
+                {
+                    out.emplace_back(kLonghands[index], parsed[index]);
+                }
+            }
+
+            return true;
+        }
+
         if (rule == "font")
         {
             // `[ <font-style> || <font-weight> ]? <font-size> [ / <line-height> ]? <font-family>`

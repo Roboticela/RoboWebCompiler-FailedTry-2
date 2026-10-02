@@ -148,6 +148,8 @@ namespace RoboHTMLCompiler
                 { StyleFlagHeight, "StyleFlagHeight" },
                 { StyleFlagMinimumWidth, "StyleFlagMinimumWidth" },
                 { StyleFlagMinimumHeight, "StyleFlagMinimumHeight" },
+                { StyleFlagMaximumWidth, "StyleFlagMaximumWidth" },
+                { StyleFlagMaximumHeight, "StyleFlagMaximumHeight" },
                 { StyleFlagMarginTop, "StyleFlagMarginTop" },
                 { StyleFlagMarginRight, "StyleFlagMarginRight" },
                 { StyleFlagMarginBottom, "StyleFlagMarginBottom" },
@@ -838,6 +840,16 @@ namespace RoboHTMLCompiler
                 {
                     source << "            tables.styles[" << index << "].minimumHeight = "
                            << LayoutValueExpression(style.minimumHeight) << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagMaximumWidth))
+                {
+                    source << "            tables.styles[" << index << "].maximumWidth = "
+                           << LayoutValueExpression(style.maximumWidth) << ";\n";
+                }
+                if (IsSpecified(style.specified, StyleFlagMaximumHeight))
+                {
+                    source << "            tables.styles[" << index << "].maximumHeight = "
+                           << LayoutValueExpression(style.maximumHeight) << ";\n";
                 }
 
                 EmitEdge(source, index, "margin", StyleFlagMarginTop, StyleFlagMarginRight, StyleFlagMarginBottom,

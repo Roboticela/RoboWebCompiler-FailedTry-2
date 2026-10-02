@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>CSS Conformance</title>
+    <link rel="stylesheet" href="app.css">
+</head>
+<body>
+    <header class="masthead">
+        <h1>CSS Conformance</h1>
+        <p class="lede">
+            One document and one stylesheet holding every CSS property and every value this
+            compiler implements. Each demo below is the declaration its caption names, so the
+            page is the list of what works, and
+            <span class="mono">CssPipeline.TheConformanceExampleCompilesWithoutADiagnostic</span>
+            keeps it honest: a value that stops compiling fails the suite.
+        </p>
+    </header>
+
+    <section>
+        <h2>1. Custom properties and var()</h2>
+        <p class="note">
+            A custom property is substituted before the value is parsed: it can stand in for a
+            whole value, an operand of a function, or a fallback, and it inherits.
+        </p>
+        <div class="row">
+            <div class="item">
+                <div class="vars" id="vars-sum"></div>
+                <p class="caption">--sum = calc(var(--double) + hypot(3px, 4px))</p>
+            </div>
+            <div class="item">
+                <div class="vars-parent" id="vars-parent">
+                    <div class="vars-child" id="vars-child"></div>
+                </div>
+                <p class="caption">var(--inherited) from the parent</p>
+            </div>
+            <div class="item">
+                <div class="vars" id="vars-fallback"></div>
+                <p class="caption">height: var(--missing, 22px)</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>2. display</h2>
+        <div class="row">
+            <div class="item">
+                <div class="display-block"></div>
+                <p class="caption">display: block</p>
+            </div>
+            <div class="item">
+                <span class="display-inline">inline</span>
+                <p class="caption">display: inline</p>
+            </div>
+            <div class="item">
+                <span class="display-inline-block"></span>
+                <p class="caption">display: inline-block</p>
+            </div>
+            <div class="item">
+                <span class="display-inline">none hides</span>
+                <span class="display-none">invisible</span>
+                <p class="caption">display: none</p>
+            </div>
+        </div>
+        <div class="display-flex" id="display-flex">
+            <div class="demo">flex</div>
+            <div class="demo">row</div>
+            <div class="demo">items</div>
+        </div>
+        <p class="caption">display: flex</p>
+        <div class="display-inline-flex" id="display-inline-flex">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">display: inline-flex</p>
+    </section>
+
+    <section>
+        <h2>3. Width, height, minimum and maximum</h2>
+        <div class="sized size-length" id="size-length">width: 140px</div>
+        <div class="sized size-percentage" id="size-percentage">width: 25%</div>
+        <div class="sized size-viewport" id="size-viewport">width: 12vw</div>
+        <div class="sized size-auto" id="size-auto">width: auto</div>
+        <div class="sized size-min" id="size-min">width: 240px; min-width: 120px</div>
+        <div class="sized size-max" id="size-max">width: 260px; max-width: 120px</div>
+        <div class="sized size-max-none" id="size-max-none">max-width: none; max-height: none</div>
+        <div class="sized size-calc" id="size-calc">width: calc(120px + 1rem)</div>
+        <div class="sized size-functions" id="size-functions">width: min(150px, 200px)</div>
+        <div class="sized size-clamp" id="size-clamp">width: clamp(80px, 160px, 200px)</div>
+        <div class="sized size-numeric" id="size-numeric">width: hypot(9px, 12px)</div>
+    </section>
+
+    <section>
+        <h2>4. Margin and padding</h2>
+        <div class="block-box margin-one">margin: 6px</div>
+        <div class="block-box margin-two">margin: 4px 10px</div>
+        <div class="block-box margin-three">margin: 4px 10px 6px</div>
+        <div class="block-box margin-four">margin: 4px 10px 6px 2px</div>
+        <div class="block-box margin-sides">margin-&lt;side&gt; longhands</div>
+        <div class="block-box padding-one">padding: 6px</div>
+        <div class="block-box padding-two">padding: 4px 10px</div>
+        <div class="block-box padding-three">padding: 4px 10px 6px</div>
+        <div class="block-box padding-four">padding: 4px 10px 6px 2px</div>
+        <div class="block-box padding-sides">padding-&lt;side&gt; longhands</div>
+    </section>
+
+    <section>
+        <h2>5. Borders</h2>
+        <div class="row">
+            <div class="item">
+                <div class="swatch border-width-longhand"></div>
+                <p class="caption">border-&lt;side&gt;-width/style/color</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-style-dotted"></div>
+                <p class="caption">border-style: dotted</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-style-dashed"></div>
+                <p class="caption">border-style: dashed</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-style-double"></div>
+                <p class="caption">border-style: double</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-style-hidden"></div>
+                <p class="caption">border-style: hidden</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-shorthand"></div>
+                <p class="caption">border: 2px solid</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="item">
+                <div class="swatch border-width-keywords-thin"></div>
+                <p class="caption">border-top-width: thin</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-width-keywords-medium"></div>
+                <p class="caption">border-top-width: medium</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-width-keywords-thick"></div>
+                <p class="caption">border-top-width: thick</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-side-top"></div>
+                <p class="caption">border-top</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-side-right"></div>
+                <p class="caption">border-right</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-side-bottom"></div>
+                <p class="caption">border-bottom</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-side-left"></div>
+                <p class="caption">border-left</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="item">
+                <div class="swatch border-width-shorthand"></div>
+                <p class="caption">border-width: 1px 2px 3px 4px</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-style-shorthand"></div>
+                <p class="caption">border-style: solid dashed dotted double</p>
+            </div>
+            <div class="item">
+                <div class="swatch border-color-shorthand"></div>
+                <p class="caption">border-color: four colours</p>
+            </div>
+            <div class="item">
+                <div class="swatch radius-one"></div>
+                <p class="caption">border-radius: 8px</p>
+            </div>
+            <div class="item">
+                <div class="swatch radius-pair"></div>
+                <p class="caption">the four corner longhands</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>6. Colour</h2>
+        <div class="row">
+            <div class="item">
+                <div class="swatch color-named"></div>
+                <p class="caption">background-color: #7c3aed</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-hex3"></div>
+                <p class="caption">#f0f</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-hex8"></div>
+                <p class="caption">#7c3aed80</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-rgb"></div>
+                <p class="caption">rgb(124, 58, 237)</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-rgb-space"></div>
+                <p class="caption">rgb(124 58 237 / 60%)</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-rgba"></div>
+                <p class="caption">rgba(124, 58, 237, 0.4)</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-hsl"></div>
+                <p class="caption">hsl(262, 83%, 58%)</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-hsl-space"></div>
+                <p class="caption">hsl(262 83% 58% / 50%)</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-hwb"></div>
+                <p class="caption">hwb(262 23% 7%)</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="item">
+                <div class="swatch color-lab"></div>
+                <p class="caption">lab(44% 46 -60)</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-lch"></div>
+                <p class="caption">lch(44% 74 302)</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-oklab"></div>
+                <p class="caption">oklab(0.5 0.1 -0.2)</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-oklch"></div>
+                <p class="caption">oklch(0.5 0.2 302)</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-color-function"></div>
+                <p class="caption">color(srgb 0.5 0.2 0.9)</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-transparent"></div>
+                <p class="caption">transparent</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-currentcolor"></div>
+                <p class="caption">currentcolor</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-initial"></div>
+                <p class="caption">initial</p>
+            </div>
+            <div class="item">
+                <div class="swatch color-background-shorthand"></div>
+                <p class="caption">background: #7c3aed</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>7. Font</h2>
+        <p class="font-family-list">font-family: Inter, "Segoe UI", sans-serif</p>
+        <p class="font-family-generic-serif">font-family: serif</p>
+        <p class="font-family-generic-monospace">font-family: monospace</p>
+        <p class="font-size-keywords">font-size: large</p>
+        <p class="font-size-length">font-size: 20px</p>
+        <p class="font-size-rem">font-size: 1.25rem</p>
+        <p class="font-weight-normal">font-weight: normal</p>
+        <p class="font-weight-bold">font-weight: bold</p>
+        <p class="font-weight-number">font-weight: 600</p>
+        <p class="font-weight-range">font-weight: 350</p>
+        <p class="font-weight-relative">font-weight: bolder</p>
+        <p class="font-style-normal">font-style: normal</p>
+        <p class="font-style-italic">font-style: italic</p>
+        <p class="font-style-oblique">font-style: oblique</p>
+        <p class="font-kerning-auto">font-kerning: auto</p>
+        <p class="font-kerning-none">font-kerning: none</p>
+        <p class="font-kerning-normal">font-kerning: normal</p>
+        <p class="font-feature-settings">font-feature-settings: "liga" 1, "tnum" 0</p>
+        <p class="font-feature-settings-normal">font-feature-settings: normal</p>
+        <p class="font-variant-ligatures">font-variant-ligatures: common-ligatures</p>
+        <p class="font-variant-caps">font-variant-caps: small-caps</p>
+        <p class="font-variant-numeric">font-variant-numeric: tabular-nums slashed-zero</p>
+        <p class="font-variant-position">font-variant-position: sub</p>
+        <p class="font-variant-east-asian">font-variant-east-asian: jis78 full-width</p>
+        <p class="font-variant-shorthand">font-variant: small-caps</p>
+        <p class="font-shorthand">font: 17px</p>
+    </section>
+
+    <section>
+        <h2>8. Text layout</h2>
+        <p class="line-height-normal">line-height: normal</p>
+        <p class="line-height-number">line-height: 1.8</p>
+        <p class="line-height-length">line-height: 26px</p>
+        <p class="letter-spacing">letter-spacing: 2px</p>
+        <p class="letter-spacing-normal">letter-spacing: normal</p>
+        <p class="word-spacing">word-spacing: 6px</p>
+        <p class="word-spacing-normal">word-spacing: normal</p>
+        <div class="text-align-start">text-align: start</div>
+        <div class="text-align-center">text-align: center</div>
+        <div class="text-align-end">text-align: end</div>
+        <div class="text-align-justify">text-align: justify — the slack of every line but the last is shared between the words of the line</div>
+        <div class="text-align-last-justify">text-align-last: justify</div>
+        <div class="text-justify-auto">text-justify: auto — the slack is shared between the words</div>
+        <div class="text-justify-none">text-justify: none</div>
+        <div class="text-justify-inter-word">text-justify: inter-word — the words are spread apart</div>
+        <div class="text-justify-inter-character">text-justify: inter-character — the characters are spread apart</div>
+        <div class="text-justify-distribute">text-justify: distribute</div>
+        <p class="text-indent">text-indent: 24px — the first line is indented and the rest are not</p>
+        <p class="text-transform-uppercase">text-transform: uppercase</p>
+        <p class="text-transform-lowercase">TEXT-TRANSFORM: LOWERCASE</p>
+        <p class="text-transform-capitalize">text-transform: capitalize every word</p>
+        <p class="text-transform-none">text-transform: none</p>
+    </section>
+
+    <section>
+        <h2>9. Text decoration</h2>
+        <p class="decoration-underline">text-decoration-line: underline</p>
+        <p class="decoration-overline">text-decoration-line: overline</p>
+        <p class="decoration-line-through">text-decoration-line: line-through</p>
+        <p class="decoration-combination">underline overline line-through</p>
+        <p class="decoration-blink">underline blink (blink is accepted and has no effect)</p>
+        <p class="decoration-color">text-decoration-color: #dc2626</p>
+        <p class="decoration-currentcolor">text-decoration-color: currentcolor</p>
+        <p class="decoration-solid">text-decoration-style: solid</p>
+        <p class="decoration-double">text-decoration-style: double</p>
+        <p class="decoration-dotted">text-decoration-style: dotted</p>
+        <p class="decoration-dashed">text-decoration-style: dashed</p>
+        <p class="decoration-wavy">text-decoration-style: wavy</p>
+        <p class="decoration-thickness-auto">text-decoration-thickness: auto</p>
+        <p class="decoration-thickness-from-font">text-decoration-thickness: from-font</p>
+        <p class="decoration-thickness-length">text-decoration-thickness: 3px</p>
+        <p class="decoration-underline-offset-auto">text-underline-offset: auto</p>
+        <p class="decoration-underline-offset-length">text-underline-offset: 5px</p>
+        <p class="decoration-shorthand">text-decoration: underline #dc2626</p>
+    </section>
+
+    <section>
+        <h2>10. white-space</h2>
+        <p class="white-space-normal">normal:     spaces    collapse and the line wraps when it has to.</p>
+        <p class="white-space-nowrap">nowrap:     spaces    collapse and the line never wraps.</p>
+        <p class="white-space-pre">pre:  spaces are kept
+and the line breaks only where the source says.</p>
+        <p class="white-space-pre-wrap">pre-wrap:  kept   spaces
+and the line also wraps where it must.</p>
+        <p class="white-space-pre-line">pre-line: spaces collapse
+but the source newline is honoured.</p>
+        <p class="white-space-break-spaces">break-spaces:  spaces   are kept,
+and a run of them at the end of a line does not hang.</p>
+        <p class="white-space-preserve">preserve:  spaces   are kept and the line wraps.</p>
+        <p class="white-space-preserve-nowrap">preserve nowrap:  spaces   are kept and the line never wraps.</p>
+        <p class="white-space-wrap">wrap: the wrap half of the shorthand on its own.</p>
+        <p class="white-space-collapse">collapse: the collapse half of the shorthand on its own.</p>
+    </section>
+
+    <section>
+        <h2>11. Writing direction</h2>
+        <p class="direction-ltr">direction: ltr — the quick brown fox</p>
+        <p class="direction-rtl">direction: rtl — the quick brown fox</p>
+        <div class="row">
+            <div class="item">
+                <div class="writing-mode-horizontal-tb">horizontal-tb</div>
+                <p class="caption">writing-mode: horizontal-tb</p>
+            </div>
+            <div class="item">
+                <div class="writing-mode-vertical-rl">vertical-rl</div>
+                <p class="caption">writing-mode: vertical-rl</p>
+            </div>
+            <div class="item">
+                <div class="writing-mode-vertical-lr">vertical-lr</div>
+                <p class="caption">writing-mode: vertical-lr</p>
+            </div>
+            <div class="item">
+                <div class="writing-mode-sideways-rl">sideways-rl</div>
+                <p class="caption">writing-mode: sideways-rl</p>
+            </div>
+            <div class="item">
+                <div class="writing-mode-sideways-lr">sideways-lr</div>
+                <p class="caption">writing-mode: sideways-lr</p>
+            </div>
+            <div class="item">
+                <div class="writing-mode-legacy-tb-rl">tb-rl</div>
+                <p class="caption">writing-mode: tb-rl (legacy)</p>
+            </div>
+            <div class="item">
+                <div class="writing-mode-legacy-lr-tb">lr-tb</div>
+                <p class="caption">writing-mode: lr-tb (legacy)</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="item">
+                <div class="text-orientation-mixed">mixed</div>
+                <p class="caption">text-orientation: mixed</p>
+            </div>
+            <div class="item">
+                <div class="text-orientation-upright">upright</div>
+                <p class="caption">text-orientation: upright</p>
+            </div>
+            <div class="item">
+                <div class="text-orientation-sideways">sideways</div>
+                <p class="caption">text-orientation: sideways</p>
+            </div>
+            <div class="item">
+                <div class="text-orientation-legacy">legacy</div>
+                <p class="caption">text-orientation: use-glyph-orientation</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>12. Line breaking</h2>
+        <p class="hyphens-none">hyphens: none — a soft hyphen has no effect: extra&shy;ordinary</p>
+        <p class="hyphens-manual">hyphens: manual — a soft hyphen breaks only where one is written: extra&shy;ordinary</p>
+        <p class="hyphens-auto">hyphens: auto — a soft hyphen offers a break: extra&shy;ordinary</p>
+        <p class="overflow-wrap-normal">overflow-wrap: normal — averylongwordthatcannotbreakoverflows its line</p>
+        <p class="overflow-wrap-break-word">overflow-wrap: break-word — averylongwordthatcannotbreak wraps inside itself</p>
+        <p class="overflow-wrap-anywhere">overflow-wrap: anywhere — averylongwordthatcannotbreak wraps and the width shrinks</p>
+        <p class="word-break-normal">word-break: normal</p>
+        <p class="word-break-break-all">word-break: break-all</p>
+        <p class="word-break-keep-all">word-break: keep-all</p>
+        <p class="word-break-auto-phrase">word-break: auto-phrase</p>
+        <p class="line-break-auto">line-break: auto — 日本語のテキストがここにあります</p>
+        <p class="line-break-loose">line-break: loose — 日本語のテキストがここにあります</p>
+        <p class="line-break-normal">line-break: normal — 日本語のテキストがここにあります</p>
+        <p class="line-break-strict">line-break: strict — 日本語のテキストがここにあります</p>
+        <p class="line-break-anywhere">line-break: anywhere — 日本語のテキストがここにあります</p>
+        <p class="tab-size-number mono">tab-size: 4 &#9;|	|	|</p>
+        <p class="tab-size-length mono">tab-size: 24px &#9;|	|	|</p>
+    </section>
+
+    <section>
+        <h2>13. Overflow</h2>
+        <div class="row">
+            <div class="item">
+                <div class="swatch overflow-visible">tall content that leaves the box</div>
+                <p class="caption">overflow: visible</p>
+            </div>
+            <div class="item">
+                <div class="swatch overflow-hidden">tall content that is clipped</div>
+                <p class="caption">overflow: hidden</p>
+            </div>
+            <div class="item">
+                <div class="swatch overflow-clip">tall content that is clipped</div>
+                <p class="caption">overflow: clip</p>
+            </div>
+            <div class="item">
+                <div class="swatch overflow-scroll">tall content that scrolls</div>
+                <p class="caption">overflow: scroll</p>
+            </div>
+            <div class="item">
+                <div class="swatch overflow-auto">tall content that scrolls</div>
+                <p class="caption">overflow: auto</p>
+            </div>
+            <div class="item">
+                <div class="swatch overflow-overlay">overlay computes to auto</div>
+                <p class="caption">overflow: overlay</p>
+            </div>
+            <div class="item">
+                <div class="swatch overflow-pair">hidden auto</div>
+                <p class="caption">overflow: hidden auto</p>
+            </div>
+            <div class="item">
+                <div class="swatch overflow-longhands">the longhands</div>
+                <p class="caption">overflow-x: hidden; overflow-y: auto</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>14. Position</h2>
+        <div class="row">
+            <div class="item">
+                <div class="position-static"></div>
+                <p class="caption">position: static</p>
+            </div>
+            <div class="item">
+                <div class="position-relative"></div>
+                <p class="caption">position: relative; top: 6px; left: 8px</p>
+            </div>
+            <div class="item">
+                <div class="position-relative-negative"></div>
+                <p class="caption">relative with negative offsets</p>
+            </div>
+            <div class="item">
+                <div class="position-relative-right-bottom"></div>
+                <p class="caption">relative with right and bottom</p>
+            </div>
+            <div class="item">
+                <div class="position-sticky"></div>
+                <p class="caption">position: sticky; top: 0</p>
+            </div>
+        </div>
+        <div class="position-container" id="position-container">
+            <p>position: relative on the containing block</p>
+            <div class="position-absolute" id="position-absolute"></div>
+            <div class="position-absolute-right-bottom" id="position-absolute-right-bottom"></div>
+            <div class="position-absolute-auto" id="position-absolute-auto"></div>
+            <div class="position-absolute-inset" id="position-absolute-inset"></div>
+            <div class="position-absolute-percentage" id="position-absolute-percentage"></div>
+        </div>
+        <p class="caption">
+            absolute children: top/left, right/bottom, left: auto, an inset shorthand, and
+            percentages of the containing block
+        </p>
+        <div class="row">
+            <div class="item">
+                <div class="swatch z-index-auto"></div>
+                <p class="caption">z-index: auto</p>
+            </div>
+            <div class="item">
+                <div class="swatch z-index-number"></div>
+                <p class="caption">z-index: 2</p>
+            </div>
+            <div class="item">
+                <div class="swatch z-index-negative"></div>
+                <p class="caption">z-index: -1</p>
+            </div>
+        </div>
+        <p class="note">
+            A fixed box is pinned to the viewport through scrolling and ignores the clip of its
+            ancestors: the green box at the bottom right of this page is
+            <span class="mono">position: fixed; right: 12px; bottom: 12px</span>.
+        </p>
+        <div class="position-fixed" id="position-fixed">fixed</div>
+    </section>
+
+    <section>
+        <h2>15. Float and clear</h2>
+        <div class="row">
+            <div class="item">
+                <div class="float-none"></div>
+                <p class="caption">float: none</p>
+            </div>
+            <div class="item">
+                <div class="float-left"></div>
+                <p class="caption">float: left</p>
+            </div>
+            <div class="item">
+                <div class="float-right"></div>
+                <p class="caption">float: right</p>
+            </div>
+            <div class="item">
+                <div class="float-inline-start"></div>
+                <p class="caption">float: inline-start</p>
+            </div>
+            <div class="item">
+                <div class="float-inline-end"></div>
+                <p class="caption">float: inline-end</p>
+            </div>
+        </div>
+        <p class="clear-none">clear: none</p>
+        <p class="clear-left">clear: left</p>
+        <p class="clear-right">clear: right</p>
+        <p class="clear-both">clear: both</p>
+        <p class="clear-inline-start">clear: inline-start</p>
+        <p class="clear-inline-end">clear: inline-end</p>
+    </section>
+
+    <section>
+        <h2>16. Flex</h2>
+        <h3>flex-direction</h3>
+        <div class="flex-container flex-row">
+            <div class="demo">1</div>
+            <div class="demo">2</div>
+            <div class="demo">3</div>
+        </div>
+        <p class="caption">flex-direction: row</p>
+        <div class="flex-container flex-row-reverse">
+            <div class="demo">1</div>
+            <div class="demo">2</div>
+            <div class="demo">3</div>
+        </div>
+        <p class="caption">flex-direction: row-reverse</p>
+        <div class="flex-container flex-column">
+            <div class="demo">1</div>
+            <div class="demo">2</div>
+        </div>
+        <p class="caption">flex-direction: column</p>
+        <div class="flex-container flex-column-reverse">
+            <div class="demo">1</div>
+            <div class="demo">2</div>
+        </div>
+        <p class="caption">flex-direction: column-reverse</p>
+
+        <h3>justify-content</h3>
+        <div class="flex-container flex-row justify-flex-start">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">justify-content: flex-start</p>
+        <div class="flex-container flex-row justify-flex-end">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">justify-content: flex-end</p>
+        <div class="flex-container flex-row justify-center">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">justify-content: center</p>
+        <div class="flex-container flex-row justify-space-between">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+            <div class="demo">c</div>
+        </div>
+        <p class="caption">justify-content: space-between</p>
+        <div class="flex-container flex-row justify-space-around">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">justify-content: space-around</p>
+        <div class="flex-container flex-row justify-space-evenly">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">justify-content: space-evenly</p>
+        <div class="flex-container flex-row justify-normal">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">justify-content: normal</p>
+
+        <h3>align-items and align-self</h3>
+        <div class="flex-container flex-row align-items-stretch">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">align-items: stretch</p>
+        <div class="flex-container flex-row align-items-flex-start">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">align-items: flex-start</p>
+        <div class="flex-container flex-row align-items-flex-end">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">align-items: flex-end</p>
+        <div class="flex-container flex-row align-items-center">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">align-items: center</p>
+        <div class="flex-container flex-row align-items-baseline">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">align-items: baseline</p>
+        <div class="flex-container flex-row align-items-normal">
+            <div class="demo">a</div>
+            <div class="demo">b</div>
+        </div>
+        <p class="caption">align-items: normal</p>
+        <div class="flex-container flex-row align-items-flex-start">
+            <div class="demo flex-item-align-self">self</div>
+            <div class="demo flex-item-align-self-end">end</div>
+            <div class="demo flex-item-align-self-start">start</div>
+            <div class="demo flex-item-align-self-auto">auto</div>
+        </div>
+        <p class="caption">align-self: center, flex-end, flex-start, auto</p>
+
+        <h3>flex-grow, flex-shrink and flex-basis</h3>
+        <div class="flex-container flex-row">
+            <div class="demo flex-grow-zero">0</div>
+            <div class="demo flex-grow-one">1</div>
+            <div class="demo flex-grow-two">2</div>
+        </div>
+        <p class="caption">flex-grow: 0, 1 and 2 in one line</p>
+        <div class="flex-container flex-row">
+            <div class="demo flex-basis-length">60px</div>
+            <div class="demo flex-basis-percentage">20%</div>
+            <div class="demo flex-basis-zero">0</div>
+            <div class="demo flex-basis-auto">auto</div>
+        </div>
+        <p class="caption">flex-basis: 60px, 20%, 0 and auto</p>
+        <div class="flex-container flex-row">
+            <div class="demo flex-shrink-zero">shrink 0</div>
+            <div class="demo flex-shrink-one">shrink 1</div>
+            <div class="demo flex-shrink-two">shrink 2</div>
+        </div>
+        <p class="caption">flex-shrink: 0, 1 and 2</p>
+
+        <h3>order</h3>
+        <div class="flex-container flex-row">
+            <div class="demo order-one">order 1</div>
+            <div class="demo order-negative">order -1</div>
+            <div class="demo order-zero">order 0</div>
+        </div>
+        <p class="caption">order: 1, -1 and 0 — sorted before anything is placed</p>
+
+        <h3>flex-wrap and flex-flow</h3>
+        <div class="row">
+            <div class="item">
+                <div class="wrap-box wrap-nowrap">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">flex-wrap: nowrap — one line, overflowing</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box wrap-wrap">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">flex-wrap: wrap — the third item starts a line</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box wrap-wrap-reverse">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">flex-wrap: wrap-reverse — the lines stack from the other end</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="item">
+                <div class="wrap-box flex-flow-row-wrap">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">flex-flow: row wrap</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box flex-flow-wrap-column">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">flex-flow: wrap column</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box flex-flow-column-nowrap">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">flex-flow: column nowrap</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box flex-flow-row">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">flex-flow: row — the wrap half stays nowrap</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box flex-flow-wrap">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">flex-flow: wrap — the direction half stays row</p>
+            </div>
+        </div>
+
+        <h3>align-content</h3>
+        <div class="row">
+            <div class="item">
+                <div class="wrap-box align-content-normal">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">align-content: normal</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box align-content-stretch">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">align-content: stretch</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box align-content-flex-start">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">align-content: flex-start</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box align-content-flex-end">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">align-content: flex-end</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box align-content-start">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">align-content: start</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box align-content-end">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">align-content: end</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box align-content-center">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">align-content: center</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box align-content-space-between">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">align-content: space-between</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box align-content-space-around">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">align-content: space-around</p>
+            </div>
+            <div class="item">
+                <div class="wrap-box align-content-space-evenly">
+                    <div class="demo">1</div><div class="demo">2</div><div class="demo">3</div>
+                </div>
+                <p class="caption">align-content: space-evenly</p>
+            </div>
+        </div>
+
+        <h3>gap</h3>
+        <div class="row">
+            <div class="item">
+                <div class="gap-one-value">
+                    <div class="demo">a</div><div class="demo">b</div><div class="demo">c</div>
+                </div>
+                <p class="caption">gap: 12px</p>
+            </div>
+            <div class="item">
+                <div class="gap-two-values">
+                    <div class="demo">a</div><div class="demo">b</div><div class="demo">c</div>
+                </div>
+                <p class="caption">gap: 8px 20px (row 8, column 20)</p>
+            </div>
+            <div class="item">
+                <div class="column-gap-value">
+                    <div class="demo">a</div><div class="demo">b</div>
+                </div>
+                <p class="caption">column-gap: 18px</p>
+            </div>
+            <div class="item">
+                <div class="column-gap-percentage">
+                    <div class="demo">a</div><div class="demo">b</div>
+                </div>
+                <p class="caption">column-gap: 10% of the content box</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="item">
+                <div class="row-gap-value">
+                    <div class="demo">a</div><div class="demo">b</div><div class="demo">c</div>
+                </div>
+                <p class="caption">row-gap: 14px between the wrapped lines</p>
+            </div>
+            <div class="item">
+                <div class="row-gap-normal">
+                    <div class="demo">a</div><div class="demo">b</div>
+                </div>
+                <p class="caption">row-gap: normal (no gap)</p>
+            </div>
+            <div class="item">
+                <div class="gap-percentage">
+                    <div class="demo">a</div><div class="demo">b</div><div class="demo">c</div>
+                </div>
+                <p class="caption">gap: 5% (a percentage of the content box)</p>
+            </div>
+        </div>
+    </section>
+
+    <section>
+        <h2>17. The CSS-wide keywords</h2>
+        <p class="all-initial">all: initial — every property goes back to its initial value</p>
+        <div class="vars-parent">
+            <p class="all-inherit">all: inherit — every property takes the parent's computed value</p>
+        </div>
+        <p class="all-unset">all: unset — inherited properties inherit, the rest go back to initial</p>
+    </section>
+
+    <section>
+        <h2>Reported rather than implemented</h2>
+        <p class="note">
+            These are named so the sheet stays a list of what works. Each is reported by the
+            compiler with its reason and does not change the document:
+        </p>
+        <ul>
+            <li><span class="mono">display: grid, table, contents, flow-root, list-item</span> — the native layout engine has block, inline, inline-block, flex and none.</li>
+            <li><span class="mono">margin: auto</span> — the native layout engine does not distribute free space.</li>
+            <li><span class="mono">background-color: currentcolor</span> without an explicit <span class="mono">color</span> — there is no native colour to borrow. With a <span class="mono">color</span> set it resolves to it, as in section 6.</li>
+            <li><span class="mono">border-radius</span> with more than one value, or the elliptical <span class="mono">/</span> form — the native radius is one circular length. The four corner longhands are accepted and the single value paints every corner.</li>
+            <li><span class="mono">stretch, fit-content(&lt;length&gt;) and anchor-size()</span> on the size properties — a length, a percentage, <span class="mono">auto</span>, <span class="mono">none</span> and <span class="mono">min-content</span>/<span class="mono">max-content</span>/<span class="mono">fit-content</span> are implemented, these three need an intrinsic-size pass or an anchor to measure against.</li>
+            <li><span class="mono">percentages in margin, padding, border-width and font-size</span> — the native box holds resolved lengths; they are supported in width, height and min-*.</li>
+            <li><span class="mono">text-align: match-parent</span> — there is no parent writing mode to inherit one from.</li>
+            <li><span class="mono">text-transform: full-width, full-size-kana, math-auto</span> — the case transforms are implemented, these are not.</li>
+            <li><span class="mono">text-indent: each-line, hanging</span> — the indent itself is implemented.</li>
+            <li><span class="mono">text-decoration-line: spelling-error, grammar-error</span> — underline, overline, line-through and blink are.</li>
+            <li><span class="mono">font-size: math</span>, and the font shorthand's family, line-height, weight, style and variant halves.</li>
+            <li><span class="mono">flex</span> — the shorthand over flex-grow, flex-shrink and flex-basis is carried, not expanded into the three longhands. The rest of the flex model, wrapping and gaps included, is implemented above.</li>
+            <li><span class="mono">z-index</span> is compiled and accepted, and does not yet reorder painting.</li>
+            <li><span class="mono">sticky</span> takes its offsets like a relative box; the scrollport clamp is not modelled.</li>
+            <li><span class="mono">env(), attr(), counter(), counters(), anchor(), anchor-size(), calc-size(), element(), if(), progress(), random(), sibling-index(), sibling-count()</span> and the image and grid functions — the numeric functions and var() are implemented, these need a document or a runtime.</li>
+            <li><span class="mono">grid, transforms, transitions, animations, filters, gradients, background images, custom fonts, logical properties, container queries</span> — carried, not compiled: accepted and kept, never drawn.</li>
+        </ul>
+    </section>
+</body>
+</html>

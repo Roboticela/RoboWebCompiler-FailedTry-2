@@ -215,6 +215,8 @@ Fonts/                      the typefaces the runtime loads (Inter by default)
 Examples/BasicApp/          a single-document HTML + CSS + JS application
 Examples/MultiPage/         three documents in one folder, one model each
 Examples/TypographyShowcase/ every writing system, emoji, weights and line breaking
+Examples/Conformance/       one document and one stylesheet holding every CSS
+                            property, value and function the compiler implements
 RoboBench.md                the current benchmark report, produced by RoboBench
 ```
 
@@ -498,9 +500,9 @@ directories:
   `shorthand-foo`, `display-or-not`, `background-tbd`), excluded by name with
   the reason recorded.
 
-**Two answers.** A property is either *compiled* - the CSS front end compiles 51
-names, the box, border, background, colour, font, text and overflow families the
-renderer can draw - or *carried*: the compiler knows the name, the module that
+**Two answers.** A property is either *compiled* - the CSS front end compiles a
+name when the renderer can draw it, across the box, border, background, colour,
+font, text, overflow, position, float and flex families - or *carried*: the compiler knows the name, the module that
 defines it, whether it inherits and its initial value, and the cascade parses a
 declaration of it and keeps the value on the computed style. Carrying is what a
 static native UI compiler can honestly do with `animation-*`, `scroll-*` or

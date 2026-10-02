@@ -202,6 +202,18 @@ namespace RoboCSSCompiler
               true, true, "css-flexbox-1" },
             { Id::FlexOrder, "order", Cat::Layout, false, "0", Grammar::Integer, nullptr, true, false, false, true,
               true, "css-flexbox-1" },
+            { Id::FlexWrap, "flex-wrap", Cat::Layout, false, "nowrap", Grammar::Keyword,
+              "nowrap wrap wrap-reverse", true, false, false, true, true, "css-flexbox-1" },
+            { Id::AlignContent, "align-content", Cat::Layout, false, "normal", Grammar::Keyword,
+              "normal flex-start flex-end start end center space-between space-around space-evenly stretch", true,
+              false, false, true, true, "css-align-3" },
+            // `row-gap` and `column-gap`: the space between flex lines and between
+            // items. `normal` is the initial value and means no gap for a flex
+            // container; a length is the only other form the native box holds.
+            { Id::RowGap, "row-gap", Cat::Layout, false, "normal", Grammar::LengthPercentageOrNormal, nullptr, true,
+              false, false, true, true, "css-align-3" },
+            { Id::ColumnGap, "column-gap", Cat::Layout, false, "normal", Grammar::LengthPercentageOrNormal, nullptr,
+              true, false, false, true, true, "css-align-3" },
 
             { Id::BorderTopWidth, "border-top-width", Cat::Border, false, "medium", Grammar::BorderWidth, nullptr, true, true, false, true, true, "css-backgrounds-3" },
             { Id::BorderRightWidth, "border-right-width", Cat::Border, false, "medium", Grammar::BorderWidth, nullptr, true, true, false, true, true, "css-backgrounds-3" },
@@ -406,6 +418,16 @@ namespace RoboCSSCompiler
         shorthands.push_back({ "inset", Cat::Position,
                                box(Id::Top, Id::Right, Id::Bottom, Id::Left), "box", true,
                                "css-position-3" });
+        // `gap`: the row gap and, when written, the column gap. The pair rule
+        // distributes `gap: <row> <column>` and gives `gap: <row>` the same
+        // value for the column, which is exactly the specification's expansion.
+        shorthands.push_back({ "gap", Cat::Layout, pair(Id::RowGap, Id::ColumnGap), "pair", true,
+                               "css-align-3" });
+        // `flex-flow`: `<flex-direction> || <flex-wrap>`, in either order, so it
+        // is decoded by asking each longhand's own keyword set whether it owns
+        // the token rather than by position.
+        shorthands.push_back({ "flex-flow", Cat::Layout, pair(Id::FlexDirection, Id::FlexWrap), "flex-flow",
+                               true, "css-flexbox-1" });
         shorthands.push_back({ "overflow", Cat::Overflow, pair(Id::OverflowX, Id::OverflowY), "pair", true,
                                "css-overflow-3" });
         shorthands.push_back({ "background", Cat::Background, single(Id::BackgroundColor), "background", true,
@@ -485,6 +507,26 @@ namespace RoboCSSCompiler
                 inheritedProperties.push_back(definition.id);
             }
         }
+
+        // What the compiler implements, as one name list a caller can walk to
+        // show what it does: derived from the two tables just built rather than
+        // written out, so it cannot fall behind them.
+        compiledProperties.reserve(properties.size() + shorthands.size());
+
+        for (const CSSPropertyDefinition& definition : properties)
+        {
+            compiledProperties.push_back({ definition.name, false });
+        }
+
+        for (const CSSShorthandDefinition& shorthand : shorthands)
+        {
+            compiledProperties.push_back({ shorthand.name, true });
+        }
+
+        std::stable_sort(compiledProperties.begin(), compiledProperties.end(),
+                         [](const CompiledName& left, const CompiledName& right) {
+                             return std::strcmp(left.name, right.name) < 0;
+                         });
 
         // What the reference does not define at all, and this compiler cannot
         // compile: five names whose specifications live outside the checkout.

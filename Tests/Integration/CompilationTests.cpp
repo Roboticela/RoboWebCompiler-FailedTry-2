@@ -368,15 +368,14 @@ ROBO_TEST(Integration, MissingScriptResourceFailsTheBuild)
 
 ROBO_TEST(Integration, BatchReportsWarningsWithoutFailingTheBuild)
 {
-    // `max-width` is compiled but the native box model has no maximum, so it is
-    // a warning: the build succeeds and the author is still told the declaration
-    // did nothing.
+    // A percentage margin has no native answer, so it is a warning: the build
+    // succeeds and the author is still told the declaration did nothing.
     const std::filesystem::path source = WriteTemporaryApplication(
         "warnings",
         "<!DOCTYPE html><html><head><title>T</title></head><body>"
         "<div class=\"box\">x</div>"
         "</body></html>",
-        ".box { max-width: 100px; color: #000000 }\n",
+        ".box { margin-top: 20%; color: #000000 }\n",
         "");
 
     CompilationOptions options;
@@ -402,7 +401,7 @@ ROBO_TEST(Integration, BatchReportsWarningsWithoutFailingTheBuild)
     ROBO_CHECK(document.succeeded);
     ROBO_CHECK(document.warningCount > 0);
     ROBO_CHECK(document.diagnostics.empty());
-    ROBO_CHECK(document.warnings.find("max-width") != std::string::npos);
+    ROBO_CHECK(document.warnings.find("margin") != std::string::npos);
 
     // A CSS warning is named as the CSS compiler's and carries its RCC code,
     // even though it surfaces through the HTML compiler's report.

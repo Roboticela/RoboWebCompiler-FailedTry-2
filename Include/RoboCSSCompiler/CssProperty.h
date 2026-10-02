@@ -69,13 +69,17 @@ namespace RoboCSSCompiler
         // properties pick the axis and how the items sit on it; the item
         // properties decide how much room each item takes and in what order.
         FlexDirection,
+        FlexWrap,
         JustifyContent,
         AlignItems,
         AlignSelf,
+        AlignContent,
         FlexGrow,
         FlexShrink,
         FlexBasis,
         FlexOrder,
+        RowGap,
+        ColumnGap,
 
         // --- borders --------------------------------------------------------
         BorderTopWidth,
@@ -205,6 +209,10 @@ namespace RoboCSSCompiler
         BorderWidth,
         /// A length that may also be `normal`.
         LengthOrNormal,
+        /// A length or percentage that may also be `normal`: the `row-gap` and
+        /// `column-gap` grammar, where `normal` is no gap and a percentage is a
+        /// fraction of the container's own content box.
+        LengthPercentageOrNormal,
         /// `normal | <number> | <length-percentage>`
         LineHeight,
         /// `<number> | <length>`, the width of a tab stop.
@@ -250,11 +258,11 @@ namespace RoboCSSCompiler
         /// `xx-small ... xxx-large | smaller | larger | <length-percentage>`
         FontSize,
         /// Anything at all, for a property the compiler carries rather than
-        /// interprets. The specification defines 669 properties beyond the 51
-        /// this compiler compiles or expands, each with a grammar of its own; a
-        /// compiler that models none of those grammars cannot honestly judge
-        /// their values, so it keeps what was written instead of refusing a
-        /// declaration that is valid CSS. A carried value is preserved as the
+        /// interprets. The specification defines far more properties than the
+        /// ones this compiler compiles or expands, each with a grammar of its
+        /// own; a compiler that models none of those grammars cannot honestly
+        /// judge their values, so it keeps what was written instead of refusing
+        /// a declaration that is valid CSS. A carried value is preserved as the
         /// tokens the author wrote, which is enough for it to be stored,
         /// inherited, compared and printed back.
         Dynamic
@@ -361,6 +369,18 @@ namespace RoboCSSCompiler
         /// directory itself is gone.
         const std::vector<CSSPropertyDefinition>& RegisteredProperties() const { return registeredProperties; }
 
+        /// Every property the compiler compiles, in name order, including the
+        /// shorthands. The definition id is the compiled property's, so a caller
+        /// that wants to assert "everything the compiler implements is shown"
+        /// can walk this rather than a hand-written list that can fall behind.
+        struct CompiledName
+        {
+            const char* name;
+            bool shorthand;
+        };
+
+        const std::vector<CompiledName>& CompiledProperties() const { return compiledProperties; }
+
         /// True when the name is a real CSS property the compiler does not
         /// even carry, because its specification is outside the reference. Such
         /// a name is not a typo, so the declaration is reported as an
@@ -399,6 +419,9 @@ namespace RoboCSSCompiler
                                        const char* initialValue);
 
         std::vector<CSSPropertyDefinition> properties;
+        /// Every compiled property and shorthand, in name order, built from the
+        /// two tables above so the list cannot fall behind them.
+        std::vector<CompiledName> compiledProperties;
         /// Registered rather than dropped: the compiler is built against this
         /// vocabulary once the reference directory itself is gone.
         std::vector<CSSPropertyDefinition> registeredProperties;

@@ -2007,166 +2007,321 @@ namespace RoboRenderer
             return left.order < right.order;
         });
 
-        const auto outerMain = [row](const FlexItem& item) {
-            return item.main + (row ? item.margin.Horizontal() : item.margin.Vertical());
+        // Resolve the gaps once. For a row container the column gap runs along
+        // the main axis and the row gap along the cross axis; for a column
+        // container the two swap. A percentage gap is a fraction of the
+        // container's content box on the axis the gap runs along, which is why
+        // the two are resolved against different references.
+        const auto resolveGap = [this](const LayoutValue& value, float reference) {
+            const float resolved = ResolveDeclaredLength(value, reference);
+            return resolved > 0.0f ? resolved : 0.0f;
         };
 
-        float sumBase = 0.0f;
-        float sumGrow = 0.0f;
-        float sumShrinkWeight = 0.0f;
+        const float mainGap = resolveGap(row ? style.columnGap : style.rowGap, mainAvailable);
+        const float crossGap = resolveGap(row ? style.rowGap : style.columnGap, crossAvailable);
+        const bool wrapping = style.flexWrap != FlexWrapKind::NoWrap;
 
-        for (const FlexItem& item : items)
+        struct FlexLine
         {
-            sumBase += item.baseMain + (row ? item.margin.Horizontal() : item.margin.Vertical());
-            sumGrow += item.grow;
-            sumShrinkWeight += item.shrink * item.baseMain;
-        }
+            std::vector<std::size_t> itemIndices;
+            float usedMain = 0.0f;
+            float cross = 0.0f;
+            float leading = 0.0f;
+            float between = 0.0f;
+        };
 
-        const float free = mainAvailable > 0.0f ? mainAvailable - sumBase : 0.0f;
+        // Break the items into lines. A line takes items until the next one
+        // would run past the container's main size, so the first item of a line
+        // always fits even when it is wider than the container on its own. With
+        // `nowrap` every item stays on the one line.
+        std::vector<FlexLine> flexLines;
 
-        for (FlexItem& item : items)
         {
-            if (free > 0.0f && sumGrow > 0.0f)
+            std::vector<std::size_t> lineIndices;
+            float lineMain = 0.0f;
+
+            for (std::size_t index = 0; index < items.size(); ++index)
             {
-                item.main = item.baseMain + free * (item.grow / sumGrow);
+                const float outer = items[index].baseMain +
+                                    (row ? items[index].margin.Horizontal() : items[index].margin.Vertical());
+                const float withGap = lineIndices.empty() ? outer : lineMain + mainGap + outer;
+
+                if (wrapping && !lineIndices.empty() && mainAvailable > 0.0f && withGap > mainAvailable)
+                {
+                    flexLines.push_back(FlexLine{ std::move(lineIndices), 0.0f, 0.0f, 0.0f, 0.0f });
+                    lineIndices.clear();
+                    lineMain = 0.0f;
+                }
+
+                if (!lineIndices.empty())
+                {
+                    lineMain += mainGap;
+                }
+
+                lineMain += outer;
+                lineIndices.push_back(index);
             }
-            else if (free < 0.0f && sumShrinkWeight > 0.0f)
+
+            if (!lineIndices.empty())
             {
-                const float scaled = free * (item.shrink * item.baseMain) / sumShrinkWeight;
-                item.main = std::max(0.0f, item.baseMain + scaled);
-            }
-            else
-            {
-                item.main = item.baseMain;
-            }
-        }
-
-        float usedMain = 0.0f;
-        for (const FlexItem& item : items)
-        {
-            usedMain += outerMain(item);
-        }
-
-        const float leftover = mainAvailable > 0.0f ? std::max(0.0f, mainAvailable - usedMain) : 0.0f;
-        const float count = static_cast<float>(items.size());
-
-        float leading = 0.0f;
-        float between = 0.0f;
-
-        switch (style.justifyContent)
-        {
-        case JustifyContentKind::FlexEnd:
-            leading = leftover;
-            break;
-        case JustifyContentKind::Center:
-            leading = leftover * 0.5f;
-            break;
-        case JustifyContentKind::SpaceBetween:
-            between = items.size() > 1 ? leftover / (count - 1.0f) : 0.0f;
-            break;
-        case JustifyContentKind::SpaceAround:
-            between = leftover / count;
-            leading = between * 0.5f;
-            break;
-        case JustifyContentKind::SpaceEvenly:
-            between = leftover / (count + 1.0f);
-            leading = between;
-            break;
-        case JustifyContentKind::FlexStart:
-        default:
-            break;
-        }
-
-        // The single line's cross size, and whether any item stretches to it.
-        float lineCross = 0.0f;
-        bool stretches = false;
-
-        for (const FlexItem& item : items)
-        {
-            lineCross = std::max(lineCross, item.cross + (row ? item.margin.Vertical() : item.margin.Horizontal()));
-
-            if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize)
-            {
-                stretches = true;
+                flexLines.push_back(FlexLine{ std::move(lineIndices), 0.0f, 0.0f, 0.0f, 0.0f });
             }
         }
 
-        if (crossAvailable > 0.0f && stretches)
+        // Per line: grow or shrink the items into the line, distribute the free
+        // main space with justify-content, and take the line's cross size.
+        for (FlexLine& line : flexLines)
         {
-            lineCross = std::max(lineCross, crossAvailable);
-        }
+            const std::size_t gapCount = line.itemIndices.empty() ? 0 : line.itemIndices.size() - 1;
 
-        float mainCursor = leading;
+            float sumBase = mainGap * static_cast<float>(gapCount);
+            float sumGrow = 0.0f;
+            float sumShrinkWeight = 0.0f;
 
-        for (const FlexItem& item : items)
-        {
-            const float marginMainStart = row ? item.margin.left : item.margin.top;
-            const float marginMainEnd = row ? item.margin.right : item.margin.bottom;
-
-            float mainOffset = mainCursor + marginMainStart;
-
-            // `*-reverse` lays the line out from the other end: the forward
-            // positions are mirrored inside the container's main size.
-            if (reverse && mainAvailable > 0.0f)
+            for (const std::size_t index : line.itemIndices)
             {
-                mainOffset = mainAvailable - (mainOffset + item.main);
+                const FlexItem& item = items[index];
+                sumBase += item.baseMain + (row ? item.margin.Horizontal() : item.margin.Vertical());
+                sumGrow += item.grow;
+                sumShrinkWeight += item.shrink * item.baseMain;
             }
 
-            float crossSize = item.cross;
-            if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize && crossAvailable > 0.0f)
+            const float free = mainAvailable > 0.0f ? mainAvailable - sumBase : 0.0f;
+
+            for (const std::size_t index : line.itemIndices)
             {
-                crossSize = std::max(item.cross,
-                                     lineCross - (row ? item.margin.Vertical() : item.margin.Horizontal()));
+                FlexItem& item = items[index];
+
+                if (free > 0.0f && sumGrow > 0.0f)
+                {
+                    item.main = item.baseMain + free * (item.grow / sumGrow);
+                }
+                else if (free < 0.0f && sumShrinkWeight > 0.0f)
+                {
+                    const float scaled = free * (item.shrink * item.baseMain) / sumShrinkWeight;
+                    item.main = std::max(0.0f, item.baseMain + scaled);
+                }
+                else
+                {
+                    item.main = item.baseMain;
+                }
             }
 
-            const float crossOuter = crossSize + (row ? item.margin.Vertical() : item.margin.Horizontal());
-            float crossOffset = 0.0f;
+            float used = mainGap * static_cast<float>(gapCount);
 
-            switch (item.align)
+            for (const std::size_t index : line.itemIndices)
             {
-            case AlignItemsKind::FlexEnd:
-                crossOffset = lineCross - crossOuter;
+                const FlexItem& item = items[index];
+                used += item.main + (row ? item.margin.Horizontal() : item.margin.Vertical());
+            }
+
+            line.usedMain = used;
+
+            const float leftover = mainAvailable > 0.0f ? std::max(0.0f, mainAvailable - used) : 0.0f;
+            const float count = static_cast<float>(line.itemIndices.size());
+
+            switch (style.justifyContent)
+            {
+            case JustifyContentKind::FlexEnd:
+                line.leading = leftover;
                 break;
-            case AlignItemsKind::Center:
-                crossOffset = (lineCross - crossOuter) * 0.5f;
+            case JustifyContentKind::Center:
+                line.leading = leftover * 0.5f;
                 break;
+            case JustifyContentKind::SpaceBetween:
+                line.between = line.itemIndices.size() > 1 ? leftover / (count - 1.0f) : 0.0f;
+                break;
+            case JustifyContentKind::SpaceAround:
+                line.between = leftover / count;
+                line.leading = line.between * 0.5f;
+                break;
+            case JustifyContentKind::SpaceEvenly:
+                line.between = leftover / (count + 1.0f);
+                line.leading = line.between;
+                break;
+            case JustifyContentKind::FlexStart:
             default:
-                crossOffset = 0.0f;
                 break;
             }
 
-            float boxX = x;
-            float boxY = y;
-            float forcedWidth = 0.0f;
-            float forcedHeight = 0.0f;
+            float lineCross = 0.0f;
+            bool stretches = false;
 
-            if (row)
+            for (const std::size_t index : line.itemIndices)
             {
-                boxX = x + mainOffset;
-                boxY = y + crossOffset + item.margin.top;
-                forcedWidth = item.main;
+                const FlexItem& item = items[index];
+                lineCross = std::max(
+                    lineCross, item.cross + (row ? item.margin.Vertical() : item.margin.Horizontal()));
 
-                if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize && crossAvailable > 0.0f)
+                if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize)
                 {
-                    forcedHeight = crossSize;
-                }
-            }
-            else
-            {
-                boxY = y + mainOffset;
-                boxX = x + crossOffset + item.margin.left;
-                forcedHeight = item.main;
-
-                if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize && crossAvailable > 0.0f)
-                {
-                    forcedWidth = crossSize;
+                    stretches = true;
                 }
             }
 
-            ArrangeElement(item.element, boxX, boxY, row ? item.main : availableWidth, clip, depth,
-                           measureOnly, false, forcedWidth, forcedHeight);
+            // A single line fills the container's own cross size when anything
+            // stretches to it; a wrapped line is only as tall as its tallest
+            // item, because the container's cross size is shared between the
+            // lines below.
+            if (!wrapping && crossAvailable > 0.0f && stretches)
+            {
+                lineCross = std::max(lineCross, crossAvailable);
+            }
 
-            mainCursor += item.main + marginMainStart + marginMainEnd + between;
+            line.cross = lineCross;
+        }
+
+        // Stack the lines on the cross axis, distributing any free cross space
+        // with align-content. A single-line `nowrap` container ignores it.
+        float linesCross = crossGap * static_cast<float>(flexLines.empty() ? 0 : flexLines.size() - 1);
+
+        for (const FlexLine& line : flexLines)
+        {
+            linesCross += line.cross;
+        }
+
+        float crossFree = crossAvailable > 0.0f ? std::max(0.0f, crossAvailable - linesCross) : 0.0f;
+        float crossLeading = 0.0f;
+        float crossBetween = 0.0f;
+
+        if (wrapping && !flexLines.empty())
+        {
+            switch (style.alignContent)
+            {
+            case AlignContentKind::Stretch:
+            {
+                if (crossFree > 0.0f)
+                {
+                    const float share = crossFree / static_cast<float>(flexLines.size());
+
+                    for (FlexLine& line : flexLines)
+                    {
+                        line.cross += share;
+                    }
+
+                    linesCross = crossAvailable;
+                    crossFree = 0.0f;
+                }
+
+                break;
+            }
+            case AlignContentKind::FlexEnd:
+                crossLeading = crossFree;
+                break;
+            case AlignContentKind::Center:
+                crossLeading = crossFree * 0.5f;
+                break;
+            case AlignContentKind::SpaceBetween:
+                crossBetween = flexLines.size() > 1 ? crossFree / (flexLines.size() - 1.0f) : 0.0f;
+                break;
+            case AlignContentKind::SpaceAround:
+                crossBetween = crossFree / static_cast<float>(flexLines.size());
+                crossLeading = crossBetween * 0.5f;
+                break;
+            case AlignContentKind::SpaceEvenly:
+                crossBetween = crossFree / static_cast<float>(flexLines.size() + 1);
+                crossLeading = crossBetween;
+                break;
+            case AlignContentKind::FlexStart:
+            default:
+                break;
+            }
+        }
+
+        float maxUsedMain = 0.0f;
+        float crossCursor = crossLeading;
+
+        for (const FlexLine& line : flexLines)
+        {
+            maxUsedMain = std::max(maxUsedMain, line.usedMain);
+
+            // `wrap-reverse` stacks the lines from the other end of the cross
+            // axis; the offsets are mirrored inside the container's cross size.
+            float lineCrossOffset = crossCursor;
+
+            if (style.flexWrap == FlexWrapKind::WrapReverse && crossAvailable > 0.0f)
+            {
+                lineCrossOffset = crossAvailable - (crossCursor + line.cross);
+            }
+
+            float mainCursor = line.leading;
+
+            for (const std::size_t index : line.itemIndices)
+            {
+                const FlexItem& item = items[index];
+                const float marginMainStart = row ? item.margin.left : item.margin.top;
+                const float marginMainEnd = row ? item.margin.right : item.margin.bottom;
+
+                float mainOffset = mainCursor + marginMainStart;
+
+                // `*-reverse` lays the line out from the other end: the forward
+                // positions are mirrored inside the container's main size.
+                if (reverse && mainAvailable > 0.0f)
+                {
+                    mainOffset = mainAvailable - (mainOffset + item.main);
+                }
+
+                float crossSize = item.cross;
+                if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize)
+                {
+                    crossSize = std::max(item.cross,
+                                         line.cross - (row ? item.margin.Vertical() : item.margin.Horizontal()));
+                }
+
+                const float crossOuter =
+                    crossSize + (row ? item.margin.Vertical() : item.margin.Horizontal());
+                float crossOffset = 0.0f;
+
+                switch (item.align)
+                {
+                case AlignItemsKind::FlexEnd:
+                    crossOffset = line.cross - crossOuter;
+                    break;
+                case AlignItemsKind::Center:
+                    crossOffset = (line.cross - crossOuter) * 0.5f;
+                    break;
+                default:
+                    crossOffset = 0.0f;
+                    break;
+                }
+
+                crossOffset += lineCrossOffset;
+
+                float boxX = x;
+                float boxY = y;
+                float forcedWidth = 0.0f;
+                float forcedHeight = 0.0f;
+
+                if (row)
+                {
+                    boxX = x + mainOffset;
+                    boxY = y + crossOffset + item.margin.top;
+                    forcedWidth = item.main;
+
+                    if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize)
+                    {
+                        forcedHeight = crossSize;
+                    }
+                }
+                else
+                {
+                    boxY = y + mainOffset;
+                    boxX = x + crossOffset + item.margin.left;
+                    forcedHeight = item.main;
+
+                    if (item.align == AlignItemsKind::Stretch && !item.hasCrossSize)
+                    {
+                        forcedWidth = crossSize;
+                    }
+                }
+
+                ArrangeElement(item.element, boxX, boxY, row ? item.main : availableWidth, clip, depth,
+                               measureOnly, false, forcedWidth, forcedHeight);
+
+                mainCursor += item.main + marginMainStart + marginMainEnd + mainGap + line.between;
+            }
+
+            crossCursor += line.cross + crossGap + crossBetween;
         }
 
         for (const ElementIndex flow : outOfFlow)
@@ -2174,11 +2329,11 @@ namespace RoboRenderer
             ArrangeElement(flow, x, y, availableWidth, clip, depth, measureOnly);
         }
 
-        lastInlineWidth = row ? usedMain : lineCross;
+        lastInlineWidth = row ? maxUsedMain : linesCross;
 
-        // The content height is the line's cross size for a row, and the main
-        // extent for a column.
-        return row ? lineCross : usedMain;
+        // The content height is the lines' cross extent for a row, and the
+        // tallest line's main extent for a column.
+        return row ? linesCross : maxUsedMain;
     }
 
     float LayoutEngine::ArrangeTable(ElementIndex index,
@@ -2546,6 +2701,14 @@ namespace RoboRenderer
             boxWidth = fillsWidth ? ClampPositive(availableWidth - margin.Horizontal()) : maxContentWidth;
         }
 
+        // The maximum is applied before the minimum so a minimum larger than a
+        // maximum wins, which is the order CSS states.
+        const float maximumWidth = ResolveDeclaredLength(style.maximumWidth, availableWidth);
+        if (maximumWidth > 0.0f && boxWidth > maximumWidth)
+        {
+            boxWidth = maximumWidth;
+        }
+
         const float minimumWidth = ResolveDeclaredLength(style.minimumWidth, availableWidth);
         if (minimumWidth > 0.0f && boxWidth < minimumWidth)
         {
@@ -2674,6 +2837,12 @@ namespace RoboRenderer
         if (forcedHeight > 0.0f)
         {
             boxHeight = forcedHeight;
+        }
+
+        const float maximumHeight = ResolveDeclaredLength(style.maximumHeight, availableWidth);
+        if (maximumHeight > 0.0f && boxHeight > maximumHeight)
+        {
+            boxHeight = maximumHeight;
         }
 
         const float minimumHeight = ResolveDeclaredLength(style.minimumHeight, availableWidth);

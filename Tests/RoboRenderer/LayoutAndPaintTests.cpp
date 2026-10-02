@@ -1058,3 +1058,251 @@ ROBO_TEST(Flex, ColumnStacksItemsVerticallyAndOrderReordersThem)
     // The cross axis stretches both items to the container's width.
     ROBO_CHECK(bBox.width > 199.0f && aBox.width > 199.0f);
 }
+
+ROBO_TEST(Flex, WrappingBreaksItemsOntoASecondLine)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"row\"><div id=\"a\">A</div><div id=\"b\">B</div><div id=\"c\">C</div></div>",
+        application,
+        { { "probe.css",
+            "#row { display: flex; flex-wrap: wrap; width: 120px; }\n"
+            "#a, #b, #c { width: 50px; height: 20px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 500.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex row = FindElementById(document, "row");
+    const ElementIndex a = FindElementById(document, "a");
+    const ElementIndex b = FindElementById(document, "b");
+    const ElementIndex c = FindElementById(document, "c");
+    ROBO_CHECK(row != NoElement && a != NoElement && b != NoElement && c != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+    const Rect rowBox = BoxOf(layout, row);
+    const Rect aBox = BoxOf(layout, a);
+    const Rect bBox = BoxOf(layout, b);
+    const Rect cBox = BoxOf(layout, c);
+
+    // Two 50px items fit in 120, so `a` and `b` share the first line...
+    ROBO_CHECK_EQ(static_cast<int>(aBox.y), static_cast<int>(bBox.y));
+    ROBO_CHECK_EQ(static_cast<int>(bBox.x), static_cast<int>(aBox.x + 50));
+
+    // ...and the third, pushed past the main size, starts a line below it.
+    ROBO_CHECK_EQ(static_cast<int>(cBox.x), static_cast<int>(aBox.x));
+    ROBO_CHECK_EQ(static_cast<int>(cBox.y), static_cast<int>(aBox.y + 20));
+    ROBO_CHECK_EQ(static_cast<int>(aBox.y), static_cast<int>(rowBox.y));
+}
+
+ROBO_TEST(Flex, GapSeparatesTheItemsAndTheWrappedLines)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"row\"><div id=\"a\">A</div><div id=\"b\">B</div></div>"
+        "<div id=\"wrap\"><div id=\"c\">C</div><div id=\"d\">D</div><div id=\"e\">E</div></div>",
+        application,
+        { { "probe.css",
+            "#row { display: flex; column-gap: 14px; width: 300px; }\n"
+            "#a, #b { width: 50px; height: 20px; }\n"
+            "#wrap { display: flex; flex-wrap: wrap; row-gap: 12px; width: 120px; }\n"
+            "#c, #d, #e { width: 50px; height: 20px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 500.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex a = FindElementById(document, "a");
+    const ElementIndex b = FindElementById(document, "b");
+    const ElementIndex c = FindElementById(document, "c");
+    const ElementIndex d = FindElementById(document, "d");
+    const ElementIndex e = FindElementById(document, "e");
+    ROBO_CHECK(a != NoElement && b != NoElement && c != NoElement && d != NoElement && e != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+    const Rect aBox = BoxOf(layout, a);
+    const Rect bBox = BoxOf(layout, b);
+    const Rect cBox = BoxOf(layout, c);
+    const Rect dBBox = BoxOf(layout, d);
+    const Rect eBox = BoxOf(layout, e);
+
+    // `column-gap: 14px` sits between the two items on the line.
+    ROBO_CHECK_EQ(static_cast<int>(bBox.x), static_cast<int>(aBox.x + 50 + 14));
+
+    // `row-gap: 12px` sits between the wrapped lines, below the first item.
+    ROBO_CHECK_EQ(static_cast<int>(dBBox.x), static_cast<int>(cBox.x + 50));
+    ROBO_CHECK_EQ(static_cast<int>(eBox.y), static_cast<int>(cBox.y + 20 + 12));
+}
+
+ROBO_TEST(Flex, AlignContentCentersAndStretchesTheWrappedLines)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"center\"><div id=\"a\">A</div><div id=\"b\">B</div><div id=\"c\">C</div></div>"
+        "<div id=\"stretch\"><div id=\"d\">D</div><div id=\"e\">E</div><div id=\"f\">F</div></div>",
+        application,
+        { { "probe.css",
+            "#center { display: flex; flex-wrap: wrap; align-content: center; width: 120px; height: 100px; }\n"
+            "#stretch { display: flex; flex-wrap: wrap; align-content: stretch; width: 120px; height: 100px; }\n"
+            "#a, #b, #c, #d, #e, #f { width: 50px; height: 20px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 500.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex center = FindElementById(document, "center");
+    const ElementIndex a = FindElementById(document, "a");
+    const ElementIndex c = FindElementById(document, "c");
+    const ElementIndex stretch = FindElementById(document, "stretch");
+    const ElementIndex d = FindElementById(document, "d");
+    const ElementIndex f = FindElementById(document, "f");
+    ROBO_CHECK(center != NoElement && a != NoElement && c != NoElement);
+    ROBO_CHECK(stretch != NoElement && d != NoElement && f != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+    const Rect centerBox = BoxOf(layout, center);
+    const Rect aBox = BoxOf(layout, a);
+    const Rect cBox = BoxOf(layout, c);
+    const Rect stretchBox = BoxOf(layout, stretch);
+    const Rect dBox = BoxOf(layout, d);
+    const Rect fBox = BoxOf(layout, f);
+
+    // Two 20px lines leave 60 free; centering puts 30 above the first line.
+    ROBO_CHECK_EQ(static_cast<int>(aBox.y), static_cast<int>(centerBox.y + 30));
+    ROBO_CHECK_EQ(static_cast<int>(cBox.y), static_cast<int>(aBox.y + 20));
+
+    // `stretch` shares the same 60 between the two lines, so each is 50 tall
+    // and the second line starts 50 below the first.
+    ROBO_CHECK_EQ(static_cast<int>(dBox.y), static_cast<int>(stretchBox.y));
+    ROBO_CHECK_EQ(static_cast<int>(fBox.y), static_cast<int>(dBox.y + 50));
+}
+
+ROBO_TEST(Flex, WrapReverseStacksTheLinesFromTheCrossEnd)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"row\"><div id=\"a\">A</div><div id=\"b\">B</div><div id=\"c\">C</div></div>",
+        application,
+        { { "probe.css",
+            "#row { display: flex; flex-wrap: wrap-reverse; align-content: flex-start; "
+            "width: 120px; height: 100px; }\n"
+            "#a, #b, #c { width: 50px; height: 20px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 500.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex row = FindElementById(document, "row");
+    const ElementIndex a = FindElementById(document, "a");
+    const ElementIndex c = FindElementById(document, "c");
+    ROBO_CHECK(row != NoElement && a != NoElement && c != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+    const Rect rowBox = BoxOf(layout, row);
+    const Rect aBox = BoxOf(layout, a);
+    const Rect cBox = BoxOf(layout, c);
+
+    // The first line is laid at the cross-end, so the wrapped line sits above it.
+    ROBO_CHECK_EQ(static_cast<int>(aBox.y), static_cast<int>(rowBox.y + 80));
+    ROBO_CHECK_EQ(static_cast<int>(cBox.y), static_cast<int>(aBox.y - 20));
+}
+
+ROBO_TEST(Box, MaximumWidthClampsTheDeclaredWidthAndTheMinimumWins)
+{
+    // The maximum is applied before the minimum, which is the order CSS states:
+    // a minimum larger than a maximum ends up winning.
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"clamped\">A</div><div id=\"floor\">B</div>",
+        application,
+        { { "probe.css",
+            "#clamped { width: 260px; max-width: 120px; height: 20px; }\n"
+            "#floor { width: 260px; max-width: 120px; min-width: 200px; height: 20px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 500.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex clamped = FindElementById(document, "clamped");
+    const ElementIndex floor = FindElementById(document, "floor");
+    ROBO_CHECK(clamped != NoElement && floor != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+
+    // 260 is clamped to the 120 maximum, so the box is narrower than it asked.
+    ROBO_CHECK_EQ(static_cast<int>(BoxOf(layout, clamped).width), 120);
+
+    // The 200 minimum is above the 120 maximum, and the minimum wins.
+    ROBO_CHECK_EQ(static_cast<int>(BoxOf(layout, floor).width), 200);
+}
+
+ROBO_TEST(Box, MaximumHeightClampsTheBoxAndNoneLeavesItUnconstrained)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"short\">A</div><div id=\"free\">B</div>",
+        application,
+        { { "probe.css",
+            "#short { width: 100px; height: 90px; max-height: 30px; }\n"
+            "#free { width: 100px; height: 90px; max-height: none; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 400.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex shortBox = FindElementById(document, "short");
+    const ElementIndex freeBox = FindElementById(document, "free");
+    ROBO_CHECK(shortBox != NoElement && freeBox != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+
+    // 90 is clamped down to the 30 maximum.
+    ROBO_CHECK_EQ(static_cast<int>(BoxOf(layout, shortBox).height), 30);
+
+    // `none` is no bound at all, so the declared height stands.
+    ROBO_CHECK_EQ(static_cast<int>(BoxOf(layout, freeBox).height), 90);
+}
+
+ROBO_TEST(Box, AMaximumOfAPercentageResolvesAgainstTheContainingBlock)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"parent\"><div id=\"child\">A</div></div>",
+        application,
+        { { "probe.css",
+            "#parent { width: 200px; height: 60px; }\n"
+            "#child { width: 200px; height: 20px; max-width: 25%; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 500.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex child = FindElementById(document, "child");
+    ROBO_CHECK(child != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+
+    // A quarter of the 200px containing block.
+    ROBO_CHECK_EQ(static_cast<int>(BoxOf(layout, child).width), 50);
+}

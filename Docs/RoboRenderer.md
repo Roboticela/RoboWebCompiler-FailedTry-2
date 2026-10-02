@@ -227,6 +227,12 @@ The behaviours worth naming, because each one is a decision:
   inline content like the element between them: `text <code>x</code>.` is one
   line, not three, because a run that claimed to be a block would end the line box
   it sits on.
+* **The size bounds.** A declared width or height is clamped into
+  `[minimum, maximum]`, with the maximum applied first so a minimum larger than a
+  maximum wins, which is the order CSS states. Both bounds are `LayoutValue`s, so
+  a length, a percentage of the containing block or a `vw` resolves where the
+  containing block is known; `none` and `auto` resolve to "no bound" and are
+  skipped rather than read as zero.
 * **Replaced elements.** An `<img>` takes its size from the declared attributes,
   then from the decoded resource's intrinsic size, then from the category default,
   and preserves the aspect ratio when only one dimension is known.
@@ -307,9 +313,15 @@ The behaviours worth naming, because each one is a decision:
   container has a definite cross size. `row-reverse` and `column-reverse` lay the
   line out from the other end by mirroring the forward positions.
 
-  This is deliberately a single line: `flex-wrap`, `flex-flow`, `align-content`,
-  the `flex` shorthand and `gap` are not modelled yet, so a container that asks
-  for them keeps its items on one line rather than wrapping.
+  `flex-wrap: wrap` breaks the items into lines once the next item would run past
+  the main size, and `wrap-reverse` stacks those lines from the cross-end. Each
+  line gets its own flexible-length resolution and `justify-content`, and
+  `align-content` shares the free cross space between the lines (`normal` and
+  `stretch` grow them, the rest place them), and the `flex-flow` shorthand sets
+  the direction and the wrapping together. `gap`, `row-gap` and `column-gap`
+  separate the items on a line and the lines themselves; a percentage gap is a
+  fraction of the container's content box on the axis the gap runs along. The one
+  part of the model still carried rather than expanded is the `flex` shorthand.
 * **The root fills the viewport** vertically, so a short document paints a page
   rather than a stripe.
 

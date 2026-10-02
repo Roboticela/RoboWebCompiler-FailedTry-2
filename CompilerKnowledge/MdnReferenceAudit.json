@@ -324,6 +324,84 @@
       "note": "Lowered to a native AlignItemsKind plus a presence flag; auto defers to the container's align-items."
     },
     {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/flex-wrap",
+      "kind": "css property",
+      "names": [
+        "flex-wrap"
+      ],
+      "compiled": true,
+      "spec": "css-flexbox-1",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native FlexWrapKind: nowrap, wrap and wrap-reverse. With wrapping the arranger keeps a line of items until the next one would run past the main size, then starts another, and wrap-reverse stacks the lines from the cross-end."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/flex-flow",
+      "kind": "css shorthand property",
+      "names": [
+        "flex-flow"
+      ],
+      "compiled": true,
+      "spec": "css-flexbox-1",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Expanded by keyword rather than by position: each token is matched against the flex-direction and flex-wrap keyword sets, so `row wrap` and `wrap column` both expand, and a half that is not written keeps its initial value."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/align-content",
+      "kind": "css property",
+      "names": [
+        "align-content"
+      ],
+      "compiled": true,
+      "spec": "css-align-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native AlignContentKind; the lines of a wrapped container are laid at the cross-start, cross-end or centre, or with space-between, space-around, space-evenly. `normal` and `stretch` share the free cross space between the lines."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/row-gap",
+      "kind": "css property",
+      "names": [
+        "row-gap"
+      ],
+      "compiled": true,
+      "spec": "css-align-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to an unresolved LayoutValue; `normal` is no gap, and a length or a percentage of the container's content box separates its wrapped flex lines."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/column-gap",
+      "kind": "css property",
+      "names": [
+        "column-gap"
+      ],
+      "compiled": true,
+      "spec": "css-align-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to an unresolved LayoutValue; `normal` is no gap, and a length or a percentage of the container's content box separates the items on a flex line."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/gap",
+      "kind": "css shorthand property",
+      "names": [
+        "gap"
+      ],
+      "compiled": true,
+      "spec": "css-align-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Expanded by the pair rule: `gap: <row> <column>` sets both longhands, and `gap: <value>` gives the column the same value as the row, which is the reference's expansion."
+    },
+    {
       "document": "Reference/MDN/files/en-us/web/css/reference/properties/direction",
       "kind": "css property",
       "names": [
@@ -1009,7 +1087,7 @@
     }
   ],
   "remainingByArea": {
-    "cssProperties": 523,
+    "cssProperties": 517,
     "cssSelectors": 166,
     "cssAtRules": 23,
     "cssValuesAndFunctions": 101,
@@ -1018,7 +1096,7 @@
     "htmlGlobalAttributes": 32
   },
   "accountedFor": {
-    "cssPropertiesCompiled": 83,
+    "cssPropertiesCompiled": 89,
     "cssPropertiesCarriedOnly": 442,
     "cssPropertyNamesNotAccountedFor": 59,
     "htmlElementDefinitions": 239,
@@ -1030,7 +1108,7 @@
     "The 59 CSS property names MDN has that no draft of the reference defined are the vendor-prefixed set, the legacy flexbox box-* set, the SVG presentation attributes (which are SVG attribute vocabulary, not CSS properties) and touch-action, math-*, corner-*-shape, user-modify and font-smooth.",
     "The out-of-flow model (position, top, right, bottom, left, inset, z-index) was the first slice of the layout machinery: the offsets and the shorthand are compiled and lowered, layout shifts relative and sticky boxes and places absolute and fixed boxes against their containing block, and a fixed box is pinned to the viewport through scrolling in paint, hit testing and bounds.",
     "The float model (float, clear) was the second slice of the layout machinery: both are compiled and lowered, a float is placed shrink-to-fit against its side and its container grows to contain it, the line boxes crossing it lose its width, and clear drops a box below the floats it names.",
-    "The single-line flex model (display: flex, flex-direction, justify-content, align-items, align-self, flex-grow, flex-shrink, flex-basis and order) was the third slice of the layout machinery. The container lays its items along one axis, distributes free space by the growth factors, shrinks when they overflow, and sorts them by order. flex-wrap, flex-flow, align-content, the flex shorthand and gap are not part of this slice and their pages stay.",
+    "The flex model (display: flex, flex-direction, flex-wrap, flex-flow, justify-content, align-items, align-content, align-self, flex-grow, flex-shrink, flex-basis, order, gap, row-gap and column-gap) is the third slice of the layout machinery. The container lays its items along one axis, breaks them into lines when flex-wrap allows it, distributes free space by the growth factors, shrinks when they overflow, sorts them by order, spaces them and their lines with gap, and shares the free cross space between the lines with align-content. The one part of the model still carried rather than compiled is the `flex` shorthand over flex-grow, flex-shrink and flex-basis; its page stays until it is expanded.",
     "The compiled property pages that predate the MDN walk were then read one by one and checked against the compiler, because a property implemented before the reference arrived was implemented from the specification, not from MDN. Every value, initial value, inherited flag and specification citation was compared. The pass found real divergences and they were fixed: `white-space` had no answer for the collapse and wrap keywords the page now gives, `font-style` refused `oblique`, `overflow` refused `overlay`, `writing-mode` and `text-orientation` refused their deprecated spellings, and `text-decoration-thickness` and `text-underline-offset` cited `css-text-decor-3` where the reference now states them in `css-text-decor-4`. The pages whose values are still partly unanswered -- display, which names the grid values the compiler does not compile; text-indent, whose `each-line` and `hanging` are not implemented; text-transform, whose `full-width`, `full-size-kana` and `math-auto` are not; and text-decoration-line, whose `spelling-error` and `grammar-error` are not -- stay in the reference until those values have an answer.",
     "The numeric functions are the reference's second family of values that are not properties. They are implemented in the same compiled math program as calc(): a step names the function and the number of operands it takes, and a program whose operands are all absolute folds at compile time to a number, a length or an angle. The type rules are the reference's, so `sin(30deg)` is the number 0.5, `hypot(3px, 4px)` is 5px, `atan2(1, 1)` is an angle and `calc(2px * 3px)` is refused. Two bugs were found and fixed while implementing them: a function nested inside another function was never parsed (the parser counted the nested block twice and reported the outer one as unclosed), and a var() inside a function was never substituted, so `calc(var(--gap) * 2)` did not compile. The functions the reference defines that need a document or a runtime rather than arithmetic -- anchor(), anchor-size(), attr(), calc-size(), counter(), counters(), element(), env(), if(), progress(), random(), sibling-count(), sibling-index(), the image functions and the grid functions minmax(), repeat() and fit-content() outside a size -- stay in the reference until they have an answer."
   ]
