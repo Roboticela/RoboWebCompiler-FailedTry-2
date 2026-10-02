@@ -397,6 +397,14 @@
     "MathCharAlign",
     "MathCharSpacing",
     "MathVAlign",
-    "CustomMetadata"
+    "CustomMetadata",
+    "MetadataPart",
+    "MetadataExportParts",
+    "MetadataAnchor",
+    "MetadataElementTiming",
+    "MetadataVirtualKeyboardPolicy",
+    "InputCapture",
+    "MetadataAutoLocate",
+    "MetadataWatch"
   ]
 }

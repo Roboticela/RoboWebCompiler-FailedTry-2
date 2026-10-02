@@ -505,22 +505,35 @@ ROBO_TEST(Typography, AVariableFaceInstantiatesItsAxes)
     ROBO_CHECK(font->IsVariable());
     ROBO_CHECK(!font->Axes().empty());
 
-    // Inter's variable file exposes a weight axis.
+    // Inter's variable file exposes a weight axis, and every axis declares a
+    // real range: a `Fixed` read as a bare integer word leaves the range at
+    // zero and clamps every instance back to the default.
     bool hasWeight = false;
+    std::vector<float> blackCoordinates;
+
     for (const SfntFont::VariationAxis& axis : font->Axes())
     {
+        ROBO_CHECK(axis.maximum > axis.minimum);
+        ROBO_CHECK(axis.defaultValue >= axis.minimum && axis.defaultValue <= axis.maximum);
+
         if (axis.tag == 0x77676874u) // 'wght'
         {
             hasWeight = true;
+            blackCoordinates.push_back(axis.maximum);
+        }
+        else
+        {
+            blackCoordinates.push_back(axis.defaultValue);
         }
     }
     ROBO_CHECK(hasWeight);
+    ROBO_CHECK_EQ(blackCoordinates.size(), font->Axes().size());
 
     const std::uint16_t glyph = font->GlyphIndex('A');
     ROBO_CHECK(glyph != 0);
 
     const float regular = font->Advance(glyph);
-    font->SetInstance({ 900.0f });
+    font->SetInstance(blackCoordinates);
     ROBO_CHECK(font->HasInstance());
     const float black = font->Advance(glyph);
 

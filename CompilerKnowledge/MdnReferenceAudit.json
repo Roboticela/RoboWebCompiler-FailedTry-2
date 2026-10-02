@@ -1,0 +1,219 @@
+{
+  "$schema": "RoboHTMLCompiler.MdnReferenceAudit.v1",
+  "generatedBy": "hand-maintained; Reference/MDN has no extractor yet",
+  "reference": "Reference/MDN",
+  "policy": "A reference document is retired once every name it defines is accounted for by the compiler, and the coverage tests exercise it. For an element or an attribute that means the name is registered, validated on the elements MDN says accept it, and routed to a typed native property; for a CSS property it means the compiler compiles it. A name that is only mentioned is not enough. The retired file is deleted and the deletion is recorded here, so the reference shrinks and the compiler's knowledge of what it once stated does not.",
+  "scope": "The CSS and HTML reference material under Reference/MDN/files/en-us/web: css/reference/{properties,selectors,at-rules,values}, html/reference/{elements,attributes,global_attributes}. The rest of the MDN content repository (Web API, JavaScript, HTTP, and so on) is outside this compiler's subject.",
+  "referenceState": "in progress",
+  "documents": [
+    {
+      "document": "Reference/MDN/files/en-us/web/html/reference/global_attributes/anchor",
+      "kind": "global attribute",
+      "names": [
+        "anchor"
+      ],
+      "nativeProperty": "MetadataAnchor",
+      "mdnStatus": "experimental, non-standard",
+      "covered": true,
+      "retired": true
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/html/reference/attributes/elementtiming",
+      "kind": "attribute",
+      "names": [
+        "elementtiming"
+      ],
+      "nativeProperty": "MetadataElementTiming",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/html/reference/global_attributes/exportparts",
+      "kind": "global attribute",
+      "names": [
+        "exportparts"
+      ],
+      "nativeProperty": "MetadataExportParts",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/html/reference/global_attributes/part",
+      "kind": "global attribute",
+      "names": [
+        "part"
+      ],
+      "nativeProperty": "MetadataPart",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/html/reference/global_attributes/virtualkeyboardpolicy",
+      "kind": "global attribute",
+      "names": [
+        "virtualkeyboardpolicy"
+      ],
+      "nativeProperty": "MetadataVirtualKeyboardPolicy",
+      "mdnStatus": "experimental",
+      "covered": true,
+      "retired": true
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/html/reference/attributes/capture",
+      "kind": "attribute",
+      "names": [
+        "capture"
+      ],
+      "nativeProperty": "InputCapture",
+      "scope": [
+        "input"
+      ],
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/html/reference/elements/fencedframe",
+      "kind": "element",
+      "names": [
+        "fencedframe",
+        "allow",
+        "height",
+        "width"
+      ],
+      "nativeKind": "Frame",
+      "mdnStatus": "deprecated",
+      "covered": true,
+      "retired": true
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/html/reference/elements/geolocation",
+      "kind": "element",
+      "names": [
+        "geolocation",
+        "autolocate",
+        "watch"
+      ],
+      "nativeKind": "Button",
+      "mdnStatus": "experimental",
+      "covered": true,
+      "retired": true
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/position",
+      "kind": "css property",
+      "names": [
+        "position"
+      ],
+      "compiled": true,
+      "spec": "css-position-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native PositionKind; static, relative, absolute, fixed and sticky are compiled."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/top",
+      "kind": "css property",
+      "names": [
+        "top"
+      ],
+      "compiled": true,
+      "spec": "css-position-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "A compiled offset resolved against the containing block; may be negative, and auto is a value."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/right",
+      "kind": "css property",
+      "names": [
+        "right"
+      ],
+      "compiled": true,
+      "spec": "css-position-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "A compiled offset; places an out-of-flow box against the containing block's right edge."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/bottom",
+      "kind": "css property",
+      "names": [
+        "bottom"
+      ],
+      "compiled": true,
+      "spec": "css-position-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "A compiled offset; places an out-of-flow box against the containing block's bottom edge."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/left",
+      "kind": "css property",
+      "names": [
+        "left"
+      ],
+      "compiled": true,
+      "spec": "css-position-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "A compiled offset; places an out-of-flow box against the containing block's left edge."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/z-index",
+      "kind": "css property",
+      "names": [
+        "z-index"
+      ],
+      "compiled": true,
+      "spec": "css2",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Compiled as an integer or auto; carried on the native style with a presence flag so auto is not zero."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/inset",
+      "kind": "css shorthand",
+      "names": [
+        "inset"
+      ],
+      "compiled": true,
+      "spec": "css-position-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Expanded to the four offset longhands by the cascade, with the same 1-to-4 distribution as margin."
+    }
+  ],
+  "remainingByArea": {
+    "cssProperties": 567,
+    "cssSelectors": 166,
+    "cssAtRules": 23,
+    "cssValuesAndFunctions": 123,
+    "htmlElements": 126,
+    "htmlAttributes": 22,
+    "htmlGlobalAttributes": 32
+  },
+  "accountedFor": {
+    "cssPropertiesCompiled": 73,
+    "cssPropertiesCarriedOnly": 442,
+    "cssPropertyNamesNotAccountedFor": 59,
+    "htmlElementDefinitions": 239,
+    "htmlAttributeRecords": 573
+  },
+  "notes": [
+    "The CSS Working Group drafts and the WHATWG HTML drafts were consumed before this reference arrived, so the compiler already accounts for 1,080 CSS property names and the HTML vocabulary those drafts define. Reference/MDN is a second, differently structured reference: one Markdown page per item, which is why it is walked page by page rather than mined by an extractor.",
+    "A property name the compiler carries is known, parsed and stored but not compiled: it keeps its declared value and is reported as an unimplemented feature (RCC010) rather than refused. Implementing one means compiling it and giving it its rendering behaviour.",
+    "The 59 CSS property names MDN has that no draft of the reference defined are the vendor-prefixed set, the legacy flexbox box-* set, the SVG presentation attributes (which are SVG attribute vocabulary, not CSS properties) and touch-action, math-*, corner-*-shape, user-modify and font-smooth.",
+    "The out-of-flow model (position, top, right, bottom, left, inset, z-index) was the first slice of the layout machinery: the offsets and the shorthand are compiled and lowered, layout shifts relative and sticky boxes and places absolute and fixed boxes against their containing block, and a fixed box is pinned to the viewport through scrolling in paint, hit testing and bounds."
+  ]
+}

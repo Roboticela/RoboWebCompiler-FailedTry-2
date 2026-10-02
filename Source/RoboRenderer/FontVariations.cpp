@@ -21,6 +21,49 @@ namespace RoboRenderer
         {
             return static_cast<float>(value) / 16384.0f;
         }
+
+        /// The weight one variation region contributes at one instance
+        /// coordinate, exactly as the OpenType interpolation algorithm defines
+        /// it. `scalar` is multiplied in and false means the region is out of
+        /// play (the coordinate has left it).
+        ///
+        /// A coordinate of zero is deliberately *not* a special case: an axis
+        /// peaked away from its default is one this instance has left, so a
+        /// region peaked on optical size contributes nothing to an instance at
+        /// the default optical size even though that coordinate is zero.
+        bool RegionScalar(float start, float peak, float end, float coordinate, float& scalar)
+        {
+            if (peak == 0.0f)
+            {
+                return true; // The axis does not take part in the region.
+            }
+            if (coordinate == peak)
+            {
+                return true; // Full weight on this axis.
+            }
+            if (start > peak || peak > end)
+            {
+                return true; // A malformed region: ignore the axis.
+            }
+            if (start < 0.0f && end > 0.0f)
+            {
+                return true; // A region that spans the default: ignore the axis.
+            }
+            if (coordinate <= start || end <= coordinate)
+            {
+                scalar = 0.0f;
+                return false;
+            }
+            if (coordinate < peak)
+            {
+                scalar *= (coordinate - start) / (peak - start);
+            }
+            else
+            {
+                scalar *= (end - coordinate) / (end - peak);
+            }
+            return true;
+        }
     }
 
     // --- names -------------------------------------------------------------
@@ -154,6 +197,11 @@ namespace RoboRenderer
 
         if (fvar.present)
         {
+            // Every numeric value an `fvar` record holds is a 16.16 `Fixed`.
+            const auto fixed = [this](std::uint32_t offset) {
+                return static_cast<float>(static_cast<std::int32_t>(ReadU32(offset))) / 65536.0f;
+            };
+
             const std::uint32_t axesOffset = fvar.offset + ReadU16(fvar.offset + 4);
             const std::uint16_t axisCount = ReadU16(fvar.offset + 8);
             const std::uint16_t axisSize = ReadU16(fvar.offset + 10);
@@ -164,10 +212,15 @@ namespace RoboRenderer
             {
                 const std::uint32_t record = axesOffset + static_cast<std::uint32_t>(index) * axisSize;
                 VariationAxis axis;
+                // Every value in an `fvar` axis record is a 16.16 `Fixed`, four
+                // bytes wide. Reading only the high word loses the fraction and,
+                // for a weight axis whose range is 100..900, leaves every value
+                // at zero: the axis then clamps every instance to its own
+                // minimum and no weight ever varies.
                 axis.tag = ReadU32(record);
-                axis.minimum = static_cast<float>(ReadI16(record + 4)) / 65536.0f;
-                axis.defaultValue = static_cast<float>(ReadI16(record + 8)) / 65536.0f;
-                axis.maximum = static_cast<float>(ReadI16(record + 12)) / 65536.0f;
+                axis.minimum = fixed(record + 4);
+                axis.defaultValue = fixed(record + 8);
+                axis.maximum = fixed(record + 12);
                 axis.hidden = (ReadU16(record + 16) & 0x0001u) != 0;
                 axes.push_back(axis);
             }
@@ -183,8 +236,7 @@ namespace RoboRenderer
                 instance.nameId = ReadU16(record);
                 for (std::uint16_t axis = 0; axis < axisCount; ++axis)
                 {
-                    instance.coordinates.push_back(
-                        static_cast<float>(ReadI16(record + 4 + axis * 4)) / 65536.0f);
+                    instance.coordinates.push_back(fixed(record + 4 + axis * 4));
                 }
                 instances.push_back(std::move(instance));
             }
@@ -256,69 +308,140 @@ namespace RoboRenderer
         {
             const std::uint16_t axisCount = ReadU16(avar.offset + 6);
 
-            // Each axis maps to an Offset16 segment list, in axis order. Walk
-            // them once into an array so the remap below is a plain lookup.
+            // The segment maps follow the header *inline*, one per axis in the
+            // font's own axis order: a count and then that many `from`/`to`
+            // pairs. `from` is a normalized coordinate and `to` is what the font
+            // wants that coordinate to mean.
             std::uint32_t cursor = avar.offset + 8;
-            std::vector<std::uint32_t> lists;
+
             for (std::uint16_t axis = 0; axis < axisCount; ++axis)
             {
-                const std::uint32_t listOffset = ReadU16(cursor);
-                lists.push_back(listOffset == 0 ? 0 : avar.offset + listOffset);
-                cursor += 2;
-            }
+                const std::uint16_t pairCount = ReadU16(cursor);
+                const std::uint32_t pairs = cursor + 2;
+                cursor = pairs + static_cast<std::uint32_t>(pairCount) * 4;
 
-            for (std::uint16_t axis = 0; axis < axisCount && axis < axes.size(); ++axis)
-            {
-                const std::uint32_t list = lists[axis];
-                if (list == 0)
+                if (axis >= axes.size() || pairCount == 0)
                 {
                     continue;
                 }
-                const std::uint16_t pairCount = ReadU16(list);
-                const float x = normalized[axis];
-                float mapped = x;
 
-                for (std::uint16_t pair = 0; pair < pairCount; ++pair)
+                const float x = normalized[axis];
+                const float firstFrom = F2Dot14Value(ReadI16(pairs));
+                const float lastFrom = F2Dot14Value(ReadI16(pairs + (pairCount - 1) * 4));
+
+                // Below the first stop and past the last one, the map holds its
+                // end values flat.
+                if (x <= firstFrom)
                 {
-                    const float from = F2Dot14Value(ReadI16(list + 2 + pair * 4));
-                    const float to = F2Dot14Value(ReadI16(list + 2 + pair * 4 + 2));
-                    if (pair + 1 < pairCount)
-                    {
-                        const float nextFrom = F2Dot14Value(ReadI16(list + 2 + (pair + 1) * 4));
-                        if (x >= from && x <= nextFrom && nextFrom > from)
-                        {
-                            mapped = to + (x - from) / (nextFrom - from);
-                            break;
-                        }
-                    }
-                    if (x >= from)
-                    {
-                        mapped = to;
-                    }
+                    normalized[axis] = F2Dot14Value(ReadI16(pairs + 2));
+                    continue;
+                }
+                if (x >= lastFrom)
+                {
+                    normalized[axis] = F2Dot14Value(ReadI16(pairs + (pairCount - 1) * 4 + 2));
+                    continue;
                 }
 
-                normalized[axis] = mapped;
+                for (std::uint16_t pair = 0; pair + 1 < pairCount; ++pair)
+                {
+                    const float from = F2Dot14Value(ReadI16(pairs + pair * 4));
+                    const float nextFrom = F2Dot14Value(ReadI16(pairs + (pair + 1) * 4));
+                    if (x < from || x > nextFrom)
+                    {
+                        continue;
+                    }
+
+                    const float to = F2Dot14Value(ReadI16(pairs + pair * 4 + 2));
+                    if (nextFrom <= from)
+                    {
+                        normalized[axis] = to;
+                        break;
+                    }
+
+                    // Between two stops the mapping is linear, through *both*
+                    // coordinates: interpolating towards `to` alone would jump
+                    // past the segment and hand the variation engine a
+                    // coordinate the font never declared.
+                    const float nextTo = F2Dot14Value(ReadI16(pairs + (pair + 1) * 4 + 2));
+                    normalized[axis] = to + (x - from) * (nextTo - to) / (nextFrom - from);
+                    break;
+                }
             }
         }
 
         instanceCoordinates = normalized;
 
         // Precompute HVAR advance deltas at this instance.
+        //
+        // The item variation store holds the delta sets; the advance mapping
+        // says which set, and which row of it, a glyph uses. A font with no
+        // mapping indexes the single set by glyph id, which is the default the
+        // specification describes, while a variable font that varies advances
+        // per weight ships a `DeltaSetIndexMap` instead. Reading only the first
+        // set would leave every weight at the same width: bold would paint
+        // heavier glyphs at regular advances.
         if (hvar.present && !axes.empty())
         {
             const std::uint32_t itemVariationStore = hvar.offset + ReadU32(hvar.offset + 4);
-            const std::size_t glyphs = glyphCount;
+            advanceDeltas.assign(glyphCount, 0.0f);
 
-            advanceDeltas.assign(glyphs, 0.0f);
+            std::vector<std::uint32_t> setIndexOf(glyphCount, 0);
+            std::vector<std::uint32_t> rowIndexOf(glyphCount, 0);
+
+            const std::uint32_t mappingOffset = ReadU32(hvar.offset + 8);
+
+            if (mappingOffset != 0)
+            {
+                const std::uint32_t mapping = hvar.offset + mappingOffset;
+                const std::uint8_t format = static_cast<std::uint8_t>(ReadU16(mapping) >> 8);
+                const std::uint8_t entryFormat = static_cast<std::uint8_t>(ReadU16(mapping) & 0xFFu);
+                const std::uint32_t mapCount =
+                    format == 0 ? ReadU16(mapping + 2) : ReadU32(mapping + 2);
+                const std::uint32_t data = mapping + (format == 0 ? 4u : 6u);
+                const std::uint32_t entrySize = ((entryFormat & 0x30u) >> 4) + 1u;
+                const std::uint32_t innerBits = (entryFormat & 0x0Fu) + 1u;
+                const std::uint32_t innerMask = (1u << innerBits) - 1u;
+
+                for (std::uint32_t glyph = 0; glyph < glyphCount; ++glyph)
+                {
+                    // Past the end of the map the last entry holds, which is how
+                    // a font writes a map covering a prefix of the glyph order.
+                    const std::uint32_t entry =
+                        glyph < mapCount ? glyph : (mapCount == 0 ? 0u : mapCount - 1u);
+                    const std::uint32_t offset = data + entry * entrySize;
+
+                    std::uint32_t packed = 0;
+                    for (std::uint32_t byte = 0; byte < entrySize; ++byte)
+                    {
+                        const std::uint32_t at = offset + byte;
+                        packed = (packed << 8) |
+                                 (at >= bytes.size() ? 0u : static_cast<std::uint32_t>(bytes[at]));
+                    }
+
+                    setIndexOf[glyph] = packed >> innerBits;
+                    rowIndexOf[glyph] = packed & innerMask;
+                }
+            }
+            else
+            {
+                for (std::uint32_t glyph = 0; glyph < glyphCount; ++glyph)
+                {
+                    rowIndexOf[glyph] = glyph;
+                }
+            }
 
             const std::uint32_t regionList = itemVariationStore + ReadU32(itemVariationStore + 2);
             const std::uint16_t regionCount = ReadU16(regionList + 2);
             const std::uint32_t regionBase = regionList + 4;
 
             const std::uint16_t dataCount = ReadU16(itemVariationStore + 6);
-            if (dataCount > 0)
+
+            for (std::uint16_t set = 0; set < dataCount; ++set)
             {
-                const std::uint32_t dataTable = itemVariationStore + ReadU32(itemVariationStore + 8);
+                const std::uint32_t dataTable =
+                    itemVariationStore +
+                    ReadU32(itemVariationStore + 8 + static_cast<std::uint32_t>(set) * 4);
+
                 const std::uint16_t itemCount = ReadU16(dataTable);
                 const std::uint16_t wordDeltaCount = ReadU16(dataTable + 2);
                 const std::uint16_t regionIndexCount = ReadU16(dataTable + 4);
@@ -345,28 +468,11 @@ namespace RoboRenderer
                         const float start = F2Dot14Value(ReadI16(regionRecord + axis * 6));
                         const float peak = F2Dot14Value(ReadI16(regionRecord + axis * 6 + 2));
                         const float end = F2Dot14Value(ReadI16(regionRecord + axis * 6 + 4));
-                        const float coordinate = instanceCoordinates[axis];
 
-                        if (peak == 0.0f || coordinate == 0.0f)
-                        {
-                            continue;
-                        }
-                        if (coordinate < start || coordinate > end)
+                        if (!RegionScalar(start, peak, end, instanceCoordinates[axis], scalar))
                         {
                             scalar = 0.0f;
                             break;
-                        }
-                        if (coordinate == peak)
-                        {
-                            continue;
-                        }
-                        if (coordinate < peak)
-                        {
-                            scalar *= start == peak ? 0.0f : (coordinate - start) / (peak - start);
-                        }
-                        else
-                        {
-                            scalar *= end == peak ? 0.0f : (end - coordinate) / (end - peak);
                         }
                     }
                     scalars[region] = scalar;
@@ -384,10 +490,15 @@ namespace RoboRenderer
 
                 const std::uint32_t deltaCursor = dataTable + 6 + regionIndexCount * 2;
 
-                for (std::uint16_t item = 0; item < itemCount && item < glyphs; ++item)
+                for (std::uint32_t glyph = 0; glyph < glyphCount; ++glyph)
                 {
+                    if (setIndexOf[glyph] != set || rowIndexOf[glyph] >= itemCount)
+                    {
+                        continue;
+                    }
+
                     float delta = 0.0f;
-                    std::uint32_t row = deltaCursor + static_cast<std::uint32_t>(item) * rowSize;
+                    std::uint32_t row = deltaCursor + rowIndexOf[glyph] * rowSize;
 
                     for (std::uint16_t region = 0; region < regionIndexCount; ++region)
                     {
@@ -408,7 +519,7 @@ namespace RoboRenderer
                         delta += value * scalars[region];
                     }
 
-                    advanceDeltas[item] = delta;
+                    advanceDeltas[glyph] = delta;
                 }
             }
         }
@@ -624,29 +735,11 @@ namespace RoboRenderer
             float scalar = 1.0f;
             for (std::size_t axis = 0; axis < axes.size(); ++axis)
             {
-                const float coordinate = instanceCoordinates[axis];
-                if (peak[axis] == 0.0f || coordinate == 0.0f)
-                {
-                    continue;
-                }
-                if (coordinate < start[axis] || coordinate > end[axis])
+                if (!RegionScalar(start[axis], peak[axis], end[axis], instanceCoordinates[axis],
+                                  scalar))
                 {
                     scalar = 0.0f;
                     break;
-                }
-                if (coordinate == peak[axis])
-                {
-                    continue;
-                }
-                if (coordinate < peak[axis])
-                {
-                    scalar *= peak[axis] == start[axis] ? 0.0f
-                        : (coordinate - start[axis]) / (peak[axis] - start[axis]);
-                }
-                else
-                {
-                    scalar *= end[axis] == peak[axis] ? 0.0f
-                        : (end[axis] - coordinate) / (end[axis] - peak[axis]);
                 }
             }
 

@@ -1,9 +1,14 @@
 {
   "$schema": "RoboHTMLCompiler.GlobalAttributeExtensions.v1",
-  "description": "The HTML Standard delegates these global attributes to DOM ('for any element in any namespace'). They are registered explicitly here so the compiler accepts them on every element.",
+  "description": "The global attributes that no element-scoped list in the mined vocabulary carries: the ones the HTML Standard delegates to DOM ('for any element in any namespace'), and the ones MDN documents as global that the standard's per-element lists do not repeat. They are registered explicitly here so the compiler accepts them on every element.",
   "attributes": [
     { "name": "class" },
     { "name": "id" },
-    { "name": "slot" }
+    { "name": "slot" },
+    { "name": "anchor" },
+    { "name": "elementtiming" },
+    { "name": "exportparts" },
+    { "name": "part" },
+    { "name": "virtualkeyboardpolicy" }
   ]
 }

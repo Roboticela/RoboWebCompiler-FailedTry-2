@@ -537,6 +537,14 @@ namespace RoboHTMLCompiler
             "MathCharSpacing",
             "MathVAlign",
             "CustomMetadata",
+            "MetadataPart",
+            "MetadataExportParts",
+            "MetadataAnchor",
+            "MetadataElementTiming",
+            "MetadataVirtualKeyboardPolicy",
+            "InputCapture",
+            "MetadataAutoLocate",
+            "MetadataWatch",
         };
     }
 
@@ -918,131 +926,147 @@ namespace RoboHTMLCompiler::Generated
             "width",
             "height",
         };
-        const char* const AttributeElements102[] = {
-            "th",
+        const char* const ElementAttributes142[] = {
+            "allow",
+            "height",
+            "width",
         };
-        const char* const AttributeElements103[] = {
-            "input",
-        };
-        const char* const AttributeElements104[] = {
-            "form",
-        };
-        const char* const AttributeElements105[] = {
-            "form",
-        };
-        const char* const AttributeElements106[] = {
-            "iframe",
+        const char* const ElementAttributes143[] = {
+            "autolocate",
+            "watch",
         };
         const char* const AttributeElements107[] = {
-            "iframe",
+            "th",
         };
         const char* const AttributeElements108[] = {
             "input",
         };
         const char* const AttributeElements109[] = {
+            "form",
+        };
+        const char* const AttributeElements110[] = {
+            "form",
+        };
+        const char* const AttributeElements111[] = {
+            "fencedframe",
+            "iframe",
+        };
+        const char* const AttributeElements112[] = {
+            "iframe",
+        };
+        const char* const AttributeElements113[] = {
+            "input",
+        };
+        const char* const AttributeElements114[] = {
             "area",
             "img",
             "input",
         };
-        const char* const AttributeElements110[] = {
+        const char* const AttributeElements115[] = {
             "link",
         };
-        const char* const AttributeElements111[] = {
+        const char* const AttributeElements116[] = {
             "script",
         };
-        const char* const AttributeElements112[] = {
+        const char* const AttributeElements117[] = {
             "form",
             "input",
             "select",
             "textarea",
         };
-        const char* const AttributeElements113[] = {
+        const char* const AttributeElements118[] = {
+            "geolocation",
+        };
+        const char* const AttributeElements119[] = {
             "audio",
             "video",
         };
-        const char* const AttributeElements114[] = {
+        const char* const AttributeElements120[] = {
             "link",
             "script",
             "style",
         };
-        const char* const AttributeElements115[] = {
-            "meta",
-        };
-        const char* const AttributeElements116[] = {
+        const char* const AttributeElements121[] = {
             "input",
         };
-        const char* const AttributeElements117[] = {
+        const char* const AttributeElements122[] = {
+            "meta",
+        };
+        const char* const AttributeElements123[] = {
+            "input",
+        };
+        const char* const AttributeElements124[] = {
             "blockquote",
             "del",
             "ins",
             "q",
         };
-        const char* const AttributeElements118[] = {
+        const char* const AttributeElements125[] = {
             "dialog",
         };
-        const char* const AttributeElements119[] = {
+        const char* const AttributeElements126[] = {
             "link",
         };
-        const char* const AttributeElements120[] = {
+        const char* const AttributeElements127[] = {
             "input",
         };
-        const char* const AttributeElements121[] = {
+        const char* const AttributeElements128[] = {
             "textarea",
         };
-        const char* const AttributeElements122[] = {
+        const char* const AttributeElements129[] = {
             "td",
             "th",
         };
-        const char* const AttributeElements123[] = {
+        const char* const AttributeElements130[] = {
             "button",
         };
-        const char* const AttributeElements124[] = {
+        const char* const AttributeElements131[] = {
             "button",
         };
-        const char* const AttributeElements125[] = {
+        const char* const AttributeElements132[] = {
             "meta",
         };
-        const char* const AttributeElements126[] = {
+        const char* const AttributeElements133[] = {
             "audio",
             "img",
             "video",
         };
-        const char* const AttributeElements127[] = {
+        const char* const AttributeElements134[] = {
             "area",
         };
-        const char* const AttributeElements128[] = {
+        const char* const AttributeElements135[] = {
             "audio",
             "img",
             "link",
             "script",
             "video",
         };
-        const char* const AttributeElements129[] = {
+        const char* const AttributeElements136[] = {
             "object",
         };
-        const char* const AttributeElements130[] = {
+        const char* const AttributeElements137[] = {
             "del",
             "ins",
             "time",
         };
-        const char* const AttributeElements131[] = {
+        const char* const AttributeElements138[] = {
             "img",
         };
-        const char* const AttributeElements132[] = {
+        const char* const AttributeElements139[] = {
             "track",
         };
-        const char* const AttributeElements133[] = {
+        const char* const AttributeElements140[] = {
             "script",
         };
-        const char* const AttributeElements134[] = {
+        const char* const AttributeElements141[] = {
             "bdi",
             "bdo",
         };
-        const char* const AttributeElements135[] = {
+        const char* const AttributeElements142[] = {
             "input",
             "textarea",
         };
-        const char* const AttributeElements136[] = {
+        const char* const AttributeElements143[] = {
             "button",
             "fieldset",
             "input",
@@ -1052,24 +1076,24 @@ namespace RoboHTMLCompiler::Generated
             "select",
             "textarea",
         };
-        const char* const AttributeElements137[] = {
+        const char* const AttributeElements144[] = {
             "a",
             "area",
         };
-        const char* const AttributeElements138[] = {
+        const char* const AttributeElements145[] = {
             "form",
         };
-        const char* const AttributeElements139[] = {
+        const char* const AttributeElements146[] = {
             "img",
             "link",
             "script",
         };
-        const char* const AttributeElements140[] = {
+        const char* const AttributeElements147[] = {
             "label",
             "output",
             "template",
         };
-        const char* const AttributeElements141[] = {
+        const char* const AttributeElements148[] = {
             "button",
             "fieldset",
             "input",
@@ -1078,38 +1102,42 @@ namespace RoboHTMLCompiler::Generated
             "select",
             "textarea",
         };
-        const char* const AttributeElements142[] = {
+        const char* const AttributeElements149[] = {
             "button",
             "input",
         };
-        const char* const AttributeElements143[] = {
+        const char* const AttributeElements150[] = {
             "button",
             "input",
         };
-        const char* const AttributeElements144[] = {
+        const char* const AttributeElements151[] = {
             "button",
             "input",
         };
-        const char* const AttributeElements145[] = {
+        const char* const AttributeElements152[] = {
             "button",
             "input",
         };
-        const char* const AttributeElements146[] = {
+        const char* const AttributeElements153[] = {
             "button",
             "input",
         };
-        const char* const AttributeElements147[] = {
+        const char* const AttributeElements154[] = {
             "td",
             "th",
         };
-        const char* const AttributeElements148[] = {
+        const char* const AttributeElements155[] = {
             "canvas",
             "embed",
             "iframe",
         };
-        const char* const AttributeElements149[] = {
+        const char* const AttributeElements156[] = {
+            "fencedframe",
+        };
+        const char* const AttributeElements157[] = {
             "canvas",
             "embed",
+            "fencedframe",
             "iframe",
             "img",
             "input",
@@ -1117,98 +1145,98 @@ namespace RoboHTMLCompiler::Generated
             "source",
             "video",
         };
-        const char* const AttributeElements150[] = {
+        const char* const AttributeElements158[] = {
             "meter",
         };
-        const char* const AttributeElements151[] = {
+        const char* const AttributeElements159[] = {
             "link",
         };
-        const char* const AttributeElements152[] = {
+        const char* const AttributeElements160[] = {
             "a",
             "area",
             "base",
             "link",
         };
-        const char* const AttributeElements153[] = {
+        const char* const AttributeElements161[] = {
             "a",
             "area",
             "link",
         };
-        const char* const AttributeElements154[] = {
+        const char* const AttributeElements162[] = {
             "meta",
         };
-        const char* const AttributeElements155[] = {
+        const char* const AttributeElements163[] = {
             "link",
         };
-        const char* const AttributeElements156[] = {
+        const char* const AttributeElements164[] = {
             "link",
         };
-        const char* const AttributeElements157[] = {
+        const char* const AttributeElements165[] = {
             "link",
             "script",
         };
-        const char* const AttributeElements158[] = {
+        const char* const AttributeElements166[] = {
             "img",
         };
-        const char* const AttributeElements159[] = {
+        const char* const AttributeElements167[] = {
             "track",
         };
-        const char* const AttributeElements160[] = {
+        const char* const AttributeElements168[] = {
             "optgroup",
             "option",
             "track",
         };
-        const char* const AttributeElements161[] = {
+        const char* const AttributeElements169[] = {
             "input",
         };
-        const char* const AttributeElements162[] = {
+        const char* const AttributeElements170[] = {
             "audio",
             "iframe",
             "img",
             "video",
         };
-        const char* const AttributeElements163[] = {
+        const char* const AttributeElements171[] = {
             "audio",
             "video",
         };
-        const char* const AttributeElements164[] = {
+        const char* const AttributeElements172[] = {
             "meter",
         };
-        const char* const AttributeElements165[] = {
+        const char* const AttributeElements173[] = {
             "input",
             "meter",
             "progress",
         };
-        const char* const AttributeElements166[] = {
+        const char* const AttributeElements174[] = {
             "input",
             "textarea",
         };
-        const char* const AttributeElements167[] = {
+        const char* const AttributeElements175[] = {
             "link",
             "meta",
             "source",
             "style",
         };
-        const char* const AttributeElements168[] = {
+        const char* const AttributeElements176[] = {
             "form",
         };
-        const char* const AttributeElements169[] = {
+        const char* const AttributeElements177[] = {
             "input",
             "meter",
         };
-        const char* const AttributeElements170[] = {
+        const char* const AttributeElements178[] = {
             "input",
             "textarea",
         };
-        const char* const AttributeElements171[] = {
+        const char* const AttributeElements179[] = {
             "input",
             "select",
         };
-        const char* const AttributeElements172[] = {
+        const char* const AttributeElements180[] = {
             "audio",
             "video",
         };
-        const char* const AttributeElements173[] = {
+        const char* const AttributeElements181[] = {
             "button",
             "details",
             "fieldset",
@@ -1223,125 +1251,125 @@ namespace RoboHTMLCompiler::Generated
             "slot",
             "textarea",
         };
-        const char* const AttributeElements174[] = {
+        const char* const AttributeElements182[] = {
             "script",
         };
-        const char* const AttributeElements175[] = {
+        const char* const AttributeElements183[] = {
             "form",
         };
-        const char* const AttributeElements176[] = {
+        const char* const AttributeElements184[] = {
             "details",
             "dialog",
         };
-        const char* const AttributeElements177[] = {
-            "meter",
-        };
-        const char* const AttributeElements178[] = {
-            "input",
-        };
-        const char* const AttributeElements179[] = {
-            "a",
-            "area",
-        };
-        const char* const AttributeElements180[] = {
-            "input",
-            "textarea",
-        };
-        const char* const AttributeElements181[] = {
-            "video",
-        };
-        const char* const AttributeElements182[] = {
-            "button",
-            "input",
-        };
-        const char* const AttributeElements183[] = {
-            "button",
-            "input",
-        };
-        const char* const AttributeElements184[] = {
-            "video",
-        };
         const char* const AttributeElements185[] = {
-            "audio",
-            "video",
+            "meter",
         };
         const char* const AttributeElements186[] = {
             "input",
-            "textarea",
         };
         const char* const AttributeElements187[] = {
             "a",
             "area",
+        };
+        const char* const AttributeElements188[] = {
+            "input",
+            "textarea",
+        };
+        const char* const AttributeElements189[] = {
+            "video",
+        };
+        const char* const AttributeElements190[] = {
+            "button",
+            "input",
+        };
+        const char* const AttributeElements191[] = {
+            "button",
+            "input",
+        };
+        const char* const AttributeElements192[] = {
+            "video",
+        };
+        const char* const AttributeElements193[] = {
+            "audio",
+            "video",
+        };
+        const char* const AttributeElements194[] = {
+            "input",
+            "textarea",
+        };
+        const char* const AttributeElements195[] = {
+            "a",
+            "area",
             "iframe",
             "img",
             "link",
             "script",
         };
-        const char* const AttributeElements188[] = {
+        const char* const AttributeElements196[] = {
             "a",
             "area",
             "form",
             "link",
         };
-        const char* const AttributeElements189[] = {
+        const char* const AttributeElements197[] = {
             "input",
             "select",
             "textarea",
         };
-        const char* const AttributeElements190[] = {
+        const char* const AttributeElements198[] = {
             "ol",
         };
-        const char* const AttributeElements191[] = {
+        const char* const AttributeElements199[] = {
             "textarea",
         };
-        const char* const AttributeElements192[] = {
+        const char* const AttributeElements200[] = {
             "td",
             "th",
         };
-        const char* const AttributeElements193[] = {
+        const char* const AttributeElements201[] = {
             "iframe",
         };
-        const char* const AttributeElements194[] = {
+        const char* const AttributeElements202[] = {
             "th",
         };
-        const char* const AttributeElements195[] = {
+        const char* const AttributeElements203[] = {
             "option",
         };
-        const char* const AttributeElements196[] = {
+        const char* const AttributeElements204[] = {
             "template",
         };
-        const char* const AttributeElements197[] = {
+        const char* const AttributeElements205[] = {
             "template",
         };
-        const char* const AttributeElements198[] = {
+        const char* const AttributeElements206[] = {
             "template",
         };
-        const char* const AttributeElements199[] = {
+        const char* const AttributeElements207[] = {
             "template",
         };
-        const char* const AttributeElements200[] = {
+        const char* const AttributeElements208[] = {
             "template",
         };
-        const char* const AttributeElements201[] = {
+        const char* const AttributeElements209[] = {
             "template",
         };
-        const char* const AttributeElements202[] = {
+        const char* const AttributeElements210[] = {
             "area",
         };
-        const char* const AttributeElements203[] = {
+        const char* const AttributeElements211[] = {
             "input",
             "select",
         };
-        const char* const AttributeElements204[] = {
+        const char* const AttributeElements212[] = {
             "img",
             "link",
             "source",
         };
-        const char* const AttributeElements205[] = {
+        const char* const AttributeElements213[] = {
             "col",
             "colgroup",
         };
-        const char* const AttributeElements206[] = {
+        const char* const AttributeElements214[] = {
             "audio",
             "embed",
             "iframe",
@@ -1352,45 +1380,45 @@ namespace RoboHTMLCompiler::Generated
             "track",
             "video",
         };
-        const char* const AttributeElements207[] = {
+        const char* const AttributeElements215[] = {
             "iframe",
         };
-        const char* const AttributeElements208[] = {
+        const char* const AttributeElements216[] = {
             "track",
         };
-        const char* const AttributeElements209[] = {
+        const char* const AttributeElements217[] = {
             "img",
             "source",
         };
-        const char* const AttributeElements210[] = {
+        const char* const AttributeElements218[] = {
             "ol",
         };
-        const char* const AttributeElements211[] = {
+        const char* const AttributeElements219[] = {
             "input",
         };
-        const char* const AttributeElements212[] = {
+        const char* const AttributeElements220[] = {
             "a",
             "area",
             "base",
             "form",
         };
-        const char* const AttributeElements213[] = {
+        const char* const AttributeElements221[] = {
             "abbr",
             "dfn",
             "input",
             "link",
             "style",
         };
-        const char* const AttributeElements214[] = {
+        const char* const AttributeElements222[] = {
             "input",
         };
-        const char* const AttributeElements215[] = {
+        const char* const AttributeElements223[] = {
             "button",
         };
-        const char* const AttributeElements216[] = {
+        const char* const AttributeElements224[] = {
             "ol",
         };
-        const char* const AttributeElements217[] = {
+        const char* const AttributeElements225[] = {
             "a",
             "area",
             "button",
@@ -1402,10 +1430,10 @@ namespace RoboHTMLCompiler::Generated
             "script",
             "source",
         };
-        const char* const AttributeElements218[] = {
+        const char* const AttributeElements226[] = {
             "img",
         };
-        const char* const AttributeElements219[] = {
+        const char* const AttributeElements227[] = {
             "button",
             "data",
             "input",
@@ -1414,14 +1442,21 @@ namespace RoboHTMLCompiler::Generated
             "option",
             "progress",
         };
-        const char* const AttributeElements220[] = {
+        const char* const AttributeElements228[] = {
+            "geolocation",
+        };
+        const char* const AttributeElements229[] = {
             "canvas",
             "embed",
             "iframe",
         };
-        const char* const AttributeElements221[] = {
+        const char* const AttributeElements230[] = {
+            "fencedframe",
+        };
+        const char* const AttributeElements231[] = {
             "canvas",
             "embed",
+            "fencedframe",
             "iframe",
             "img",
             "input",
@@ -1429,78 +1464,78 @@ namespace RoboHTMLCompiler::Generated
             "source",
             "video",
         };
-        const char* const AttributeElements222[] = {
+        const char* const AttributeElements232[] = {
             "textarea",
         };
-        const char* const AttributeElements309[] = {
-            "line",
-            "linearGradient",
-        };
-        const char* const AttributeElements310[] = {
-            "line",
-            "linearGradient",
-        };
-        const char* const AttributeElements311[] = {
-            "line",
-            "linearGradient",
-        };
-        const char* const AttributeElements312[] = {
-            "line",
-            "linearGradient",
-        };
-        const char* const AttributeElements313[] = {
-            "circle",
-            "ellipse",
-            "radialGradient",
-        };
-        const char* const AttributeElements314[] = {
-            "circle",
-            "ellipse",
-            "radialGradient",
-        };
-        const char* const AttributeElements315[] = {
-            "circle",
-            "radialGradient",
-        };
-        const char* const AttributeElements316[] = {
-            "ellipse",
-            "rect",
-        };
-        const char* const AttributeElements317[] = {
-            "ellipse",
-            "rect",
-        };
-        const char* const AttributeElements318[] = {
-            "radialGradient",
-        };
         const char* const AttributeElements319[] = {
-            "radialGradient",
+            "line",
+            "linearGradient",
         };
         const char* const AttributeElements320[] = {
-            "radialGradient",
+            "line",
+            "linearGradient",
+        };
+        const char* const AttributeElements321[] = {
+            "line",
+            "linearGradient",
+        };
+        const char* const AttributeElements322[] = {
+            "line",
+            "linearGradient",
         };
         const char* const AttributeElements323[] = {
-            "path",
+            "circle",
+            "ellipse",
+            "radialGradient",
         };
         const char* const AttributeElements324[] = {
+            "circle",
+            "ellipse",
+            "radialGradient",
+        };
+        const char* const AttributeElements325[] = {
+            "circle",
+            "radialGradient",
+        };
+        const char* const AttributeElements326[] = {
+            "ellipse",
+            "rect",
+        };
+        const char* const AttributeElements327[] = {
+            "ellipse",
+            "rect",
+        };
+        const char* const AttributeElements328[] = {
+            "radialGradient",
+        };
+        const char* const AttributeElements329[] = {
+            "radialGradient",
+        };
+        const char* const AttributeElements330[] = {
+            "radialGradient",
+        };
+        const char* const AttributeElements333[] = {
+            "path",
+        };
+        const char* const AttributeElements334[] = {
             "polyline",
             "polygon",
         };
-        const char* const AttributeElements325[] = {
+        const char* const AttributeElements335[] = {
             "stop",
             "feFuncA",
             "feFuncB",
             "feFuncG",
             "feFuncR",
         };
-        const char* const AttributeElements327[] = {
+        const char* const AttributeElements337[] = {
             "svg",
             "symbol",
             "marker",
             "pattern",
             "view",
         };
-        const char* const AttributeElements328[] = {
+        const char* const AttributeElements338[] = {
             "svg",
             "symbol",
             "image",
@@ -1508,135 +1543,135 @@ namespace RoboHTMLCompiler::Generated
             "pattern",
             "view",
         };
-        const char* const AttributeElements344[] = {
+        const char* const AttributeElements354[] = {
             "linearGradient",
             "radialGradient",
         };
-        const char* const AttributeElements345[] = {
+        const char* const AttributeElements355[] = {
             "linearGradient",
             "radialGradient",
         };
-        const char* const AttributeElements346[] = {
+        const char* const AttributeElements356[] = {
             "linearGradient",
             "radialGradient",
         };
-        const char* const AttributeElements347[] = {
+        const char* const AttributeElements357[] = {
             "stop",
         };
-        const char* const AttributeElements348[] = {
+        const char* const AttributeElements358[] = {
             "stop",
         };
-        const char* const AttributeElements349[] = {
-            "pattern",
-        };
-        const char* const AttributeElements350[] = {
-            "pattern",
-        };
-        const char* const AttributeElements351[] = {
+        const char* const AttributeElements359[] = {
             "pattern",
         };
         const char* const AttributeElements360[] = {
-            "text",
-            "tspan",
-            "textPath",
+            "pattern",
         };
         const char* const AttributeElements361[] = {
+            "pattern",
+        };
+        const char* const AttributeElements370[] = {
             "text",
             "tspan",
             "textPath",
         };
-        const char* const AttributeElements365[] = {
+        const char* const AttributeElements371[] = {
+            "text",
+            "tspan",
             "textPath",
         };
-        const char* const AttributeElements376[] = {
-            "clipPath",
-        };
-        const char* const AttributeElements378[] = {
-            "mask",
-        };
-        const char* const AttributeElements379[] = {
-            "mask",
-        };
-        const char* const AttributeElements381[] = {
-            "filter",
-        };
-        const char* const AttributeElements382[] = {
-            "filter",
+        const char* const AttributeElements375[] = {
+            "textPath",
         };
         const char* const AttributeElements386[] = {
+            "clipPath",
+        };
+        const char* const AttributeElements388[] = {
+            "mask",
+        };
+        const char* const AttributeElements389[] = {
+            "mask",
+        };
+        const char* const AttributeElements391[] = {
+            "filter",
+        };
+        const char* const AttributeElements392[] = {
+            "filter",
+        };
+        const char* const AttributeElements396[] = {
             "feGaussianBlur",
             "feDropShadow",
         };
-        const char* const AttributeElements387[] = {
+        const char* const AttributeElements397[] = {
             "feBlend",
             "feMerge",
         };
-        const char* const AttributeElements388[] = {
+        const char* const AttributeElements398[] = {
             "feComposite",
             "feMorphology",
         };
-        const char* const AttributeElements389[] = {
+        const char* const AttributeElements399[] = {
             "feMorphology",
         };
-        const char* const AttributeElements390[] = {
+        const char* const AttributeElements400[] = {
             "feDisplacementMap",
         };
-        const char* const AttributeElements391[] = {
+        const char* const AttributeElements401[] = {
             "feConvolveMatrix",
         };
-        const char* const AttributeElements392[] = {
+        const char* const AttributeElements402[] = {
             "feColorMatrix",
         };
-        const char* const AttributeElements393[] = {
+        const char* const AttributeElements403[] = {
             "feColorMatrix",
             "feTurbulence",
             "feComponentTransfer",
             "animateTransform",
             "animate",
         };
-        const char* const AttributeElements397[] = {
+        const char* const AttributeElements407[] = {
             "marker",
         };
-        const char* const AttributeElements398[] = {
+        const char* const AttributeElements408[] = {
             "marker",
         };
-        const char* const AttributeElements399[] = {
+        const char* const AttributeElements409[] = {
             "marker",
         };
-        const char* const AttributeElements400[] = {
+        const char* const AttributeElements410[] = {
             "marker",
         };
-        const char* const AttributeElements401[] = {
+        const char* const AttributeElements411[] = {
             "marker",
         };
-        const char* const AttributeElements402[] = {
+        const char* const AttributeElements412[] = {
             "marker",
         };
-        const char* const AttributeElements413[] = {
+        const char* const AttributeElements423[] = {
             "animate",
             "animateMotion",
             "animateTransform",
             "set",
         };
-        const char* const AttributeElements414[] = {
-            "animateMotion",
-        };
-        const char* const AttributeElements422[] = {
+        const char* const AttributeElements424[] = {
             "animateMotion",
         };
         const char* const AttributeElements432[] = {
+            "animateMotion",
+        };
+        const char* const AttributeElements442[] = {
             "a",
         };
-        const char* const AttributeElements433[] = {
+        const char* const AttributeElements443[] = {
             "a",
         };
-        const char* const AttributeElements434[] = {
+        const char* const AttributeElements444[] = {
             "a",
         };
-        const char* const AttributeElements451[] = {
+        const char* const AttributeElements461[] = {
             "math",
         };
-        const char* const AttributeElements456[] = {
+        const char* const AttributeElements466[] = {
             "math",
             "mstyle",
             "mfrac",
@@ -1653,160 +1688,160 @@ namespace RoboHTMLCompiler::Generated
             "mtr",
             "mtd",
         };
-        const char* const AttributeElements458[] = {
+        const char* const AttributeElements468[] = {
             "math",
         };
-        const char* const AttributeElements460[] = {
-            "mfrac",
-        };
-        const char* const AttributeElements461[] = {
-            "mfrac",
-        };
-        const char* const AttributeElements462[] = {
-            "mfrac",
-        };
-        const char* const AttributeElements463[] = {
-            "mfrac",
-        };
-        const char* const AttributeElements464[] = {
-            "mo",
-            "mover",
-            "munderover",
-        };
-        const char* const AttributeElements465[] = {
-            "mo",
-            "munder",
-            "munderover",
-        };
-        const char* const AttributeElements466[] = {
-            "mo",
-        };
-        const char* const AttributeElements467[] = {
-            "mo",
-        };
-        const char* const AttributeElements468[] = {
-            "mo",
-            "munder",
-            "mover",
-            "munderover",
-        };
-        const char* const AttributeElements469[] = {
-            "mo",
-        };
         const char* const AttributeElements470[] = {
-            "mo",
+            "mfrac",
         };
         const char* const AttributeElements471[] = {
-            "mo",
+            "mfrac",
         };
         const char* const AttributeElements472[] = {
-            "mo",
+            "mfrac",
         };
         const char* const AttributeElements473[] = {
-            "mo",
-            "mpadded",
+            "mfrac",
         };
         const char* const AttributeElements474[] = {
             "mo",
-            "mpadded",
+            "mover",
+            "munderover",
         };
         const char* const AttributeElements475[] = {
             "mo",
+            "munder",
+            "munderover",
         };
         const char* const AttributeElements476[] = {
             "mo",
         };
         const char* const AttributeElements477[] = {
-            "mtable",
-            "mtr",
-            "mtd",
+            "mo",
         };
         const char* const AttributeElements478[] = {
-            "mtable",
-            "mtr",
-            "mtd",
+            "mo",
+            "munder",
+            "mover",
+            "munderover",
         };
         const char* const AttributeElements479[] = {
-            "mtable",
+            "mo",
         };
         const char* const AttributeElements480[] = {
-            "mtable",
+            "mo",
         };
         const char* const AttributeElements481[] = {
-            "mtable",
+            "mo",
         };
         const char* const AttributeElements482[] = {
-            "mtable",
+            "mo",
         };
         const char* const AttributeElements483[] = {
-            "mtable",
+            "mo",
+            "mpadded",
         };
         const char* const AttributeElements484[] = {
-            "mtable",
+            "mo",
+            "mpadded",
         };
         const char* const AttributeElements485[] = {
-            "mtable",
+            "mo",
         };
         const char* const AttributeElements486[] = {
-            "mtable",
+            "mo",
         };
         const char* const AttributeElements487[] = {
             "mtable",
+            "mtr",
+            "mtd",
         };
         const char* const AttributeElements488[] = {
+            "mtable",
+            "mtr",
             "mtd",
         };
         const char* const AttributeElements489[] = {
-            "mtd",
+            "mtable",
         };
         const char* const AttributeElements490[] = {
-            "mspace",
-            "mpadded",
-            "mtd",
+            "mtable",
         };
         const char* const AttributeElements491[] = {
-            "mspace",
-            "mpadded",
+            "mtable",
         };
         const char* const AttributeElements492[] = {
+            "mtable",
+        };
+        const char* const AttributeElements493[] = {
+            "mtable",
+        };
+        const char* const AttributeElements494[] = {
+            "mtable",
+        };
+        const char* const AttributeElements495[] = {
+            "mtable",
+        };
+        const char* const AttributeElements496[] = {
+            "mtable",
+        };
+        const char* const AttributeElements497[] = {
+            "mtable",
+        };
+        const char* const AttributeElements498[] = {
+            "mtd",
+        };
+        const char* const AttributeElements499[] = {
+            "mtd",
+        };
+        const char* const AttributeElements500[] = {
+            "mspace",
+            "mpadded",
+            "mtd",
+        };
+        const char* const AttributeElements501[] = {
             "mspace",
             "mpadded",
         };
-        const char* const AttributeElements493[] = {
+        const char* const AttributeElements502[] = {
+            "mspace",
             "mpadded",
         };
-        const char* const AttributeElements494[] = {
-            "annotation",
-        };
-        const char* const AttributeElements495[] = {
-            "annotation",
-            "annotation-xml",
-        };
-        const char* const AttributeElements496[] = {
-            "annotation",
-        };
-        const char* const AttributeElements497[] = {
-            "annotation-xml",
-        };
-        const char* const AttributeElements498[] = {
-            "maction",
-        };
-        const char* const AttributeElements499[] = {
-            "maction",
-        };
-        const char* const AttributeElements500[] = {
-            "mo",
-        };
-        const char* const AttributeElements501[] = {
-            "mo",
-        };
-        const char* const AttributeElements502[] = {
-            "mtd",
-        };
         const char* const AttributeElements503[] = {
-            "mtd",
+            "mpadded",
         };
         const char* const AttributeElements504[] = {
+            "annotation",
+        };
+        const char* const AttributeElements505[] = {
+            "annotation",
+            "annotation-xml",
+        };
+        const char* const AttributeElements506[] = {
+            "annotation",
+        };
+        const char* const AttributeElements507[] = {
+            "annotation-xml",
+        };
+        const char* const AttributeElements508[] = {
+            "maction",
+        };
+        const char* const AttributeElements509[] = {
+            "maction",
+        };
+        const char* const AttributeElements510[] = {
+            "mo",
+        };
+        const char* const AttributeElements511[] = {
+            "mo",
+        };
+        const char* const AttributeElements512[] = {
+            "mtd",
+        };
+        const char* const AttributeElements513[] = {
+            "mtd",
+        };
+        const char* const AttributeElements514[] = {
             "math",
         };
     }
@@ -1954,6 +1989,8 @@ namespace RoboHTMLCompiler::Generated
         { "marquee", NamespaceId::Html, ElementKind::ObsoleteElement, 0, ElementFlagObsolete, nullptr, 0, "the-marquee-element", "" },
         { "frameset", NamespaceId::Html, ElementKind::ObsoleteElement, 0, ElementFlagObsolete, nullptr, 0, "", "" },
         { "frame", NamespaceId::Html, ElementKind::ObsoleteElement, 0, ElementFlagObsolete, nullptr, 0, "", "" },
+        { "fencedframe", NamespaceId::Html, ElementKind::Frame, 0, ElementFlagGlobalAttributes | ElementFlagPhrasing | ElementFlagInteractive, ElementAttributes142, 3, "", "HTMLFencedFrameElement" },
+        { "geolocation", NamespaceId::Html, ElementKind::Button, 0, ElementFlagGlobalAttributes | ElementFlagPhrasing | ElementFlagInteractive, ElementAttributes143, 2, "", "HTMLGeolocationElement" },
         { "svg", NamespaceId::Svg, ElementKind::SvgDocument, 0, ElementFlagNone, nullptr, 0, "", "" },
         { "g", NamespaceId::Svg, ElementKind::SvgContainer, 0, ElementFlagNone, nullptr, 0, "", "" },
         { "defs", NamespaceId::Svg, ElementKind::SvgContainer, 0, ElementFlagNone, nullptr, 0, "", "" },
@@ -2051,10 +2088,11 @@ namespace RoboHTMLCompiler::Generated
         { "mtd", NamespaceId::MathMl, ElementKind::MathTableCell, 0, ElementFlagNone, nullptr, 0, "", "" },
     };
 
-    const std::uint32_t ElementCount = 237;
+    const std::uint32_t ElementCount = 239;
 
     const AttributeRecord AttributeTable[] = {
         { "accesskey", NamespaceId::Html, NativeProperty::MetadataAccessKey, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
+        { "anchor", NamespaceId::Html, NativeProperty::MetadataAnchor, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "autocapitalize", NamespaceId::Html, NativeProperty::MetadataAutoCapitalize, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "autocorrect", NamespaceId::Html, NativeProperty::MetadataAutoCorrect, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "autofocus", NamespaceId::Html, NativeProperty::StateAutofocus, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
@@ -2062,7 +2100,9 @@ namespace RoboHTMLCompiler::Generated
         { "contenteditable", NamespaceId::Html, NativeProperty::MetadataEditable, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "dir", NamespaceId::Html, NativeProperty::TextDirection, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "draggable", NamespaceId::Html, NativeProperty::StateDraggable, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
+        { "elementtiming", NamespaceId::Html, NativeProperty::MetadataElementTiming, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "enterkeyhint", NamespaceId::Html, NativeProperty::MetadataEnterKeyHint, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
+        { "exportparts", NamespaceId::Html, NativeProperty::MetadataExportParts, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "headingoffset", NamespaceId::Html, NativeProperty::HeadingOffset, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "headingreset", NamespaceId::Html, NativeProperty::HeadingReset, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "hidden", NamespaceId::Html, NativeProperty::StateHidden, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
@@ -2077,6 +2117,7 @@ namespace RoboHTMLCompiler::Generated
         { "itemtype", NamespaceId::Html, NativeProperty::MicroDataItemType, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "lang", NamespaceId::Html, NativeProperty::TextLanguage, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "nonce", NamespaceId::Html, NativeProperty::MetadataNonce, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
+        { "part", NamespaceId::Html, NativeProperty::MetadataPart, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "popover", NamespaceId::Html, NativeProperty::MetadataPopover, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "slot", NamespaceId::Html, NativeProperty::SlotAssignment, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "spellcheck", NamespaceId::Html, NativeProperty::StateSpellCheck, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
@@ -2084,6 +2125,7 @@ namespace RoboHTMLCompiler::Generated
         { "tabindex", NamespaceId::Html, NativeProperty::InteractionTabIndex, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "title", NamespaceId::Html, NativeProperty::MetadataTitle, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "translate", NamespaceId::Html, NativeProperty::TextTranslate, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
+        { "virtualkeyboardpolicy", NamespaceId::Html, NativeProperty::MetadataVirtualKeyboardPolicy, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "writingsuggestions", NamespaceId::Html, NativeProperty::MetadataWriteSuggestions, AttributeFlagNamespaceDefault | AttributeFlagGlobal | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Global", nullptr, 0 },
         { "onauxclick", NamespaceId::Html, NativeProperty::Unmapped, AttributeFlagNamespaceDefault | AttributeFlagEventHandler | AttributeFlagForbidden | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "JavaScript", "Event handler", nullptr, 0 },
         { "onbeforeinput", NamespaceId::Html, NativeProperty::Unmapped, AttributeFlagNamespaceDefault | AttributeFlagEventHandler | AttributeFlagForbidden | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "JavaScript", "Event handler", nullptr, 0 },
@@ -2156,127 +2198,132 @@ namespace RoboHTMLCompiler::Generated
         { "onvolumechange", NamespaceId::Html, NativeProperty::Unmapped, AttributeFlagNamespaceDefault | AttributeFlagEventHandler | AttributeFlagForbidden | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "JavaScript", "Event handler", nullptr, 0 },
         { "onwaiting", NamespaceId::Html, NativeProperty::Unmapped, AttributeFlagNamespaceDefault | AttributeFlagEventHandler | AttributeFlagForbidden | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "JavaScript", "Event handler", nullptr, 0 },
         { "onwheel", NamespaceId::Html, NativeProperty::Unmapped, AttributeFlagNamespaceDefault | AttributeFlagEventHandler | AttributeFlagForbidden | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "JavaScript", "Event handler", nullptr, 0 },
-        { "abbr", NamespaceId::Html, NativeProperty::AccessibilityLabel, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements102, 1 },
-        { "accept", NamespaceId::Html, NativeProperty::ValidationAccept, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements103, 1 },
-        { "accept-charset", NamespaceId::Html, NativeProperty::DocumentCharacterSet, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements104, 1 },
-        { "action", NamespaceId::Html, NativeProperty::FormAction, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements105, 1 },
-        { "allow", NamespaceId::Html, NativeProperty::FramePermissions, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements106, 1 },
-        { "allowfullscreen", NamespaceId::Html, NativeProperty::FrameAllowFullScreen, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements107, 1 },
-        { "alpha", NamespaceId::Html, NativeProperty::ColorAlpha, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements108, 1 },
-        { "alt", NamespaceId::Html, NativeProperty::ImageAlternativeText, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements109, 3 },
-        { "as", NamespaceId::Html, NativeProperty::ResourceDestination, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements110, 1 },
-        { "async", NamespaceId::Html, NativeProperty::ScriptAsynchronous, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements111, 1 },
-        { "autocomplete", NamespaceId::Html, NativeProperty::InputAutocomplete, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements112, 4 },
-        { "autoplay", NamespaceId::Html, NativeProperty::MediaAutoPlay, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements113, 2 },
-        { "blocking", NamespaceId::Html, NativeProperty::ResourceBlocking, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements114, 3 },
-        { "charset", NamespaceId::Html, NativeProperty::DocumentCharacterSet, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements115, 1 },
-        { "checked", NamespaceId::Html, NativeProperty::StateChecked, AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements116, 1 },
-        { "cite", NamespaceId::Html, NativeProperty::QuoteCitation, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements117, 4 },
-        { "closedby", NamespaceId::Html, NativeProperty::DialogCloseBehavior, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements118, 1 },
-        { "color", NamespaceId::Html, NativeProperty::ResourceColor, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements119, 1 },
-        { "colorspace", NamespaceId::Html, NativeProperty::ColorSpace, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements120, 1 },
-        { "cols", NamespaceId::Html, NativeProperty::LayoutColumns, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements121, 1 },
-        { "colspan", NamespaceId::Html, NativeProperty::LayoutColumnSpan, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements122, 2 },
-        { "command", NamespaceId::Html, NativeProperty::InteractionCommand, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements123, 1 },
-        { "commandfor", NamespaceId::Html, NativeProperty::InteractionCommandFor, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements124, 1 },
-        { "content", NamespaceId::Html, NativeProperty::MetadataContent, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements125, 1 },
-        { "controls", NamespaceId::Html, NativeProperty::MediaControls, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements126, 3 },
-        { "coords", NamespaceId::Html, NativeProperty::ImageMapCoordinates, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements127, 1 },
-        { "crossorigin", NamespaceId::Html, NativeProperty::ResourceCrossOrigin, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements128, 5 },
-        { "data", NamespaceId::Html, NativeProperty::EmbeddedData, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements129, 1 },
-        { "datetime", NamespaceId::Html, NativeProperty::DateValue, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements130, 3 },
-        { "decoding", NamespaceId::Html, NativeProperty::ResourceDecoding, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements131, 1 },
-        { "default", NamespaceId::Html, NativeProperty::ValueDefaultValue, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements132, 1 },
-        { "defer", NamespaceId::Html, NativeProperty::ScriptDeferred, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements133, 1 },
-        { "dir", NamespaceId::Html, NativeProperty::TextDirection, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements134, 2 },
-        { "dirname", NamespaceId::Html, NativeProperty::InputDirectoryName, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements135, 2 },
-        { "disabled", NamespaceId::Html, NativeProperty::StateDisabled, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements136, 8 },
-        { "download", NamespaceId::Html, NativeProperty::NavigationDownload, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements137, 2 },
-        { "enctype", NamespaceId::Html, NativeProperty::FormEnctype, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements138, 1 },
-        { "fetchpriority", NamespaceId::Html, NativeProperty::ResourceFetchPriority, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements139, 3 },
-        { "for", NamespaceId::Html, NativeProperty::LabelFor, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements140, 3 },
-        { "form", NamespaceId::Html, NativeProperty::FormOwner, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements141, 7 },
-        { "formaction", NamespaceId::Html, NativeProperty::FormAction, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements142, 2 },
-        { "formenctype", NamespaceId::Html, NativeProperty::FormEnctype, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements143, 2 },
-        { "formmethod", NamespaceId::Html, NativeProperty::FormMethod, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements144, 2 },
-        { "formnovalidate", NamespaceId::Html, NativeProperty::FormNoValidate, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements145, 2 },
-        { "formtarget", NamespaceId::Html, NativeProperty::FormTarget, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements146, 2 },
-        { "headers", NamespaceId::Html, NativeProperty::LayoutHeaders, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements147, 2 },
-        { "height", NamespaceId::Html, NativeProperty::EmbeddedHeight, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements148, 3 },
-        { "height", NamespaceId::Html, NativeProperty::LayoutHeight, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements149, 8 },
-        { "high", NamespaceId::Html, NativeProperty::ConstraintHigh, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements150, 1 },
-        { "href", NamespaceId::Html, NativeProperty::ResourceSource, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements151, 1 },
-        { "href", NamespaceId::Html, NativeProperty::NavigationHref, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements152, 4 },
-        { "hreflang", NamespaceId::Html, NativeProperty::NavigationLanguage, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements153, 3 },
-        { "http-equiv", NamespaceId::Html, NativeProperty::DocumentHttpEquiv, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements154, 1 },
-        { "imagesizes", NamespaceId::Html, NativeProperty::ResourceImages, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements155, 1 },
-        { "imagesrcset", NamespaceId::Html, NativeProperty::ResourceCandidates, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements156, 1 },
-        { "integrity", NamespaceId::Html, NativeProperty::ResourceIntegrity, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements157, 2 },
-        { "ismap", NamespaceId::Html, NativeProperty::ImageMapServerSide, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements158, 1 },
-        { "kind", NamespaceId::Html, NativeProperty::MediaKind, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements159, 1 },
-        { "label", NamespaceId::Html, NativeProperty::OptionLabel, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements160, 3 },
-        { "list", NamespaceId::Html, NativeProperty::InputOptions, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements161, 1 },
-        { "loading", NamespaceId::Html, NativeProperty::ResourceLoadMode, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements162, 4 },
-        { "loop", NamespaceId::Html, NativeProperty::MediaLoop, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements163, 2 },
-        { "low", NamespaceId::Html, NativeProperty::ConstraintLow, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements164, 1 },
-        { "max", NamespaceId::Html, NativeProperty::ConstraintMaximum, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements165, 3 },
-        { "maxlength", NamespaceId::Html, NativeProperty::ValidationMaximumLength, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements166, 2 },
-        { "media", NamespaceId::Html, NativeProperty::ResourceMedia, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements167, 4 },
-        { "method", NamespaceId::Html, NativeProperty::FormMethod, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements168, 1 },
-        { "min", NamespaceId::Html, NativeProperty::ConstraintMinimum, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements169, 2 },
-        { "minlength", NamespaceId::Html, NativeProperty::ValidationMinimumLength, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements170, 2 },
-        { "multiple", NamespaceId::Html, NativeProperty::StateMultiple, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements171, 2 },
-        { "muted", NamespaceId::Html, NativeProperty::MediaMuted, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements172, 2 },
-        { "name", NamespaceId::Html, NativeProperty::IdentityName, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements173, 13 },
-        { "nomodule", NamespaceId::Html, NativeProperty::ScriptNoModule, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements174, 1 },
-        { "novalidate", NamespaceId::Html, NativeProperty::FormNoValidate, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements175, 1 },
-        { "open", NamespaceId::Html, NativeProperty::StateOpen, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements176, 2 },
-        { "optimum", NamespaceId::Html, NativeProperty::ConstraintOptimum, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements177, 1 },
-        { "pattern", NamespaceId::Html, NativeProperty::ValidationPattern, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements178, 1 },
-        { "ping", NamespaceId::Html, NativeProperty::NavigationPing, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements179, 2 },
-        { "placeholder", NamespaceId::Html, NativeProperty::InputPlaceholder, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements180, 2 },
-        { "playsinline", NamespaceId::Html, NativeProperty::MediaPlayInline, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements181, 1 },
-        { "popovertarget", NamespaceId::Html, NativeProperty::InteractionCommandTarget, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements182, 2 },
-        { "popovertargetaction", NamespaceId::Html, NativeProperty::InteractionCommand, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements183, 2 },
-        { "poster", NamespaceId::Html, NativeProperty::MediaPoster, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements184, 1 },
-        { "preload", NamespaceId::Html, NativeProperty::MediaPreload, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements185, 2 },
-        { "readonly", NamespaceId::Html, NativeProperty::StateReadOnly, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements186, 2 },
-        { "referrerpolicy", NamespaceId::Html, NativeProperty::NavigationReferrerPolicy, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements187, 6 },
-        { "rel", NamespaceId::Html, NativeProperty::NavigationRelation, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements188, 4 },
-        { "required", NamespaceId::Html, NativeProperty::StateRequired, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements189, 3 },
-        { "reversed", NamespaceId::Html, NativeProperty::ListReversed, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements190, 1 },
-        { "rows", NamespaceId::Html, NativeProperty::LayoutRows, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements191, 1 },
-        { "rowspan", NamespaceId::Html, NativeProperty::LayoutRowSpan, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements192, 2 },
-        { "sandbox", NamespaceId::Html, NativeProperty::FrameSandbox, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements193, 1 },
-        { "scope", NamespaceId::Html, NativeProperty::LayoutScope, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements194, 1 },
-        { "selected", NamespaceId::Html, NativeProperty::StateSelected, AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements195, 1 },
-        { "shadowrootclonable", NamespaceId::Html, NativeProperty::ShadowRootClonable, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements196, 1 },
-        { "shadowrootcustomelementregistry", NamespaceId::Html, NativeProperty::ShadowRootCustomElementRegistry, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements197, 1 },
-        { "shadowrootdelegatesfocus", NamespaceId::Html, NativeProperty::ShadowRootDelegatesFocus, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements198, 1 },
-        { "shadowrootmode", NamespaceId::Html, NativeProperty::ShadowRootMode, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements199, 1 },
-        { "shadowrootserializable", NamespaceId::Html, NativeProperty::ShadowRootSerializable, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements200, 1 },
-        { "shadowrootslotassignment", NamespaceId::Html, NativeProperty::ShadowRootSlotAssignment, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements201, 1 },
-        { "shape", NamespaceId::Html, NativeProperty::ImageMapShape, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements202, 1 },
-        { "size", NamespaceId::Html, NativeProperty::InputSize, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements203, 2 },
-        { "sizes", NamespaceId::Html, NativeProperty::ResourceSizes, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements204, 3 },
-        { "span", NamespaceId::Html, NativeProperty::LayoutSpan, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements205, 2 },
-        { "src", NamespaceId::Html, NativeProperty::ResourceSource, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements206, 9 },
-        { "srcdoc", NamespaceId::Html, NativeProperty::FrameSourceDocument, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements207, 1 },
-        { "srclang", NamespaceId::Html, NativeProperty::MediaSourceLanguage, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements208, 1 },
-        { "srcset", NamespaceId::Html, NativeProperty::ResourceSourceSet, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements209, 2 },
-        { "start", NamespaceId::Html, NativeProperty::ListStart, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements210, 1 },
-        { "step", NamespaceId::Html, NativeProperty::ConstraintStep, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements211, 1 },
-        { "target", NamespaceId::Html, NativeProperty::NavigationTarget, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements212, 4 },
-        { "title", NamespaceId::Html, NativeProperty::MetadataTitle, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements213, 5 },
-        { "type", NamespaceId::Html, NativeProperty::InputType, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements214, 1 },
-        { "type", NamespaceId::Html, NativeProperty::ButtonType, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements215, 1 },
-        { "type", NamespaceId::Html, NativeProperty::ListStyle, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements216, 1 },
-        { "type", NamespaceId::Html, NativeProperty::ResourceMimeType, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements217, 10 },
-        { "usemap", NamespaceId::Html, NativeProperty::ImageMapName, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements218, 1 },
-        { "value", NamespaceId::Html, NativeProperty::ValueValue, AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements219, 7 },
-        { "width", NamespaceId::Html, NativeProperty::EmbeddedWidth, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements220, 3 },
-        { "width", NamespaceId::Html, NativeProperty::LayoutWidth, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements221, 8 },
-        { "wrap", NamespaceId::Html, NativeProperty::InputWrap, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements222, 1 },
+        { "abbr", NamespaceId::Html, NativeProperty::AccessibilityLabel, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements107, 1 },
+        { "accept", NamespaceId::Html, NativeProperty::ValidationAccept, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements108, 1 },
+        { "accept-charset", NamespaceId::Html, NativeProperty::DocumentCharacterSet, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements109, 1 },
+        { "action", NamespaceId::Html, NativeProperty::FormAction, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements110, 1 },
+        { "allow", NamespaceId::Html, NativeProperty::FramePermissions, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements111, 2 },
+        { "allowfullscreen", NamespaceId::Html, NativeProperty::FrameAllowFullScreen, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements112, 1 },
+        { "alpha", NamespaceId::Html, NativeProperty::ColorAlpha, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements113, 1 },
+        { "alt", NamespaceId::Html, NativeProperty::ImageAlternativeText, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements114, 3 },
+        { "as", NamespaceId::Html, NativeProperty::ResourceDestination, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements115, 1 },
+        { "async", NamespaceId::Html, NativeProperty::ScriptAsynchronous, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements116, 1 },
+        { "autocomplete", NamespaceId::Html, NativeProperty::InputAutocomplete, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements117, 4 },
+        { "autolocate", NamespaceId::Html, NativeProperty::MetadataAutoLocate, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements118, 1 },
+        { "autoplay", NamespaceId::Html, NativeProperty::MediaAutoPlay, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements119, 2 },
+        { "blocking", NamespaceId::Html, NativeProperty::ResourceBlocking, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements120, 3 },
+        { "capture", NamespaceId::Html, NativeProperty::InputCapture, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements121, 1 },
+        { "charset", NamespaceId::Html, NativeProperty::DocumentCharacterSet, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements122, 1 },
+        { "checked", NamespaceId::Html, NativeProperty::StateChecked, AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements123, 1 },
+        { "cite", NamespaceId::Html, NativeProperty::QuoteCitation, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements124, 4 },
+        { "closedby", NamespaceId::Html, NativeProperty::DialogCloseBehavior, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements125, 1 },
+        { "color", NamespaceId::Html, NativeProperty::ResourceColor, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements126, 1 },
+        { "colorspace", NamespaceId::Html, NativeProperty::ColorSpace, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements127, 1 },
+        { "cols", NamespaceId::Html, NativeProperty::LayoutColumns, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements128, 1 },
+        { "colspan", NamespaceId::Html, NativeProperty::LayoutColumnSpan, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements129, 2 },
+        { "command", NamespaceId::Html, NativeProperty::InteractionCommand, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements130, 1 },
+        { "commandfor", NamespaceId::Html, NativeProperty::InteractionCommandFor, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements131, 1 },
+        { "content", NamespaceId::Html, NativeProperty::MetadataContent, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements132, 1 },
+        { "controls", NamespaceId::Html, NativeProperty::MediaControls, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements133, 3 },
+        { "coords", NamespaceId::Html, NativeProperty::ImageMapCoordinates, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements134, 1 },
+        { "crossorigin", NamespaceId::Html, NativeProperty::ResourceCrossOrigin, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements135, 5 },
+        { "data", NamespaceId::Html, NativeProperty::EmbeddedData, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements136, 1 },
+        { "datetime", NamespaceId::Html, NativeProperty::DateValue, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements137, 3 },
+        { "decoding", NamespaceId::Html, NativeProperty::ResourceDecoding, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements138, 1 },
+        { "default", NamespaceId::Html, NativeProperty::ValueDefaultValue, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements139, 1 },
+        { "defer", NamespaceId::Html, NativeProperty::ScriptDeferred, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements140, 1 },
+        { "dir", NamespaceId::Html, NativeProperty::TextDirection, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements141, 2 },
+        { "dirname", NamespaceId::Html, NativeProperty::InputDirectoryName, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements142, 2 },
+        { "disabled", NamespaceId::Html, NativeProperty::StateDisabled, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements143, 8 },
+        { "download", NamespaceId::Html, NativeProperty::NavigationDownload, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements144, 2 },
+        { "enctype", NamespaceId::Html, NativeProperty::FormEnctype, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements145, 1 },
+        { "fetchpriority", NamespaceId::Html, NativeProperty::ResourceFetchPriority, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements146, 3 },
+        { "for", NamespaceId::Html, NativeProperty::LabelFor, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements147, 3 },
+        { "form", NamespaceId::Html, NativeProperty::FormOwner, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements148, 7 },
+        { "formaction", NamespaceId::Html, NativeProperty::FormAction, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements149, 2 },
+        { "formenctype", NamespaceId::Html, NativeProperty::FormEnctype, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements150, 2 },
+        { "formmethod", NamespaceId::Html, NativeProperty::FormMethod, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements151, 2 },
+        { "formnovalidate", NamespaceId::Html, NativeProperty::FormNoValidate, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements152, 2 },
+        { "formtarget", NamespaceId::Html, NativeProperty::FormTarget, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements153, 2 },
+        { "headers", NamespaceId::Html, NativeProperty::LayoutHeaders, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements154, 2 },
+        { "height", NamespaceId::Html, NativeProperty::EmbeddedHeight, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements155, 3 },
+        { "height", NamespaceId::Html, NativeProperty::EmbeddedHeight, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements156, 1 },
+        { "height", NamespaceId::Html, NativeProperty::LayoutHeight, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements157, 9 },
+        { "high", NamespaceId::Html, NativeProperty::ConstraintHigh, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements158, 1 },
+        { "href", NamespaceId::Html, NativeProperty::ResourceSource, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements159, 1 },
+        { "href", NamespaceId::Html, NativeProperty::NavigationHref, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements160, 4 },
+        { "hreflang", NamespaceId::Html, NativeProperty::NavigationLanguage, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements161, 3 },
+        { "http-equiv", NamespaceId::Html, NativeProperty::DocumentHttpEquiv, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements162, 1 },
+        { "imagesizes", NamespaceId::Html, NativeProperty::ResourceImages, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements163, 1 },
+        { "imagesrcset", NamespaceId::Html, NativeProperty::ResourceCandidates, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements164, 1 },
+        { "integrity", NamespaceId::Html, NativeProperty::ResourceIntegrity, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements165, 2 },
+        { "ismap", NamespaceId::Html, NativeProperty::ImageMapServerSide, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements166, 1 },
+        { "kind", NamespaceId::Html, NativeProperty::MediaKind, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements167, 1 },
+        { "label", NamespaceId::Html, NativeProperty::OptionLabel, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements168, 3 },
+        { "list", NamespaceId::Html, NativeProperty::InputOptions, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements169, 1 },
+        { "loading", NamespaceId::Html, NativeProperty::ResourceLoadMode, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements170, 4 },
+        { "loop", NamespaceId::Html, NativeProperty::MediaLoop, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements171, 2 },
+        { "low", NamespaceId::Html, NativeProperty::ConstraintLow, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements172, 1 },
+        { "max", NamespaceId::Html, NativeProperty::ConstraintMaximum, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements173, 3 },
+        { "maxlength", NamespaceId::Html, NativeProperty::ValidationMaximumLength, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements174, 2 },
+        { "media", NamespaceId::Html, NativeProperty::ResourceMedia, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements175, 4 },
+        { "method", NamespaceId::Html, NativeProperty::FormMethod, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements176, 1 },
+        { "min", NamespaceId::Html, NativeProperty::ConstraintMinimum, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements177, 2 },
+        { "minlength", NamespaceId::Html, NativeProperty::ValidationMinimumLength, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements178, 2 },
+        { "multiple", NamespaceId::Html, NativeProperty::StateMultiple, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements179, 2 },
+        { "muted", NamespaceId::Html, NativeProperty::MediaMuted, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements180, 2 },
+        { "name", NamespaceId::Html, NativeProperty::IdentityName, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements181, 13 },
+        { "nomodule", NamespaceId::Html, NativeProperty::ScriptNoModule, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements182, 1 },
+        { "novalidate", NamespaceId::Html, NativeProperty::FormNoValidate, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements183, 1 },
+        { "open", NamespaceId::Html, NativeProperty::StateOpen, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements184, 2 },
+        { "optimum", NamespaceId::Html, NativeProperty::ConstraintOptimum, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements185, 1 },
+        { "pattern", NamespaceId::Html, NativeProperty::ValidationPattern, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements186, 1 },
+        { "ping", NamespaceId::Html, NativeProperty::NavigationPing, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements187, 2 },
+        { "placeholder", NamespaceId::Html, NativeProperty::InputPlaceholder, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements188, 2 },
+        { "playsinline", NamespaceId::Html, NativeProperty::MediaPlayInline, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements189, 1 },
+        { "popovertarget", NamespaceId::Html, NativeProperty::InteractionCommandTarget, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements190, 2 },
+        { "popovertargetaction", NamespaceId::Html, NativeProperty::InteractionCommand, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements191, 2 },
+        { "poster", NamespaceId::Html, NativeProperty::MediaPoster, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements192, 1 },
+        { "preload", NamespaceId::Html, NativeProperty::MediaPreload, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements193, 2 },
+        { "readonly", NamespaceId::Html, NativeProperty::StateReadOnly, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements194, 2 },
+        { "referrerpolicy", NamespaceId::Html, NativeProperty::NavigationReferrerPolicy, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements195, 6 },
+        { "rel", NamespaceId::Html, NativeProperty::NavigationRelation, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements196, 4 },
+        { "required", NamespaceId::Html, NativeProperty::StateRequired, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements197, 3 },
+        { "reversed", NamespaceId::Html, NativeProperty::ListReversed, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements198, 1 },
+        { "rows", NamespaceId::Html, NativeProperty::LayoutRows, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements199, 1 },
+        { "rowspan", NamespaceId::Html, NativeProperty::LayoutRowSpan, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements200, 2 },
+        { "sandbox", NamespaceId::Html, NativeProperty::FrameSandbox, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements201, 1 },
+        { "scope", NamespaceId::Html, NativeProperty::LayoutScope, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements202, 1 },
+        { "selected", NamespaceId::Html, NativeProperty::StateSelected, AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements203, 1 },
+        { "shadowrootclonable", NamespaceId::Html, NativeProperty::ShadowRootClonable, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements204, 1 },
+        { "shadowrootcustomelementregistry", NamespaceId::Html, NativeProperty::ShadowRootCustomElementRegistry, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements205, 1 },
+        { "shadowrootdelegatesfocus", NamespaceId::Html, NativeProperty::ShadowRootDelegatesFocus, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements206, 1 },
+        { "shadowrootmode", NamespaceId::Html, NativeProperty::ShadowRootMode, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements207, 1 },
+        { "shadowrootserializable", NamespaceId::Html, NativeProperty::ShadowRootSerializable, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements208, 1 },
+        { "shadowrootslotassignment", NamespaceId::Html, NativeProperty::ShadowRootSlotAssignment, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements209, 1 },
+        { "shape", NamespaceId::Html, NativeProperty::ImageMapShape, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements210, 1 },
+        { "size", NamespaceId::Html, NativeProperty::InputSize, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements211, 2 },
+        { "sizes", NamespaceId::Html, NativeProperty::ResourceSizes, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements212, 3 },
+        { "span", NamespaceId::Html, NativeProperty::LayoutSpan, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements213, 2 },
+        { "src", NamespaceId::Html, NativeProperty::ResourceSource, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements214, 9 },
+        { "srcdoc", NamespaceId::Html, NativeProperty::FrameSourceDocument, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements215, 1 },
+        { "srclang", NamespaceId::Html, NativeProperty::MediaSourceLanguage, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements216, 1 },
+        { "srcset", NamespaceId::Html, NativeProperty::ResourceSourceSet, AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements217, 2 },
+        { "start", NamespaceId::Html, NativeProperty::ListStart, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements218, 1 },
+        { "step", NamespaceId::Html, NativeProperty::ConstraintStep, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements219, 1 },
+        { "target", NamespaceId::Html, NativeProperty::NavigationTarget, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements220, 4 },
+        { "title", NamespaceId::Html, NativeProperty::MetadataTitle, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements221, 5 },
+        { "type", NamespaceId::Html, NativeProperty::InputType, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements222, 1 },
+        { "type", NamespaceId::Html, NativeProperty::ButtonType, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements223, 1 },
+        { "type", NamespaceId::Html, NativeProperty::ListStyle, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements224, 1 },
+        { "type", NamespaceId::Html, NativeProperty::ResourceMimeType, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements225, 10 },
+        { "usemap", NamespaceId::Html, NativeProperty::ImageMapName, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements226, 1 },
+        { "value", NamespaceId::Html, NativeProperty::ValueValue, AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements227, 7 },
+        { "watch", NamespaceId::Html, NativeProperty::MetadataWatch, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements228, 1 },
+        { "width", NamespaceId::Html, NativeProperty::EmbeddedWidth, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements229, 3 },
+        { "width", NamespaceId::Html, NativeProperty::EmbeddedWidth, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements230, 1 },
+        { "width", NamespaceId::Html, NativeProperty::LayoutWidth, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements231, 9 },
+        { "wrap", NamespaceId::Html, NativeProperty::InputWrap, AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Element", AttributeElements232, 1 },
         { "align", NamespaceId::Html, NativeProperty::Unmapped, AttributeFlagObsolete | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Obsolete", nullptr, 0 },
         { "alink", NamespaceId::Html, NativeProperty::Unmapped, AttributeFlagObsolete | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Obsolete", nullptr, 0 },
         { "alinkcolor", NamespaceId::Html, NativeProperty::Unmapped, AttributeFlagObsolete | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Obsolete", nullptr, 0 },
@@ -2363,26 +2410,26 @@ namespace RoboHTMLCompiler::Generated
         { "vspace", NamespaceId::Html, NativeProperty::Unmapped, AttributeFlagObsolete | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Obsolete", nullptr, 0 },
         { "x", NamespaceId::Svg, NativeProperty::SvgGeometryX, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", nullptr, 0 },
         { "y", NamespaceId::Svg, NativeProperty::SvgGeometryY, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", nullptr, 0 },
-        { "x1", NamespaceId::Svg, NativeProperty::SvgGeometryX1, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements309, 2 },
-        { "y1", NamespaceId::Svg, NativeProperty::SvgGeometryY1, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements310, 2 },
-        { "x2", NamespaceId::Svg, NativeProperty::SvgGeometryX2, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements311, 2 },
-        { "y2", NamespaceId::Svg, NativeProperty::SvgGeometryY2, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements312, 2 },
-        { "cx", NamespaceId::Svg, NativeProperty::SvgGeometryCenterX, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements313, 3 },
-        { "cy", NamespaceId::Svg, NativeProperty::SvgGeometryCenterY, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements314, 3 },
-        { "r", NamespaceId::Svg, NativeProperty::SvgGeometryRadius, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements315, 2 },
-        { "rx", NamespaceId::Svg, NativeProperty::SvgGeometryRadiusX, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements316, 2 },
-        { "ry", NamespaceId::Svg, NativeProperty::SvgGeometryRadiusY, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements317, 2 },
-        { "fx", NamespaceId::Svg, NativeProperty::SvgGeometryCenterX, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements318, 1 },
-        { "fy", NamespaceId::Svg, NativeProperty::SvgGeometryCenterY, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements319, 1 },
-        { "fr", NamespaceId::Svg, NativeProperty::SvgGeometryRadius, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements320, 1 },
+        { "x1", NamespaceId::Svg, NativeProperty::SvgGeometryX1, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements319, 2 },
+        { "y1", NamespaceId::Svg, NativeProperty::SvgGeometryY1, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements320, 2 },
+        { "x2", NamespaceId::Svg, NativeProperty::SvgGeometryX2, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements321, 2 },
+        { "y2", NamespaceId::Svg, NativeProperty::SvgGeometryY2, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements322, 2 },
+        { "cx", NamespaceId::Svg, NativeProperty::SvgGeometryCenterX, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements323, 3 },
+        { "cy", NamespaceId::Svg, NativeProperty::SvgGeometryCenterY, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements324, 3 },
+        { "r", NamespaceId::Svg, NativeProperty::SvgGeometryRadius, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements325, 2 },
+        { "rx", NamespaceId::Svg, NativeProperty::SvgGeometryRadiusX, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements326, 2 },
+        { "ry", NamespaceId::Svg, NativeProperty::SvgGeometryRadiusY, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements327, 2 },
+        { "fx", NamespaceId::Svg, NativeProperty::SvgGeometryCenterX, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements328, 1 },
+        { "fy", NamespaceId::Svg, NativeProperty::SvgGeometryCenterY, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements329, 1 },
+        { "fr", NamespaceId::Svg, NativeProperty::SvgGeometryRadius, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements330, 1 },
         { "width", NamespaceId::Svg, NativeProperty::SvgGeometryWidth, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", nullptr, 0 },
         { "height", NamespaceId::Svg, NativeProperty::SvgGeometryHeight, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", nullptr, 0 },
-        { "d", NamespaceId::Svg, NativeProperty::SvgGeometryPath, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements323, 1 },
-        { "points", NamespaceId::Svg, NativeProperty::SvgGeometryPoints, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements324, 2 },
-        { "offset", NamespaceId::Svg, NativeProperty::SvgGradientOffset, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements325, 5 },
+        { "d", NamespaceId::Svg, NativeProperty::SvgGeometryPath, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements333, 1 },
+        { "points", NamespaceId::Svg, NativeProperty::SvgGeometryPoints, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements334, 2 },
+        { "offset", NamespaceId::Svg, NativeProperty::SvgGradientOffset, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements335, 5 },
         { "pathLength", NamespaceId::Svg, NativeProperty::SvgGeometryPathLength, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", nullptr, 0 },
-        { "viewBox", NamespaceId::Svg, NativeProperty::SvgViewBox, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements327, 5 },
-        { "preserveAspectRatio", NamespaceId::Svg, NativeProperty::SvgPreserveAspectRatio, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements328, 6 },
+        { "viewBox", NamespaceId::Svg, NativeProperty::SvgViewBox, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements337, 5 },
+        { "preserveAspectRatio", NamespaceId::Svg, NativeProperty::SvgPreserveAspectRatio, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Geometry", AttributeElements338, 6 },
         { "fill", NamespaceId::Svg, NativeProperty::SvgPaintFill, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Paint", nullptr, 0 },
         { "fill-opacity", NamespaceId::Svg, NativeProperty::SvgPaintFillOpacity, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Paint", nullptr, 0 },
         { "fill-rule", NamespaceId::Svg, NativeProperty::SvgPaintFillRule, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Paint", nullptr, 0 },
@@ -2398,14 +2445,14 @@ namespace RoboHTMLCompiler::Generated
         { "opacity", NamespaceId::Svg, NativeProperty::SvgPaintOpacity, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Paint", nullptr, 0 },
         { "transform", NamespaceId::Svg, NativeProperty::SvgTransform, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Transform", nullptr, 0 },
         { "transform-origin", NamespaceId::Svg, NativeProperty::SvgTransformOrigin, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Transform", nullptr, 0 },
-        { "gradientUnits", NamespaceId::Svg, NativeProperty::SvgGradientUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements344, 2 },
-        { "gradientTransform", NamespaceId::Svg, NativeProperty::SvgGradientTransform, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements345, 2 },
-        { "spreadMethod", NamespaceId::Svg, NativeProperty::SvgSpreadMethod, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements346, 2 },
-        { "stop-color", NamespaceId::Svg, NativeProperty::SvgStopColor, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements347, 1 },
-        { "stop-opacity", NamespaceId::Svg, NativeProperty::SvgStopOpacity, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements348, 1 },
-        { "patternUnits", NamespaceId::Svg, NativeProperty::SvgPatternUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Paint", AttributeElements349, 1 },
-        { "patternContentUnits", NamespaceId::Svg, NativeProperty::SvgPatternContentUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Paint", AttributeElements350, 1 },
-        { "patternTransform", NamespaceId::Svg, NativeProperty::SvgPatternTransform, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Paint", AttributeElements351, 1 },
+        { "gradientUnits", NamespaceId::Svg, NativeProperty::SvgGradientUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements354, 2 },
+        { "gradientTransform", NamespaceId::Svg, NativeProperty::SvgGradientTransform, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements355, 2 },
+        { "spreadMethod", NamespaceId::Svg, NativeProperty::SvgSpreadMethod, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements356, 2 },
+        { "stop-color", NamespaceId::Svg, NativeProperty::SvgStopColor, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements357, 1 },
+        { "stop-opacity", NamespaceId::Svg, NativeProperty::SvgStopOpacity, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Gradient", AttributeElements358, 1 },
+        { "patternUnits", NamespaceId::Svg, NativeProperty::SvgPatternUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Paint", AttributeElements359, 1 },
+        { "patternContentUnits", NamespaceId::Svg, NativeProperty::SvgPatternContentUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Paint", AttributeElements360, 1 },
+        { "patternTransform", NamespaceId::Svg, NativeProperty::SvgPatternTransform, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Paint", AttributeElements361, 1 },
         { "font-family", NamespaceId::Svg, NativeProperty::SvgFontFamily, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
         { "font-size", NamespaceId::Svg, NativeProperty::SvgFontSize, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
         { "font-weight", NamespaceId::Svg, NativeProperty::SvgFontWeight, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
@@ -2414,12 +2461,12 @@ namespace RoboHTMLCompiler::Generated
         { "text-anchor", NamespaceId::Svg, NativeProperty::SvgTextAnchor, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
         { "letter-spacing", NamespaceId::Svg, NativeProperty::SvgLetterSpacing, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
         { "word-spacing", NamespaceId::Svg, NativeProperty::SvgWordSpacing, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
-        { "textLength", NamespaceId::Svg, NativeProperty::SvgTextLength, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", AttributeElements360, 3 },
-        { "lengthAdjust", NamespaceId::Svg, NativeProperty::SvgTextLength, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", AttributeElements361, 3 },
+        { "textLength", NamespaceId::Svg, NativeProperty::SvgTextLength, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", AttributeElements370, 3 },
+        { "lengthAdjust", NamespaceId::Svg, NativeProperty::SvgTextLength, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", AttributeElements371, 3 },
         { "dominant-baseline", NamespaceId::Svg, NativeProperty::SvgDominantBaseline, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
         { "alignment-baseline", NamespaceId::Svg, NativeProperty::SvgDominantBaseline, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
         { "baseline-shift", NamespaceId::Svg, NativeProperty::SvgBaselineShift, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
-        { "startOffset", NamespaceId::Svg, NativeProperty::SvgStartOffset, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", AttributeElements365, 1 },
+        { "startOffset", NamespaceId::Svg, NativeProperty::SvgStartOffset, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", AttributeElements375, 1 },
         { "dx", NamespaceId::Svg, NativeProperty::SvgGeometryX, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
         { "dy", NamespaceId::Svg, NativeProperty::SvgGeometryY, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
         { "rotate", NamespaceId::Svg, NativeProperty::SvgAnimationRotation, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Typography", nullptr, 0 },
@@ -2430,33 +2477,33 @@ namespace RoboHTMLCompiler::Generated
         { "clip", NamespaceId::Svg, NativeProperty::SvgClipDefinition, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Clipping", nullptr, 0 },
         { "clip-path", NamespaceId::Svg, NativeProperty::SvgClipDefinition, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Clipping", nullptr, 0 },
         { "clip-rule", NamespaceId::Svg, NativeProperty::SvgClipRule, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Clipping", nullptr, 0 },
-        { "clipPathUnits", NamespaceId::Svg, NativeProperty::SvgClipPathUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Clipping", AttributeElements376, 1 },
+        { "clipPathUnits", NamespaceId::Svg, NativeProperty::SvgClipPathUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Clipping", AttributeElements386, 1 },
         { "mask", NamespaceId::Svg, NativeProperty::SvgMaskDefinition, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Masking", nullptr, 0 },
-        { "maskUnits", NamespaceId::Svg, NativeProperty::SvgMaskUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Masking", AttributeElements378, 1 },
-        { "maskContentUnits", NamespaceId::Svg, NativeProperty::SvgMaskContentUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Masking", AttributeElements379, 1 },
+        { "maskUnits", NamespaceId::Svg, NativeProperty::SvgMaskUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Masking", AttributeElements388, 1 },
+        { "maskContentUnits", NamespaceId::Svg, NativeProperty::SvgMaskContentUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Masking", AttributeElements389, 1 },
         { "filter", NamespaceId::Svg, NativeProperty::SvgFilterDefinition, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", nullptr, 0 },
-        { "filterUnits", NamespaceId::Svg, NativeProperty::SvgFilterUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements381, 1 },
-        { "primitiveUnits", NamespaceId::Svg, NativeProperty::SvgFilterUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements382, 1 },
+        { "filterUnits", NamespaceId::Svg, NativeProperty::SvgFilterUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements391, 1 },
+        { "primitiveUnits", NamespaceId::Svg, NativeProperty::SvgFilterUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements392, 1 },
         { "in", NamespaceId::Svg, NativeProperty::SvgFilterPrimitiveInput, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", nullptr, 0 },
         { "in2", NamespaceId::Svg, NativeProperty::SvgFilterPrimitiveInput, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", nullptr, 0 },
         { "result", NamespaceId::Svg, NativeProperty::SvgFilterPrimitiveResult, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", nullptr, 0 },
-        { "stdDeviation", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements386, 2 },
-        { "mode", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements387, 2 },
-        { "operator", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements388, 2 },
-        { "radius", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements389, 1 },
-        { "scale", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements390, 1 },
-        { "kernelMatrix", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements391, 1 },
-        { "values", NamespaceId::Svg, NativeProperty::SvgAnimationValues, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", AttributeElements392, 1 },
-        { "type", NamespaceId::Svg, NativeProperty::SvgAnimationType, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements393, 5 },
+        { "stdDeviation", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements396, 2 },
+        { "mode", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements397, 2 },
+        { "operator", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements398, 2 },
+        { "radius", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements399, 1 },
+        { "scale", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements400, 1 },
+        { "kernelMatrix", NamespaceId::Svg, NativeProperty::SvgFilterPrimitives, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements401, 1 },
+        { "values", NamespaceId::Svg, NativeProperty::SvgAnimationValues, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", AttributeElements402, 1 },
+        { "type", NamespaceId::Svg, NativeProperty::SvgAnimationType, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Filtering", AttributeElements403, 5 },
         { "marker-start", NamespaceId::Svg, NativeProperty::SvgMarkerStart, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", nullptr, 0 },
         { "marker-mid", NamespaceId::Svg, NativeProperty::SvgMarkerMiddle, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", nullptr, 0 },
         { "marker-end", NamespaceId::Svg, NativeProperty::SvgMarkerEnd, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", nullptr, 0 },
-        { "markerWidth", NamespaceId::Svg, NativeProperty::SvgMarkerWidth, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements397, 1 },
-        { "markerHeight", NamespaceId::Svg, NativeProperty::SvgMarkerHeight, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements398, 1 },
-        { "markerUnits", NamespaceId::Svg, NativeProperty::SvgMarkerUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements399, 1 },
-        { "orient", NamespaceId::Svg, NativeProperty::SvgMarkerOrientation, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements400, 1 },
-        { "refX", NamespaceId::Svg, NativeProperty::SvgGeometryX, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements401, 1 },
-        { "refY", NamespaceId::Svg, NativeProperty::SvgGeometryY, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements402, 1 },
+        { "markerWidth", NamespaceId::Svg, NativeProperty::SvgMarkerWidth, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements407, 1 },
+        { "markerHeight", NamespaceId::Svg, NativeProperty::SvgMarkerHeight, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements408, 1 },
+        { "markerUnits", NamespaceId::Svg, NativeProperty::SvgMarkerUnits, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements409, 1 },
+        { "orient", NamespaceId::Svg, NativeProperty::SvgMarkerOrientation, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements410, 1 },
+        { "refX", NamespaceId::Svg, NativeProperty::SvgGeometryX, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements411, 1 },
+        { "refY", NamespaceId::Svg, NativeProperty::SvgGeometryY, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Marker", AttributeElements412, 1 },
         { "attributeName", NamespaceId::Svg, NativeProperty::SvgAnimationAttributeName, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
         { "attributeType", NamespaceId::Svg, NativeProperty::SvgAnimationAttributeType, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
         { "from", NamespaceId::Svg, NativeProperty::SvgAnimationFrom, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
@@ -2467,8 +2514,8 @@ namespace RoboHTMLCompiler::Generated
         { "end", NamespaceId::Svg, NativeProperty::SvgAnimationDuration, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
         { "repeatCount", NamespaceId::Svg, NativeProperty::SvgAnimationRepeatCount, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
         { "repeatDur", NamespaceId::Svg, NativeProperty::SvgAnimationRepeatCount, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
-        { "fill", NamespaceId::Svg, NativeProperty::SvgAnimationFillMode, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", AttributeElements413, 4 },
-        { "path", NamespaceId::Svg, NativeProperty::SvgAnimationPath, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", AttributeElements414, 1 },
+        { "fill", NamespaceId::Svg, NativeProperty::SvgAnimationFillMode, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", AttributeElements423, 4 },
+        { "path", NamespaceId::Svg, NativeProperty::SvgAnimationPath, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", AttributeElements424, 1 },
         { "keyTimes", NamespaceId::Svg, NativeProperty::SvgAnimationKeyTimes, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
         { "keySplines", NamespaceId::Svg, NativeProperty::SvgAnimationKeySplines, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
         { "calcMode", NamespaceId::Svg, NativeProperty::SvgAnimationCalcMode, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
@@ -2476,7 +2523,7 @@ namespace RoboHTMLCompiler::Generated
         { "accumulate", NamespaceId::Svg, NativeProperty::SvgAnimationAccumulate, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
         { "restart", NamespaceId::Svg, NativeProperty::SvgAnimationRestart, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
         { "origin", NamespaceId::Svg, NativeProperty::SvgAnimationOrigin, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", nullptr, 0 },
-        { "keyPoints", NamespaceId::Svg, NativeProperty::SvgAnimationValues, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", AttributeElements422, 1 },
+        { "keyPoints", NamespaceId::Svg, NativeProperty::SvgAnimationValues, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Animation", AttributeElements432, 1 },
         { "id", NamespaceId::Svg, NativeProperty::IdentityId, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Metadata", nullptr, 0 },
         { "class", NamespaceId::Svg, NativeProperty::StyleReference, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Metadata", nullptr, 0 },
         { "role", NamespaceId::Svg, NativeProperty::AccessibilityRole, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Metadata", nullptr, 0 },
@@ -2486,9 +2533,9 @@ namespace RoboHTMLCompiler::Generated
         { "xml:space", NamespaceId::Svg, NativeProperty::SvgVisibility, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Metadata", nullptr, 0 },
         { "href", NamespaceId::Svg, NativeProperty::SvgReference, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "References", nullptr, 0 },
         { "xlink:href", NamespaceId::Svg, NativeProperty::SvgReference, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "References", nullptr, 0 },
-        { "target", NamespaceId::Svg, NativeProperty::NavigationTarget, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "References", AttributeElements432, 1 },
-        { "download", NamespaceId::Svg, NativeProperty::NavigationDownload, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "References", AttributeElements433, 1 },
-        { "rel", NamespaceId::Svg, NativeProperty::NavigationRelation, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "References", AttributeElements434, 1 },
+        { "target", NamespaceId::Svg, NativeProperty::NavigationTarget, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "References", AttributeElements442, 1 },
+        { "download", NamespaceId::Svg, NativeProperty::NavigationDownload, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "References", AttributeElements443, 1 },
+        { "rel", NamespaceId::Svg, NativeProperty::NavigationRelation, AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "References", AttributeElements444, 1 },
         { "lang", NamespaceId::Svg, NativeProperty::TextLanguage, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Metadata", nullptr, 0 },
         { "tabindex", NamespaceId::Svg, NativeProperty::InteractionTabIndex, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Metadata", nullptr, 0 },
         { "version", NamespaceId::Svg, NativeProperty::SvgVersion, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Metadata", nullptr, 0 },
@@ -2505,60 +2552,60 @@ namespace RoboHTMLCompiler::Generated
         { "color-rendering", NamespaceId::Svg, NativeProperty::SvgColorRendering, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Paint", nullptr, 0 },
         { "cursor", NamespaceId::Svg, NativeProperty::SvgCursor, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Visibility", nullptr, 0 },
         { "style", NamespaceId::Svg, NativeProperty::ForbiddenInlineStyle, AttributeFlagNamespaceDefault | AttributeFlagSvg | AttributeFlagForbidden | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "Metadata", nullptr, 0 },
-        { "display", NamespaceId::MathMl, NativeProperty::MathDisplay, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathDisplay", AttributeElements451, 1 },
+        { "display", NamespaceId::MathMl, NativeProperty::MathDisplay, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathDisplay", AttributeElements461, 1 },
         { "mathcolor", NamespaceId::MathMl, NativeProperty::MathColor, AttributeFlagNamespaceDefault | AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathColor", nullptr, 0 },
         { "mathbackground", NamespaceId::MathMl, NativeProperty::MathBackground, AttributeFlagNamespaceDefault | AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathBackground", nullptr, 0 },
         { "mathsize", NamespaceId::MathMl, NativeProperty::MathSize, AttributeFlagNamespaceDefault | AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSize", nullptr, 0 },
         { "displaystyle", NamespaceId::MathMl, NativeProperty::MathDisplayStyle, AttributeFlagNamespaceDefault | AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathStyle", nullptr, 0 },
-        { "scriptlevel", NamespaceId::MathMl, NativeProperty::MathScriptLevel, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathScriptLevel", AttributeElements456, 15 },
+        { "scriptlevel", NamespaceId::MathMl, NativeProperty::MathScriptLevel, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathScriptLevel", AttributeElements466, 15 },
         { "mathvariant", NamespaceId::MathMl, NativeProperty::MathVariant, AttributeFlagNamespaceDefault | AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathStyle", nullptr, 0 },
-        { "dir", NamespaceId::MathMl, NativeProperty::TextDirection, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathStyle", AttributeElements458, 1 },
+        { "dir", NamespaceId::MathMl, NativeProperty::TextDirection, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathStyle", AttributeElements468, 1 },
         { "href", NamespaceId::MathMl, NativeProperty::MathHref, AttributeFlagNamespaceDefault | AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathMetadata", nullptr, 0 },
-        { "linethickness", NamespaceId::MathMl, NativeProperty::MathLineThickness, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathFraction", AttributeElements460, 1 },
-        { "numalign", NamespaceId::MathMl, NativeProperty::MathNumalign, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathFraction", AttributeElements461, 1 },
-        { "denomalign", NamespaceId::MathMl, NativeProperty::MathDenomalign, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathFraction", AttributeElements462, 1 },
-        { "bevelled", NamespaceId::MathMl, NativeProperty::MathBevelled, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathFraction", AttributeElements463, 1 },
-        { "accent", NamespaceId::MathMl, NativeProperty::MathAccent, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements464, 3 },
-        { "accentunder", NamespaceId::MathMl, NativeProperty::MathAccentUnder, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements465, 3 },
-        { "stretchy", NamespaceId::MathMl, NativeProperty::MathStretchy, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements466, 1 },
-        { "symmetric", NamespaceId::MathMl, NativeProperty::MathSymmetric, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements467, 1 },
-        { "movablelimits", NamespaceId::MathMl, NativeProperty::MathMovableLimits, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements468, 4 },
-        { "form", NamespaceId::MathMl, NativeProperty::MathForm, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements469, 1 },
-        { "fence", NamespaceId::MathMl, NativeProperty::MathFence, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements470, 1 },
-        { "separator", NamespaceId::MathMl, NativeProperty::MathSeparator, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements471, 1 },
-        { "largeop", NamespaceId::MathMl, NativeProperty::MathLargeOperator, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements472, 1 },
-        { "lspace", NamespaceId::MathMl, NativeProperty::MathLeftSpace, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements473, 2 },
-        { "rspace", NamespaceId::MathMl, NativeProperty::MathRightSpace, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements474, 2 },
-        { "minsize", NamespaceId::MathMl, NativeProperty::MathMinSize, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements475, 1 },
-        { "maxsize", NamespaceId::MathMl, NativeProperty::MathMaxSize, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements476, 1 },
-        { "columnalign", NamespaceId::MathMl, NativeProperty::MathColumnAlign, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements477, 3 },
-        { "rowalign", NamespaceId::MathMl, NativeProperty::MathRowAlign, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements478, 3 },
-        { "columnspacing", NamespaceId::MathMl, NativeProperty::MathColumnSpacing, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements479, 1 },
-        { "rowspacing", NamespaceId::MathMl, NativeProperty::MathRowSpacing, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements480, 1 },
-        { "columnlines", NamespaceId::MathMl, NativeProperty::MathColumnLines, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements481, 1 },
-        { "rowlines", NamespaceId::MathMl, NativeProperty::MathRowLines, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements482, 1 },
-        { "frame", NamespaceId::MathMl, NativeProperty::MathTableFrame, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements483, 1 },
-        { "framespacing", NamespaceId::MathMl, NativeProperty::MathTableFrameSpacing, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements484, 1 },
-        { "equalrows", NamespaceId::MathMl, NativeProperty::MathTableEqualRows, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements485, 1 },
-        { "equalcolumns", NamespaceId::MathMl, NativeProperty::MathTableEqualColumns, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements486, 1 },
-        { "columnwidth", NamespaceId::MathMl, NativeProperty::MathTableColumnWidth, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements487, 1 },
-        { "rowspan", NamespaceId::MathMl, NativeProperty::MathRowSpan, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements488, 1 },
-        { "columnspan", NamespaceId::MathMl, NativeProperty::MathColumnSpan, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements489, 1 },
-        { "width", NamespaceId::MathMl, NativeProperty::MathWidth, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSize", AttributeElements490, 3 },
-        { "height", NamespaceId::MathMl, NativeProperty::MathHeight, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSize", AttributeElements491, 2 },
-        { "depth", NamespaceId::MathMl, NativeProperty::MathDepth, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSize", AttributeElements492, 2 },
-        { "voffset", NamespaceId::MathMl, NativeProperty::MathDepth, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSize", AttributeElements493, 1 },
-        { "notation", NamespaceId::MathMl, NativeProperty::MathNotation, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSemantics", AttributeElements494, 1 },
-        { "encoding", NamespaceId::MathMl, NativeProperty::MathEncoding, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSemantics", AttributeElements495, 2 },
-        { "definitionURL", NamespaceId::MathMl, NativeProperty::MathDefinitionUrl, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSemantics", AttributeElements496, 1 },
-        { "src", NamespaceId::MathMl, NativeProperty::ResourceSource, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSemantics", AttributeElements497, 1 },
-        { "actiontype", NamespaceId::MathMl, NativeProperty::MathActionType, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathAction", AttributeElements498, 1 },
-        { "selection", NamespaceId::MathMl, NativeProperty::MathActionSelection, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathAction", AttributeElements499, 1 },
-        { "open", NamespaceId::MathMl, NativeProperty::MathOpen, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements500, 1 },
-        { "close", NamespaceId::MathMl, NativeProperty::MathClose, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements501, 1 },
-        { "charalign", NamespaceId::MathMl, NativeProperty::MathCharAlign, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements502, 1 },
-        { "charspacing", NamespaceId::MathMl, NativeProperty::MathCharSpacing, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements503, 1 },
-        { "alttext", NamespaceId::MathMl, NativeProperty::MathAltText, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathAccessibility", AttributeElements504, 1 },
+        { "linethickness", NamespaceId::MathMl, NativeProperty::MathLineThickness, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathFraction", AttributeElements470, 1 },
+        { "numalign", NamespaceId::MathMl, NativeProperty::MathNumalign, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathFraction", AttributeElements471, 1 },
+        { "denomalign", NamespaceId::MathMl, NativeProperty::MathDenomalign, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathFraction", AttributeElements472, 1 },
+        { "bevelled", NamespaceId::MathMl, NativeProperty::MathBevelled, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathFraction", AttributeElements473, 1 },
+        { "accent", NamespaceId::MathMl, NativeProperty::MathAccent, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements474, 3 },
+        { "accentunder", NamespaceId::MathMl, NativeProperty::MathAccentUnder, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements475, 3 },
+        { "stretchy", NamespaceId::MathMl, NativeProperty::MathStretchy, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements476, 1 },
+        { "symmetric", NamespaceId::MathMl, NativeProperty::MathSymmetric, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements477, 1 },
+        { "movablelimits", NamespaceId::MathMl, NativeProperty::MathMovableLimits, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements478, 4 },
+        { "form", NamespaceId::MathMl, NativeProperty::MathForm, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements479, 1 },
+        { "fence", NamespaceId::MathMl, NativeProperty::MathFence, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements480, 1 },
+        { "separator", NamespaceId::MathMl, NativeProperty::MathSeparator, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements481, 1 },
+        { "largeop", NamespaceId::MathMl, NativeProperty::MathLargeOperator, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements482, 1 },
+        { "lspace", NamespaceId::MathMl, NativeProperty::MathLeftSpace, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements483, 2 },
+        { "rspace", NamespaceId::MathMl, NativeProperty::MathRightSpace, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements484, 2 },
+        { "minsize", NamespaceId::MathMl, NativeProperty::MathMinSize, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements485, 1 },
+        { "maxsize", NamespaceId::MathMl, NativeProperty::MathMaxSize, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements486, 1 },
+        { "columnalign", NamespaceId::MathMl, NativeProperty::MathColumnAlign, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements487, 3 },
+        { "rowalign", NamespaceId::MathMl, NativeProperty::MathRowAlign, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements488, 3 },
+        { "columnspacing", NamespaceId::MathMl, NativeProperty::MathColumnSpacing, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements489, 1 },
+        { "rowspacing", NamespaceId::MathMl, NativeProperty::MathRowSpacing, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements490, 1 },
+        { "columnlines", NamespaceId::MathMl, NativeProperty::MathColumnLines, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements491, 1 },
+        { "rowlines", NamespaceId::MathMl, NativeProperty::MathRowLines, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements492, 1 },
+        { "frame", NamespaceId::MathMl, NativeProperty::MathTableFrame, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements493, 1 },
+        { "framespacing", NamespaceId::MathMl, NativeProperty::MathTableFrameSpacing, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements494, 1 },
+        { "equalrows", NamespaceId::MathMl, NativeProperty::MathTableEqualRows, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements495, 1 },
+        { "equalcolumns", NamespaceId::MathMl, NativeProperty::MathTableEqualColumns, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements496, 1 },
+        { "columnwidth", NamespaceId::MathMl, NativeProperty::MathTableColumnWidth, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements497, 1 },
+        { "rowspan", NamespaceId::MathMl, NativeProperty::MathRowSpan, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements498, 1 },
+        { "columnspan", NamespaceId::MathMl, NativeProperty::MathColumnSpan, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements499, 1 },
+        { "width", NamespaceId::MathMl, NativeProperty::MathWidth, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSize", AttributeElements500, 3 },
+        { "height", NamespaceId::MathMl, NativeProperty::MathHeight, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSize", AttributeElements501, 2 },
+        { "depth", NamespaceId::MathMl, NativeProperty::MathDepth, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSize", AttributeElements502, 2 },
+        { "voffset", NamespaceId::MathMl, NativeProperty::MathDepth, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSize", AttributeElements503, 1 },
+        { "notation", NamespaceId::MathMl, NativeProperty::MathNotation, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSemantics", AttributeElements504, 1 },
+        { "encoding", NamespaceId::MathMl, NativeProperty::MathEncoding, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSemantics", AttributeElements505, 2 },
+        { "definitionURL", NamespaceId::MathMl, NativeProperty::MathDefinitionUrl, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSemantics", AttributeElements506, 1 },
+        { "src", NamespaceId::MathMl, NativeProperty::ResourceSource, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathSemantics", AttributeElements507, 1 },
+        { "actiontype", NamespaceId::MathMl, NativeProperty::MathActionType, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathAction", AttributeElements508, 1 },
+        { "selection", NamespaceId::MathMl, NativeProperty::MathActionSelection, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathAction", AttributeElements509, 1 },
+        { "open", NamespaceId::MathMl, NativeProperty::MathOpen, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements510, 1 },
+        { "close", NamespaceId::MathMl, NativeProperty::MathClose, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathOperator", AttributeElements511, 1 },
+        { "charalign", NamespaceId::MathMl, NativeProperty::MathCharAlign, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements512, 1 },
+        { "charspacing", NamespaceId::MathMl, NativeProperty::MathCharSpacing, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathTable", AttributeElements513, 1 },
+        { "alttext", NamespaceId::MathMl, NativeProperty::MathAltText, AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathAccessibility", AttributeElements514, 1 },
         { "id", NamespaceId::MathMl, NativeProperty::IdentityId, AttributeFlagNamespaceDefault | AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathIdentity", nullptr, 0 },
         { "class", NamespaceId::MathMl, NativeProperty::StyleReference, AttributeFlagNamespaceDefault | AttributeFlagMathMl | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathIdentity", nullptr, 0 },
         { "style", NamespaceId::MathMl, NativeProperty::ForbiddenInlineStyle, AttributeFlagNamespaceDefault | AttributeFlagMathMl | AttributeFlagForbidden | AttributeFlagCompileTime | AttributeFlagBrowserPreserved, "String", "MathIdentity", nullptr, 0 },
@@ -2619,7 +2666,7 @@ namespace RoboHTMLCompiler::Generated
         { "aria-valuetext", NamespaceId::Html, NativeProperty::AccessibilityValueText, AttributeFlagNamespaceDefault | AttributeFlagAria | AttributeFlagCompileTime | AttributeFlagRuntimeMutable | AttributeFlagBrowserPreserved, "String", "ARIA", nullptr, 0 },
     };
 
-    const std::uint32_t AttributeCount = 563;
+    const std::uint32_t AttributeCount = 573;
 
     const InputTypeRecord InputTypeTable[] = {
         { "text", ElementKind::Input, AttributeFlagNone },

@@ -543,3 +543,180 @@ ROBO_TEST(Paint, LayoutChangesRepaintTheWholeWindow)
     ROBO_CHECK(window.renderer.Metrics().layoutRan);
     ROBO_CHECK(window.renderer.Metrics().fullRepaint);
 }
+
+// ---------------------------------------------------------------------------
+// The out-of-flow model: `position` and the four offsets.
+//
+// `position: relative` moves the box and keeps its space; `absolute` and
+// `fixed` take the box out of the flow entirely and place it against a
+// containing block. These tests pin the two properties CSS states for each:
+// where the box ends up, and whether the page still reserves room for it.
+// ---------------------------------------------------------------------------
+
+/// The border box of an element in document coordinates.
+static Rect BoxOf(const LayoutResult& layout, ElementIndex index)
+{
+    const ElementLayout* box = layout.Element(index);
+    return box != nullptr ? box->border : Rect{};
+}
+
+ROBO_TEST(Layout, RelativePositioningMovesTheBoxAndKeepsItsSpace)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"col\"><div id=\"a\">A</div><div id=\"b\">B</div><div id=\"c\">C</div></div>",
+        application,
+        { { "probe.css",
+            ".col { width: 200px; }\n"
+            "div { height: 40px; }\n"
+            "#b { position: relative; top: 10px; left: 25px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 400.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex first = FindElementById(document, "a");
+    const ElementIndex second = FindElementById(document, "b");
+    const ElementIndex third = FindElementById(document, "c");
+    ROBO_CHECK(first != NoElement && second != NoElement && third != NoElement);
+
+    const Rect firstBox = BoxOf(window.renderer.Layout().Result(), first);
+    const Rect secondBox = BoxOf(window.renderer.Layout().Result(), second);
+    const Rect thirdBox = BoxOf(window.renderer.Layout().Result(), third);
+
+    // The relative box is shifted by its offsets...
+    ROBO_CHECK(secondBox.x > firstBox.x + 20.0f);
+    ROBO_CHECK(secondBox.y > firstBox.Bottom() + 9.0f);
+
+    // ...and its space is still reserved, so the next sibling has not moved.
+    ROBO_CHECK(thirdBox.y > firstBox.Bottom() + 30.0f);
+    ROBO_CHECK(thirdBox.y < firstBox.Bottom() + 50.0f);
+    ROBO_CHECK(thirdBox.x < secondBox.x);
+}
+
+ROBO_TEST(Layout, AbsolutePositioningResolvesAgainstTheNearestPositionedAncestor)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"outer\"><div id=\"anchor\"><div id=\"abs\">X</div></div></div>",
+        application,
+        { { "probe.css",
+            "#outer { width: 400px; padding: 20px; }\n"
+            "#anchor { position: relative; top: 30px; left: 40px; width: 200px; height: 100px; }\n"
+            "#abs { position: absolute; top: 15px; left: 12px; width: 50px; height: 20px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 600.0f, 400.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex outer = FindElementById(document, "outer");
+    const ElementIndex anchor = FindElementById(document, "anchor");
+    const ElementIndex abs = FindElementById(document, "abs");
+    ROBO_CHECK(outer != NoElement && anchor != NoElement && abs != NoElement);
+
+    const Rect outerBox = BoxOf(window.renderer.Layout().Result(), outer);
+    const Rect anchorBox = BoxOf(window.renderer.Layout().Result(), anchor);
+    const Rect absBox = BoxOf(window.renderer.Layout().Result(), abs);
+
+    // The anchor is shifted by its own relative offsets.
+    ROBO_CHECK(anchorBox.y > outerBox.y + 25.0f);
+    ROBO_CHECK(anchorBox.x > outerBox.x + 35.0f);
+
+    // The absolute box lands at the anchor's padding box plus its offsets. The
+    // anchor has no padding, so that box is its content box.
+    ROBO_CHECK(absBox.x > anchorBox.x + 11.0f && absBox.x < anchorBox.x + 13.0f);
+    ROBO_CHECK(absBox.y > anchorBox.y + 14.0f && absBox.y < anchorBox.y + 16.0f);
+    ROBO_CHECK(absBox.width > 49.0f && absBox.width < 51.0f);
+}
+
+ROBO_TEST(Layout, OutOfFlowBoxesTakeNoSpaceInTheFlow)
+{
+    std::string error;
+
+    // Two documents that differ only by an absolutely positioned box between the
+    // two runs. The following block must land in the same place either way: an
+    // out-of-flow box reserves nothing.
+    const std::string style = "#one, #two, #one2, #two2 { height: 30px; }\n"
+                              "#floaty { position: absolute; top: 0px; left: 0px; width: 120px; height: 90px; }\n";
+
+    RoboTools::CompiledApplication withBox;
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"one\">One</div><div id=\"floaty\">F</div><div id=\"two\">Two</div>", withBox,
+        { { "probe.css", style } }, error));
+
+    RoboTools::CompiledApplication withoutBox;
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"one2\">One</div><div id=\"two2\">Two</div>", withoutBox,
+        { { "probe.css", style } }, error));
+
+    TestRenderer a(withBox.Document(), 500.0f, 300.0f);
+    TestRenderer b(withoutBox.Document(), 500.0f, 300.0f);
+    ROBO_CHECK(a.Frame() && b.Frame());
+
+    const ElementIndex followingWith = FindElementById(withBox.Document(), "two");
+    const ElementIndex followingWithout = FindElementById(withoutBox.Document(), "two2");
+    ROBO_CHECK(followingWith != NoElement && followingWithout != NoElement);
+
+    const Rect followingWithBox = BoxOf(a.renderer.Layout().Result(), followingWith);
+    const Rect followingWithoutBox = BoxOf(b.renderer.Layout().Result(), followingWithout);
+
+    ROBO_CHECK_EQ(static_cast<int>(followingWithBox.y), static_cast<int>(followingWithoutBox.y));
+
+    // The box itself is still laid out, against the initial containing block.
+    const ElementIndex floaty = FindElementById(withBox.Document(), "floaty");
+    ROBO_CHECK(floaty != NoElement);
+    ROBO_CHECK(!BoxOf(a.renderer.Layout().Result(), floaty).IsEmpty());
+}
+
+ROBO_TEST(Layout, FixedPositioningPinsToTheViewportAndIgnoresScroll)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"tall\">tall</div><div id=\"pin\">P</div>",
+        application,
+        { { "probe.css",
+            "#tall { height: 2000px; }\n"
+            "#pin { position: fixed; right: 12px; bottom: 8px; width: 60px; height: 24px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 500.0f, 400.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex pin = FindElementById(document, "pin");
+    ROBO_CHECK(pin != NoElement);
+
+    // `right: 12px; width: 60px` against a 500-unit viewport puts the right edge
+    // at 488, and `bottom: 8px; height: 24px` against 400 puts the bottom at 392.
+    const Rect before = BoxOf(window.renderer.Layout().Result(), pin);
+    ROBO_CHECK(before.Right() > 487.0f && before.Right() < 489.0f);
+    ROBO_CHECK(before.Bottom() > 391.0f && before.Bottom() < 393.0f);
+
+    // Hit testing the element agrees with where it was placed.
+    Rect bounds{};
+    ROBO_CHECK(window.renderer.Hits().ElementBounds(pin, bounds));
+    ROBO_CHECK_EQ(static_cast<int>(bounds.y), static_cast<int>(before.y));
+
+    // A scroll is a paint-and-hit-test translation, and a fixed box is pinned to
+    // the viewport, so neither its geometry nor its bounds may move.
+    window.renderer.State().SetScroll(0.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const Rect after = BoxOf(window.renderer.Layout().Result(), pin);
+    ROBO_CHECK_EQ(static_cast<int>(after.y), static_cast<int>(before.y));
+
+    Rect scrolledBounds{};
+    ROBO_CHECK(window.renderer.Hits().ElementBounds(pin, scrolledBounds));
+    ROBO_CHECK_EQ(static_cast<int>(scrolledBounds.y), static_cast<int>(before.y));
+}

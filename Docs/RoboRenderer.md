@@ -168,6 +168,18 @@ When CSS is added later, the compiler publishes resolved values into
 read final values. That is the whole reason the style table exists in the
 contract before anything fills it.
 
+**A run of text is set by the element it flowed out of.** Mixed content lowers
+each run into a child of its own (`ElementNature::textRun`, carried to the
+runtime as `ElementFlagTextRun`) so the inline sequence is explicit. A run has no
+element for a selector to match and no box of its own, so `StyleTableProvider`
+gives it the *inherited* text properties of its containing element's resolved
+style — the font, the colour, the spacing, the alignment, the direction and the
+decorations — and none of that element's display, edges, background or borders.
+That is what keeps `text <code>x</code> more` one paragraph's worth of type
+instead of three sizes, and what colours the words on either side of a nested
+element the way the element around them is coloured. `InheritedTextFlags` is the
+`inherited` set of the CSS property registry expressed as native flags.
+
 The same header exposes the questions layout asks about a category —
 `IsBlockCategory`, `IsInlineCategory`, `IsReplacedCategory`, `IsTextCategory`,
 `CategoryIntrinsicSize` — so the layout engine branches on native categories, not
@@ -224,6 +236,40 @@ The behaviours worth naming, because each one is a decision:
 * **`<details>`.** A closed disclosure collapses everything except its
   `<summary>`; opening it changes layout, and the runtime treats that as exactly
   that — a layout invalidation, not a special case in the painter.
+* **The out-of-flow model.** `position` decides which formatting context a box
+  belongs to, and the four offsets (`top`, `right`, `bottom`, `left`, or their
+  `inset` shorthand) say where it sits inside that context. `relative` and
+  `sticky` move the box *and everything inside it* without moving anything else:
+  the space it occupied stays where it was. `absolute` and `fixed` take the box
+  out of the flow entirely — a sibling flows as if it were not there — and place
+  it against a containing block: the padding box of the nearest positioned
+  ancestor, or the viewport when there is none. A missing offset leaves the box
+  at its static position on that axis, which is not the same as an offset of
+  zero, so `auto` is a value the engine reads rather than a default it skips.
+
+  All of this happens in `ApplyPositioning()`, *after* the flow and *before* the
+  extent is measured, for one reason: an out-of-flow box resolves against the
+  **finished** geometry of its containing block, which does not exist while its
+  ancestors are still being arranged. Elements are visited in document order so
+  an ancestor is moved before a descendant asks where its containing block
+  ended up. Moving a box is always a translation, applied to its own rectangles,
+  to the line fragments it owns and to every descendant.
+
+  `fixed` is pinned to the viewport, which is a rule that has to hold in three
+  places at once: layout places it against the viewport rect, the paint
+  traversal paints it with an origin of zero so no ancestor's scroll applies,
+  and hit testing and `ElementBounds` follow the same rule — what is seen on top
+  is what is clicked.
+
+  `sticky` is the one kind that is only partly modelled: its offsets are applied
+  like `relative`'s, but the clamp that holds a sticky box inside the scrollport
+  is a function of the scroll offset, and this runtime treats a scroll as a
+  paint-time translation that never invalidates layout. Getting it exactly right
+  therefore belongs in the same place the scroll translation lives, not in the
+  layout pass.
+* **z-index.** Compiled as an integer or `auto`, carried on the native style with
+  a presence flag so `auto` ("no stacking level of its own") is told apart from
+  `0`. `auto` is the initial value and writes nothing.
 * **The root fills the viewport** vertically, so a short document paints a page
   rather than a stripe.
 

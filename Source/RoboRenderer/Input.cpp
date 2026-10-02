@@ -172,6 +172,15 @@ namespace RoboRenderer
             return;
         }
 
+        // A fixed box is positioned against the viewport: its geometry is
+        // already in viewport coordinates, so no ancestor's scroll applies to
+        // it. That is the same rule the paint traversal follows, which keeps
+        // bounds, hit testing and what is drawn in agreement.
+        if (layout.StyleOf(index).position == PositionKind::Fixed)
+        {
+            return;
+        }
+
         const CompiledElement* element = ElementAt(document, index);
         if (element == nullptr || element->parent == NoElement)
         {
@@ -262,15 +271,27 @@ namespace RoboRenderer
 
         for (ElementIndex child = element->firstChild; child != NoElement;)
         {
+            const CompiledElement* childElement = ElementAt(document, child);
+
+            // A fixed box is positioned against the viewport, so it is hit
+            // tested at its document coordinates with no ancestor scroll or clip
+            // applied: the same rule painting uses, so what is seen on top is
+            // what is clicked.
+            const bool fixed = childElement != nullptr &&
+                               layout.StyleOf(child).position == PositionKind::Fixed;
+
+            const RenderTargetInfo& target = layout.Viewport();
+
             const ElementIndex hit =
-                HitTestRecursive(child, pointX, pointY, childOriginX, childOriginY, childClip);
+                fixed ? HitTestRecursive(child, pointX, pointY, 0.0f, 0.0f,
+                                         Rect{ 0.0f, 0.0f, target.logicalWidth, target.logicalHeight })
+                      : HitTestRecursive(child, pointX, pointY, childOriginX, childOriginY, childClip);
 
             if (hit != NoElement)
             {
                 best = hit;
             }
 
-            const CompiledElement* childElement = ElementAt(document, child);
             child = childElement != nullptr ? childElement->nextSibling : NoElement;
         }
 

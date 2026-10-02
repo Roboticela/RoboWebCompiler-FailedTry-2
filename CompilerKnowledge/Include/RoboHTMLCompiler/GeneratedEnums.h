@@ -541,7 +541,15 @@ namespace RoboHTMLCompiler
         MathCharAlign = 392,
         MathCharSpacing = 393,
         MathVAlign = 394,
-        CustomMetadata = 395
+        CustomMetadata = 395,
+        MetadataPart = 396,
+        MetadataExportParts = 397,
+        MetadataAnchor = 398,
+        MetadataElementTiming = 399,
+        MetadataVirtualKeyboardPolicy = 400,
+        InputCapture = 401,
+        MetadataAutoLocate = 402,
+        MetadataWatch = 403
     };
 
     /// Stable diagnostic name for a native element kind.

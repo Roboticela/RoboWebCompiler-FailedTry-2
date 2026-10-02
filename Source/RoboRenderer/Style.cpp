@@ -302,6 +302,125 @@ namespace RoboRenderer
         }
     }
 
+    /// The text properties a run of text takes from the element it flows inside.
+    ///
+    /// This is the `inherited` set of the property registry expressed as native
+    /// flags: the font, the colour, the spacing, the alignment, the decorations
+    /// and the writing direction. Nothing that describes a box is here, because
+    /// a box's own edges, background and borders are never inherited - a
+    /// sentence inside a bordered card is set in the card's type, not in its
+    /// padding.
+    constexpr std::uint64_t InheritedTextFlags =
+        StyleFlagForeground | StyleFlagFontFamily | StyleFlagFontSize | StyleFlagFontWeight |
+        StyleFlagFontStyle | StyleFlagLineHeight | StyleFlagLetterSpacing | StyleFlagWordSpacing |
+        StyleFlagTextAlign | StyleFlagTextAlignLast | StyleFlagTextJustify | StyleFlagTextIndent |
+        StyleFlagTextTransform | StyleFlagWhiteSpace | StyleFlagWordBreak | StyleFlagOverflowWrap |
+        StyleFlagLineBreak | StyleFlagHyphens | StyleFlagTabSize | StyleFlagFontKerning |
+        StyleFlagFontFeatures | StyleFlagDirection | StyleFlagWritingMode | StyleFlagTextOrientation |
+        StyleFlagTextDecoration | StyleFlagTextDecorationColor | StyleFlagTextDecorationStyle |
+        StyleFlagTextDecorationThickness | StyleFlagTextUnderlineOffset;
+
+    /// Carries `source`'s decoration onto `target` when `target` states none.
+    ///
+    /// The specification does not inherit `text-decoration`: a decoration
+    /// propagates to the descendants painted inside it. Layout draws a decoration
+    /// per run, so the words either side of a nested element and the nested
+    /// element's own text all have to report the line - otherwise a phrase inside
+    /// an underlined paragraph is the one phrase without a line under it.
+    void PropagateTextDecoration(CompiledStyle& target, const CompiledStyle& source)
+    {
+        if (!IsSpecified(source.specified, StyleFlagTextDecoration) ||
+            IsSpecified(target.specified, StyleFlagTextDecoration))
+        {
+            return;
+        }
+
+        target.textDecoration = source.textDecoration;
+        target.specified |= StyleFlagTextDecoration;
+
+        // What describes the decoration travels with it, and only where the
+        // element painted inside has not described its own.
+        if (IsSpecified(source.specified, StyleFlagTextDecorationColor) &&
+            !IsSpecified(target.specified, StyleFlagTextDecorationColor))
+        {
+            target.textDecorationColor = source.textDecorationColor;
+            target.specified |= StyleFlagTextDecorationColor;
+        }
+
+        if (IsSpecified(source.specified, StyleFlagTextDecorationStyle) &&
+            !IsSpecified(target.specified, StyleFlagTextDecorationStyle))
+        {
+            target.textDecorationStyle = source.textDecorationStyle;
+            target.specified |= StyleFlagTextDecorationStyle;
+        }
+
+        if (IsSpecified(source.specified, StyleFlagTextDecorationThickness) &&
+            !IsSpecified(target.specified, StyleFlagTextDecorationThickness))
+        {
+            target.textDecorationThicknessKind = source.textDecorationThicknessKind;
+            target.textDecorationThickness = source.textDecorationThickness;
+            target.specified |= StyleFlagTextDecorationThickness;
+        }
+
+        if (IsSpecified(source.specified, StyleFlagTextUnderlineOffset) &&
+            !IsSpecified(target.specified, StyleFlagTextUnderlineOffset))
+        {
+            target.textUnderlineOffsetKind = source.textUnderlineOffsetKind;
+            target.textUnderlineOffset = source.textUnderlineOffset;
+            target.specified |= StyleFlagTextUnderlineOffset;
+        }
+    }
+
+    /// Copies the text properties of `source` onto `target`, leaving the target's
+    /// own box - its display, edges, background and borders - alone.
+    ///
+    /// The specification does not inherit the decorations; they propagate to a
+    /// descendant's painting instead. Here a run is the only thing that draws its
+    /// own text, so it carries the decoration of the element it sits in, which is
+    /// the underline a reader sees under a word inside a decorated paragraph.
+    void InheritTextProperties(CompiledStyle& target, const CompiledStyle& source)
+    {
+        target.foreground = source.foreground;
+        target.hasForeground = source.hasForeground;
+        target.fontFamily = source.fontFamily;
+        target.fontSize = source.fontSize;
+        target.fontWeight = source.fontWeight;
+        target.fontStyle = source.fontStyle;
+        target.lineHeight = source.lineHeight;
+        target.letterSpacing = source.letterSpacing;
+        target.wordSpacing = source.wordSpacing;
+        target.textAlign = source.textAlign;
+        target.textAlignLast = source.textAlignLast;
+        target.hasTextAlignLast = source.hasTextAlignLast;
+        target.textJustify = source.textJustify;
+        target.textIndent = source.textIndent;
+        target.textTransform = source.textTransform;
+        target.whiteSpace = source.whiteSpace;
+        target.wordBreak = source.wordBreak;
+        target.overflowWrap = source.overflowWrap;
+        target.lineBreak = source.lineBreak;
+        target.hyphens = source.hyphens;
+        target.tabSize = source.tabSize;
+        target.tabSizeLength = source.tabSizeLength;
+        target.fontKerning = source.fontKerning;
+        target.fontFeatures = source.fontFeatures;
+        target.direction = source.direction;
+        target.writingMode = source.writingMode;
+        target.textOrientation = source.textOrientation;
+        target.textDecoration = source.textDecoration;
+        target.textDecorationColor = source.textDecorationColor;
+        target.textDecorationStyle = source.textDecorationStyle;
+        target.textDecorationThicknessKind = source.textDecorationThicknessKind;
+        target.textDecorationThickness = source.textDecorationThickness;
+        target.textUnderlineOffsetKind = source.textUnderlineOffsetKind;
+        target.textUnderlineOffset = source.textUnderlineOffset;
+
+        // The properties just carried in are decided values now, which is what
+        // the mask says: nothing downstream reads a field the element itself
+        // never set.
+        target.specified |= InheritedTextFlags;
+    }
+
     DefaultStyleProvider::DefaultStyleProvider()
     {
         for (CompiledStyle& style : categoryStyles)
@@ -833,6 +952,36 @@ namespace RoboRenderer
         {
             target.display = authored.display;
         }
+
+        // The out-of-flow model. Each offset is copied only when its own flag is
+        // set, so an element that declares `position` and one offset keeps the
+        // default `auto` on the other three, which is what puts it at its static
+        // position on those axes.
+        if (IsSpecified(specified, StyleFlagPosition))
+        {
+            target.position = authored.position;
+        }
+        if (IsSpecified(specified, StyleFlagTop))
+        {
+            target.insetTop = authored.insetTop;
+        }
+        if (IsSpecified(specified, StyleFlagRight))
+        {
+            target.insetRight = authored.insetRight;
+        }
+        if (IsSpecified(specified, StyleFlagBottom))
+        {
+            target.insetBottom = authored.insetBottom;
+        }
+        if (IsSpecified(specified, StyleFlagLeft))
+        {
+            target.insetLeft = authored.insetLeft;
+        }
+        if (IsSpecified(specified, StyleFlagZIndex))
+        {
+            target.zIndex = authored.zIndex;
+            target.hasZIndex = authored.hasZIndex;
+        }
         if (IsSpecified(specified, StyleFlagOverflowX))
         {
             target.overflowX = authored.overflowX;
@@ -870,8 +1019,19 @@ namespace RoboRenderer
                                                      RenderCategory category)
     {
         const CompiledStyle* authored = AuthoredStyleFor(document, index);
+        const CompiledElement* element = ElementAt(document, index);
 
-        if (authored == nullptr)
+        // A run of text is set by the element it flowed out of. It has no element
+        // of its own for a selector to match and no box of its own either, so it
+        // takes the text properties of that element's resolved style: `text
+        // <span>more</span>` is one paragraph's worth of type rather than two
+        // sizes and, in a link, the words around the bold one are the link's
+        // colour rather than the document's.
+        const bool inheritsFromContainer =
+            element != nullptr && element->HasFlag(ElementFlagTextRun) &&
+            element->parent != NoElement && ElementAt(document, element->parent) != nullptr;
+
+        if (authored == nullptr && !inheritsFromContainer)
         {
             return defaults.StyleFor(document, index, category);
         }
@@ -885,7 +1045,35 @@ namespace RoboRenderer
         if (mergedValid[index] == 0)
         {
             CompiledStyle composed = defaults.StyleFor(document, index, category);
-            ApplyAuthored(composed, *authored);
+
+            if (inheritsFromContainer)
+            {
+                const CompiledElement* container = ElementAt(document, element->parent);
+                InheritTextProperties(composed, StyleFor(document, element->parent,
+                                                          CategoryFor(container->kind)));
+            }
+            else
+            {
+                if (authored != nullptr)
+                {
+                    ApplyAuthored(composed, *authored);
+                }
+
+                // A decoration reaches the elements painted inside the one that
+                // states it, which covers a nested element's own text the way
+                // the runs around it are already covered.
+                const CompiledElement* container =
+                    element != nullptr && element->parent != NoElement
+                        ? ElementAt(document, element->parent)
+                        : nullptr;
+
+                if (container != nullptr)
+                {
+                    PropagateTextDecoration(composed, StyleFor(document, element->parent,
+                                                              CategoryFor(container->kind)));
+                }
+            }
+
             merged[index] = composed;
             mergedValid[index] = 1;
             ++authoredElementCount;

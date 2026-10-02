@@ -158,6 +158,19 @@ namespace RoboCSSCompiler
             { Id::PaddingBottom, "padding-bottom", Cat::BoxModel, false, "0", Grammar::LengthPercentage, nullptr, true, true, false, true, true, "css-box-3" },
             { Id::PaddingLeft, "padding-left", Cat::BoxModel, false, "0", Grammar::LengthPercentage, nullptr, true, true, false, true, true, "css-box-3" },
 
+            // The out-of-flow model. `position` and its four offsets are layout
+            // properties: moving a box moves what it contains, and an offset
+            // change never repaints the page, so only `position` is a paint
+            // property too (a static box paints in flow order while an
+            // out-of-flow one paints by stacking order).
+            { Id::Position, "position", Cat::Position, false, "static", Grammar::Keyword,
+              "static relative absolute fixed sticky", true, true, false, true, true, "css-position-3" },
+            { Id::Top, "top", Cat::Position, false, "auto", Grammar::LengthPercentageOrAuto, nullptr, true, false, false, true, true, "css-position-3" },
+            { Id::Right, "right", Cat::Position, false, "auto", Grammar::LengthPercentageOrAuto, nullptr, true, false, false, true, true, "css-position-3" },
+            { Id::Bottom, "bottom", Cat::Position, false, "auto", Grammar::LengthPercentageOrAuto, nullptr, true, false, false, true, true, "css-position-3" },
+            { Id::Left, "left", Cat::Position, false, "auto", Grammar::LengthPercentageOrAuto, nullptr, true, false, false, true, true, "css-position-3" },
+            { Id::ZIndex, "z-index", Cat::Position, false, "auto", Grammar::ZIndex, nullptr, false, true, false, true, true, "css2" },
+
             { Id::BorderTopWidth, "border-top-width", Cat::Border, false, "medium", Grammar::BorderWidth, nullptr, true, true, false, true, true, "css-backgrounds-3" },
             { Id::BorderRightWidth, "border-right-width", Cat::Border, false, "medium", Grammar::BorderWidth, nullptr, true, true, false, true, true, "css-backgrounds-3" },
             { Id::BorderBottomWidth, "border-bottom-width", Cat::Border, false, "medium", Grammar::BorderWidth, nullptr, true, true, false, true, true, "css-backgrounds-3" },
@@ -336,6 +349,12 @@ namespace RoboCSSCompiler
                                "css-backgrounds-3" });
         shorthands.push_back({ "border-left", Cat::Border, single(Id::BorderLeftWidth), "border-side", true,
                                "css-backgrounds-3" });
+        // `inset` is the four offsets as one box shorthand, exactly like `margin`
+        // is the four margins: the same 1-to-4 value distribution, because an
+        // offset and a margin are the same kind of value.
+        shorthands.push_back({ "inset", Cat::Position,
+                               box(Id::Top, Id::Right, Id::Bottom, Id::Left), "box", true,
+                               "css-position-3" });
         shorthands.push_back({ "overflow", Cat::Overflow, pair(Id::OverflowX, Id::OverflowY), "pair", true,
                                "css-overflow-3" });
         shorthands.push_back({ "background", Cat::Background, single(Id::BackgroundColor), "background", true,

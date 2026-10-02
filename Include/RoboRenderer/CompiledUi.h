@@ -184,6 +184,40 @@ namespace RoboRenderer
         Scroll = 2
     };
 
+    /// `position`. Which formatting context the box belongs to, and therefore
+    /// whether it is laid out in flow or out of it.
+    enum class PositionKind : std::uint8_t
+    {
+        /// In flow, at its normal position. The initial value.
+        Static = 0,
+        /// In flow, then shifted by the four offsets. The shift never affects
+        /// the position of anything else.
+        Relative = 1,
+        /// Out of flow, and positioned against the nearest positioned ancestor
+        /// rather than the element's normal position.
+        Absolute = 2,
+        /// Out of flow, and positioned against the viewport. A scroll never
+        /// moves a fixed box.
+        Fixed = 3,
+        /// In flow like `relative`, but held inside the scrollport once its
+        /// scroll position would carry it out.
+        Sticky = 4
+    };
+
+    /// True for the kinds that take their box out of the normal flow: their
+    /// space is not reserved for them and their siblings flow as if they were
+    /// absent.
+    inline bool IsOutOfFlow(PositionKind kind)
+    {
+        return kind == PositionKind::Absolute || kind == PositionKind::Fixed;
+    }
+
+    /// True for the kinds the four offsets move.
+    inline bool IsPositioned(PositionKind kind)
+    {
+        return kind != PositionKind::Static;
+    }
+
     enum class TextAlignKind : std::uint8_t
     {
         Start = 0,
@@ -478,6 +512,19 @@ namespace RoboRenderer
         StyleFlagWritingMode = 1ull << 49,
         StyleFlagTextOrientation = 1ull << 50,
 
+        // The out-of-flow model. `position` decides whether the other five are
+        // read at all: a static box ignores its offsets and paints in flow
+        // order, so an unstyled document never pays for them.
+        StyleFlagPosition = 1ull << 51,
+        StyleFlagTop = 1ull << 52,
+        StyleFlagRight = 1ull << 53,
+        StyleFlagBottom = 1ull << 54,
+        StyleFlagLeft = 1ull << 55,
+        StyleFlagZIndex = 1ull << 56,
+
+        /// Every inset, for an `inset` shorthand that set all four.
+        StyleFlagInset = StyleFlagTop | StyleFlagRight | StyleFlagBottom | StyleFlagLeft,
+
         /// Every margin edge, for a shorthand that set all four.
         StyleFlagMargin = StyleFlagMarginTop | StyleFlagMarginRight | StyleFlagMarginBottom | StyleFlagMarginLeft,
         /// Every padding edge.
@@ -570,6 +617,24 @@ namespace RoboRenderer
         /// strings. 0 means "the defaults", which is what an unstyled element
         /// needs. Parsed by the shaper rather than stored typed.
         StringIndex fontFeatures = 0;
+
+        /// `position`. `Static` is the initial value, so an unstyled element is
+        /// laid out in flow exactly as it was before the property existed.
+        PositionKind position = PositionKind::Static;
+
+        /// The four offsets, unresolved like every other declared length: a
+        /// percentage is a fraction of the containing block, which is a runtime
+        /// fact. `Auto` means "the element's static position on that axis",
+        /// which is what an absolutely positioned box falls back to.
+        LayoutValue insetTop;
+        LayoutValue insetRight;
+        LayoutValue insetBottom;
+        LayoutValue insetLeft;
+
+        /// `z-index`. Only read when `hasZIndex` is set: `auto` is not zero, it
+        /// is "no stacking level of its own", so the two have to be told apart.
+        std::int32_t zIndex = 0;
+        std::uint8_t hasZIndex = 0;
 
         /// `font-kerning`. `Auto` leaves the font's kerning on, which is the
         /// shaper's own default.

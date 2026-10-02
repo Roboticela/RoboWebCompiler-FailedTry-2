@@ -27,6 +27,13 @@ namespace RoboHTMLCompiler
 
         using RoboRenderer::CompiledStyle;
         using RoboRenderer::DisplayKind;
+        using RoboRenderer::PositionKind;
+        using RoboRenderer::StyleFlagBottom;
+        using RoboRenderer::StyleFlagLeft;
+        using RoboRenderer::StyleFlagPosition;
+        using RoboRenderer::StyleFlagRight;
+        using RoboRenderer::StyleFlagTop;
+        using RoboRenderer::StyleFlagZIndex;
         using RoboRenderer::FontWeightKind;
         using RoboRenderer::LayoutValue;
         using RoboRenderer::LayoutValueType;
@@ -516,6 +523,9 @@ namespace RoboHTMLCompiler
                 const float elementFontSize = FontSizeOf(&computed, context.rootFontSize);
 
                 LowerDisplay(computed, location, out);
+                LowerPosition(computed, location, out);
+                LowerOffsets(computed, location, elementFontSize, out);
+                LowerZIndex(computed, location, out);
                 LowerSize(computed, CSSPropertyId::Width, StyleFlagWidth, location, elementFontSize, out.width, out);
                 LowerSize(computed, CSSPropertyId::Height, StyleFlagHeight, location, elementFontSize, out.height,
                           out);
@@ -616,6 +626,165 @@ namespace RoboHTMLCompiler
                 }
 
                 out.specified |= StyleFlagDisplay;
+            }
+
+            void LowerPosition(const CSSComputedStyle& computed, const SourceLocation& location, CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::Position);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->text == "static")
+                {
+                    out.position = PositionKind::Static;
+                }
+                else if (value->text == "relative")
+                {
+                    out.position = PositionKind::Relative;
+                }
+                else if (value->text == "absolute")
+                {
+                    out.position = PositionKind::Absolute;
+                }
+                else if (value->text == "fixed")
+                {
+                    out.position = PositionKind::Fixed;
+                }
+                else if (value->text == "sticky")
+                {
+                    out.position = PositionKind::Sticky;
+                }
+                else
+                {
+                    // `position` also accepts an SVG-specific sub-value grammar
+                    // (`position: running(name)` and the like) whose coordinates
+                    // are a different model entirely.
+                    ReportNotLowered(computed, CSSPropertyId::Position, location,
+                                     "the native layout engine has five positioning kinds",
+                                     "Use static, relative, absolute, fixed or sticky.");
+                    return;
+                }
+
+                out.specified |= StyleFlagPosition;
+            }
+
+            /// One of `top`/`right`/`bottom`/`left`, or `inset`.
+            ///
+            /// An offset differs from a margin or a padding in two ways that
+            /// matter here: it may be negative, and `auto` is a real value
+            /// rather than an unsupported one. Both are why this is not
+            /// `LowerEdges` with different names.
+            void LowerOffsets(const CSSComputedStyle& computed,
+                              const SourceLocation& location,
+                              float elementFontSize,
+                              CompiledStyle& out)
+            {
+                struct Offset
+                {
+                    CSSPropertyId id;
+                    std::uint64_t flag;
+                    LayoutValue* target;
+                };
+
+                const Offset offsets[4] = {
+                    { CSSPropertyId::Top, StyleFlagTop, &out.insetTop },
+                    { CSSPropertyId::Right, StyleFlagRight, &out.insetRight },
+                    { CSSPropertyId::Bottom, StyleFlagBottom, &out.insetBottom },
+                    { CSSPropertyId::Left, StyleFlagLeft, &out.insetLeft }
+                };
+
+                for (const Offset& offset : offsets)
+                {
+                    const CSSValue* value = Value(computed, offset.id);
+
+                    if (value == nullptr)
+                    {
+                        continue;
+                    }
+
+                    if (value->kind == CSSValueKind::Keyword && value->text == "auto")
+                    {
+                        // `auto` on an inset means "the static position on the
+                        // axis", which is exactly `Auto` in the compiled box.
+                        *offset.target = LayoutValue::Auto();
+                        out.specified |= offset.flag;
+                        continue;
+                    }
+
+                    if (value->kind == CSSValueKind::Percentage)
+                    {
+                        // A percentage inset is a fraction of the containing
+                        // block, which only layout knows.
+                        *offset.target = LayoutValue{ static_cast<float>(value->number) / 100.0f,
+                                                      LayoutValueType::ParentRelative };
+                        out.specified |= offset.flag;
+                        continue;
+                    }
+
+                    if (value->kind == CSSValueKind::Dimension && IsViewportUnit(value->unit))
+                    {
+                        const float fraction =
+                            ViewportFraction(value->unit, static_cast<float>(value->number), context);
+
+                        if (fraction < 0.0f)
+                        {
+                            ReportNotLowered(computed, offset.id, location,
+                                             "this viewport unit has no native equivalent",
+                                             "Use vw, vh, vmin, vmax or a length.");
+                            continue;
+                        }
+
+                        *offset.target = LayoutValue{ fraction, LayoutValueType::ViewportRelative };
+                        out.specified |= offset.flag;
+                        continue;
+                    }
+
+                    const LengthResolution resolved =
+                        ResolveLength(*value, context, elementFontSize, PropertyName(offset.id), diagnostics,
+                                      location);
+
+                    if (!resolved.resolved)
+                    {
+                        continue;
+                    }
+
+                    *offset.target = LayoutValue::Fixed(resolved.value);
+                    out.specified |= offset.flag;
+                }
+            }
+
+            void LowerZIndex(const CSSComputedStyle& computed, const SourceLocation& location, CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::ZIndex);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->IsKeyword("auto"))
+                {
+                    // `auto` is the initial value and the element takes part in
+                    // its parent stacking level: it is not written, because
+                    // `hasZIndex` staying clear is what says so.
+                    out.hasZIndex = 0;
+                    out.specified |= StyleFlagZIndex;
+                    return;
+                }
+
+                if (value->kind == CSSValueKind::Number)
+                {
+                    out.zIndex = static_cast<std::int32_t>(value->number);
+                    out.hasZIndex = 1;
+                    out.specified |= StyleFlagZIndex;
+                    return;
+                }
+
+                ReportNotLowered(computed, CSSPropertyId::ZIndex, location, "z-index is an integer or 'auto'",
+                                 "Write an integer such as 0, 1 or -1, or 'auto'.");
             }
 
             void LowerSize(const CSSComputedStyle& computed,

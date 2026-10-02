@@ -195,6 +195,12 @@ namespace RoboRenderer
         BuildLineIndex();
         ResolveInlineBoxes();
 
+        // Normal flow is finished, so every containing block is final. The
+        // out-of-flow model runs here, between the flow and the extent, because
+        // it needs finished geometry to resolve against and it can change how
+        // far the document reaches.
+        ApplyPositioning();
+
         const ElementLayout& rootLayout = result.elements[document.root];
         result.documentWidth = std::max(viewportWidth, rootLayout.border.width);
         result.documentHeight = std::max(viewportHeight, rootLayout.border.height);
@@ -308,6 +314,240 @@ namespace RoboRenderer
         }
     }
 
+    // -----------------------------------------------------------------------
+    // The out-of-flow model
+    // -----------------------------------------------------------------------
+
+    float LayoutEngine::ResolveInset(const LayoutValue& inset, float containingLength, bool& isAuto) const
+    {
+        isAuto = false;
+
+        switch (inset.type)
+        {
+        case LayoutValueType::Fixed:
+            // An inset may be negative, which is what pulls a box past the edge
+            // of its containing block, so the value is returned as written.
+            return inset.value;
+
+        case LayoutValueType::ParentRelative:
+            // A percentage inset is a fraction of the containing block, and it
+            // is the *height* that a vertical inset resolves against.
+            return inset.value * containingLength;
+
+        case LayoutValueType::ViewportRelative:
+            return inset.value * viewport.logicalWidth;
+
+        case LayoutValueType::Auto:
+        case LayoutValueType::Content:
+            break;
+        }
+
+        // `auto`: the box stays at its static position on that axis, which is
+        // not the same as an offset of zero.
+        isAuto = true;
+        return 0.0f;
+    }
+
+    Rect LayoutEngine::ContainingBlockFor(ElementIndex index) const
+    {
+        const CompiledStyle& style = stylesCache[index];
+
+        // A fixed box is positioned against the viewport, never against an
+        // ancestor: that is what makes scrolling not move it.
+        if (style.position == PositionKind::Fixed)
+        {
+            return Rect{ 0.0f, 0.0f, viewport.logicalWidth, viewport.logicalHeight };
+        }
+
+        const CompiledElement* element = ElementAt(document, index);
+
+        for (ElementIndex parent = element != nullptr ? element->parent : NoElement; parent != NoElement;)
+        {
+            const CompiledStyle& parentStyle = stylesCache[parent];
+
+            if (IsPositioned(parentStyle.position))
+            {
+                // The containing block of an absolutely positioned box is the
+                // *padding box* of its positioned ancestor, which is the content
+                // box grown by the padding.
+                const ElementLayout& box = result.elements[parent];
+                return Rect{ box.content.x - parentStyle.padding.left,
+                             box.content.y - parentStyle.padding.top,
+                             box.content.width + parentStyle.padding.Horizontal(),
+                             box.content.height + parentStyle.padding.Vertical() };
+            }
+
+            const CompiledElement* node = ElementAt(document, parent);
+            parent = node != nullptr ? node->parent : NoElement;
+        }
+
+        // No positioned ancestor: the initial containing block is the viewport.
+        return Rect{ 0.0f, 0.0f, viewport.logicalWidth, viewport.logicalHeight };
+    }
+
+    bool LayoutEngine::IsWithinSubtree(ElementIndex element, ElementIndex ancestor) const
+    {
+        for (ElementIndex index = element; index != NoElement;)
+        {
+            if (index == ancestor)
+            {
+                return true;
+            }
+
+            const CompiledElement* node = ElementAt(document, index);
+            index = node != nullptr ? node->parent : NoElement;
+        }
+
+        return false;
+    }
+
+    void LayoutEngine::ShiftSubtree(ElementIndex index, float deltaX, float deltaY)
+    {
+        if ((deltaX == 0.0f && deltaY == 0.0f) || index >= result.elements.size())
+        {
+            return;
+        }
+
+        ElementLayout& box = result.elements[index];
+
+        if ((box.flags & LayoutFlagDisplayNone) != 0)
+        {
+            return;
+        }
+
+        box.border = box.border.Translated(deltaX, deltaY);
+        box.content = box.content.Translated(deltaX, deltaY);
+        box.clip = box.clip.Translated(deltaX, deltaY);
+
+        // The line fragments this element owns travel with it. A fragment is
+        // geometry the paint engine draws from directly, so moving the box
+        // without moving them would move everything except the text.
+        for (std::uint32_t slot = 0; slot < box.lineCount; ++slot)
+        {
+            const std::uint32_t lineSlot = box.firstLine + slot;
+            if (lineSlot >= result.elementLines.size())
+            {
+                break;
+            }
+
+            LineLayout& line = result.lines[result.elementLines[lineSlot]];
+            line.x += deltaX;
+            line.lineTop += deltaY;
+            line.baseline += deltaY;
+        }
+
+        const CompiledElement* element = ElementAt(document, index);
+        if (element == nullptr)
+        {
+            return;
+        }
+
+        for (ElementIndex child = element->firstChild; child != NoElement;)
+        {
+            const CompiledElement* node = ElementAt(document, child);
+            if (node == nullptr)
+            {
+                break;
+            }
+
+            ShiftSubtree(child, deltaX, deltaY);
+            child = node->nextSibling;
+        }
+    }
+
+    void LayoutEngine::ApplyPositioning()
+    {
+        // Document order is parent before child, so an ancestor is moved before
+        // a descendant asks where its containing block ended up.
+        for (ElementIndex index = 0; index < document.elementCount; ++index)
+        {
+            const CompiledStyle& style = stylesCache[index];
+
+            if (!IsPositioned(style.position))
+            {
+                continue;
+            }
+
+            const ElementLayout& box = result.elements[index];
+            if ((box.flags & LayoutFlagDisplayNone) != 0)
+            {
+                continue;
+            }
+
+            const Rect containingBlock = ContainingBlockFor(index);
+
+            bool topIsAuto = false;
+            bool rightIsAuto = false;
+            bool bottomIsAuto = false;
+            bool leftIsAuto = false;
+
+            const float top = ResolveInset(style.insetTop, containingBlock.height, topIsAuto);
+            const float right = ResolveInset(style.insetRight, containingBlock.width, rightIsAuto);
+            const float bottom = ResolveInset(style.insetBottom, containingBlock.height, bottomIsAuto);
+            const float left = ResolveInset(style.insetLeft, containingBlock.width, leftIsAuto);
+
+            float deltaX = 0.0f;
+            float deltaY = 0.0f;
+
+            if (IsOutOfFlow(style.position))
+            {
+                // An out-of-flow box is placed against the containing block. A
+                // missing offset leaves it at its static position on that axis,
+                // which is what the flow already computed; a pair of offsets
+                // takes the first that was given, which is the start/end rule the
+                // specification states for a box whose size is fixed.
+                float targetX = box.border.x;
+                float targetY = box.border.y;
+
+                if (!leftIsAuto)
+                {
+                    targetX = containingBlock.x + left;
+                }
+                else if (!rightIsAuto)
+                {
+                    targetX = containingBlock.Right() - right - box.border.width;
+                }
+
+                if (!topIsAuto)
+                {
+                    targetY = containingBlock.y + top;
+                }
+                else if (!bottomIsAuto)
+                {
+                    targetY = containingBlock.Bottom() - bottom - box.border.height;
+                }
+
+                deltaX = targetX - box.border.x;
+                deltaY = targetY - box.border.y;
+            }
+            else
+            {
+                // `relative` and `sticky` move the box, and everything inside
+                // it, without moving anything else: the space it occupied in the
+                // flow stays where it was.
+                if (!leftIsAuto)
+                {
+                    deltaX = left;
+                }
+                else if (!rightIsAuto)
+                {
+                    deltaX = -right;
+                }
+
+                if (!topIsAuto)
+                {
+                    deltaY = top;
+                }
+                else if (!bottomIsAuto)
+                {
+                    deltaY = -bottom;
+                }
+            }
+
+            ShiftSubtree(index, deltaX, deltaY);
+        }
+    }
+
     float LayoutEngine::MaxScrollY() const
     {
         return std::max(0.0f, result.documentHeight - viewport.logicalHeight);
@@ -390,6 +630,15 @@ namespace RoboRenderer
             if (node == nullptr)
             {
                 break;
+            }
+
+            // An out-of-flow child is handled by the block path whatever its
+            // display is: it has no inline box in the flow, so a container whose
+            // only child is absolutely positioned still has to be arranged as a
+            // block to place it.
+            if (IsOutOfFlow(stylesCache[child].position))
+            {
+                return true;
             }
 
             if (IsDisplayed(child) && !IsCollapsedByDisclosure(child) &&
@@ -580,8 +829,13 @@ namespace RoboRenderer
         item.fontSize = style.fontSize;
         item.weight = style.fontWeight;
         item.width = textLayout.Measure(text, style.fontSize, style.fontWeight, &runStyle);
+        // A line box is as tall as the face's own line height, which is what
+        // `line-height: normal` means: the ascent, the descent *and* the line
+        // gap. Leaving the gap out stacks lines tighter than the font asks;
+        // that only shows on a family that uses one (Inter does, Segoe UI does
+        // not), so the gap belongs to the descent here rather than nowhere.
         item.ascent = face.Ascent() * scale;
-        item.descent = face.Descent() * scale;
+        item.descent = (face.Descent() + face.LineGap()) * scale;
         item.height = item.ascent + item.descent;
         item.placeholder = isPlaceholder;
         item.controlValue = isControlValue;
@@ -652,6 +906,13 @@ namespace RoboRenderer
 
             if (!IsDisplayed(child) || style.display == DisplayKind::Hidden)
             {
+                child = node->nextSibling;
+                continue;
+            }
+
+            if (IsOutOfFlow(style.position))
+            {
+                // The block path places it; it never becomes part of a line.
                 child = node->nextSibling;
                 continue;
             }
@@ -1259,7 +1520,18 @@ namespace RoboRenderer
 
             const CompiledStyle& childStyle = stylesCache[child];
 
-            if (IsBlockDisplay(childStyle.display))
+            if (IsOutOfFlow(childStyle.position))
+            {
+                // An out-of-flow box reserves no space: the cursor does not
+                // advance and its margins do not apply, because the page flows
+                // as if it were not there. It is still arranged, at the position
+                // it would have had, so that `top: auto; left: auto` has a
+                // static position to fall back to and so its own content is
+                // measured. ApplyPositioning moves it afterwards.
+                flushRun();
+                ArrangeElement(child, x, cursorY, availableWidth, clip, depth, measureOnly);
+            }
+            else if (IsBlockDisplay(childStyle.display))
             {
                 flushRun();
 
@@ -1793,6 +2065,7 @@ namespace RoboRenderer
         {
             boxHeight = contentHeight + extraHeight;
         }
+
 
         if (category == RenderCategory::Input)
         {

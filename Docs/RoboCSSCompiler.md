@@ -195,6 +195,18 @@ border widths, `border-style`, the four border colours, `border-radius`,
 `overflow`, `background`, `font`, `font-variant` and `text-decoration`
 shorthands.
 
+The out-of-flow model is compiled and applied: `position`, the four offsets
+`top`, `right`, `bottom` and `left`, `z-index`, and the `inset` shorthand, which
+is the four offsets distributed exactly as `margin` distributes the four margins
+because an offset and a margin are the same kind of value. An offset is lowered
+to the same unresolved `LayoutValue` a width is: a percentage stays a fraction of
+the containing block and a viewport unit stays a fraction of the window, because
+only the layout engine knows either. Two things make an offset not a margin — it
+may be negative, so the lowering reads the resolver's `resolved` flag rather than
+testing the value's sign, and `auto` is a real value rather than an unsupported
+one, so it is stored as `Auto` and the engine reads it as "the static position on
+this axis" rather than as an offset of zero.
+
 The text and font properties are the ones that reach the runtime's own text
 engine rather than only the style table. `font-family` and `font-style` select a
 face (a real italic when the host has one, a synthesized oblique otherwise);

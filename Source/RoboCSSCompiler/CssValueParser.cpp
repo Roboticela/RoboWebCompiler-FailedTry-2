@@ -1751,6 +1751,49 @@ namespace RoboCSSCompiler
             return false;
         }
 
+        /// `z-index`: an integer or the keyword `auto`. A number that is not an
+        /// integer is not a value CSS defines here, so it is refused rather than
+        /// rounded.
+        bool ParseZIndexValue(const std::vector<CSSComponentValue>& components,
+                              CSSValue& out,
+                              const CSSSourceLocation& location,
+                              CSSDiagnosticSink& diagnostics)
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.size() != 1)
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidGrammar,
+                                  location,
+                                  "Expected one value.",
+                                  ComponentsToText(components),
+                                  "Write 'auto' or an integer such as 0, 1 or -1.",
+                                  "z-index");
+                return false;
+            }
+
+            if (values[0]->token.type == CSSTokenType::Ident &&
+                LowerCase(values[0]->token.text) == "auto")
+            {
+                out = CSSValue::MakeKeyword("auto");
+                return true;
+            }
+
+            if (values[0]->token.type == CSSTokenType::Number && values[0]->token.isInteger)
+            {
+                out = CSSValue::MakeNumber(values[0]->token.number, true);
+                return true;
+            }
+
+            diagnostics.Error(CSSDiagnosticCode::InvalidValue,
+                              location,
+                              "Invalid z-index value: '" + ComponentsToText(components) + "'.",
+                              "z-index is an integer or the keyword 'auto'",
+                              "Write 'auto' or an integer such as 0, 1 or -1.",
+                              ComponentsToText(components));
+            return false;
+        }
+
         bool ParseTextAlignValue(const std::vector<CSSComponentValue>& components,
                                  CSSValue& out,
                                  const CSSSourceLocation& location,
@@ -2650,6 +2693,9 @@ namespace RoboCSSCompiler
 
         case CSSValueGrammar::Overflow:
             return ParseOverflowValue(components, out, location, diagnostics);
+
+        case CSSValueGrammar::ZIndex:
+            return ParseZIndexValue(components, out, location, diagnostics);
 
         case CSSValueGrammar::TextAlign:
             return ParseTextAlignValue(components, out, location, diagnostics);

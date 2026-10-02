@@ -160,6 +160,9 @@
     { "source": "spacer", "kind": "ObsoleteElement", "obsolete": true },
     { "source": "strike", "kind": "ObsoleteElement", "obsolete": true },
     { "source": "tt", "kind": "ObsoleteElement", "obsolete": true },
-    { "source": "xmp", "kind": "ObsoleteElement", "obsolete": true }
+    { "source": "xmp", "kind": "ObsoleteElement", "obsolete": true },
+
+    { "source": "fencedframe", "kind": "Frame", "phrasing": true, "interactive": true },
+    { "source": "geolocation", "kind": "Button", "phrasing": true, "interactive": true }
   ]
 }

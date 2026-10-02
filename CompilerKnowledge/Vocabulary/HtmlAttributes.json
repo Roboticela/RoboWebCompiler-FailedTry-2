@@ -44,6 +44,7 @@
       "kind": "element",
       "obsolete": false,
       "allowedElements": [
+        "fencedframe",
         "iframe"
       ]
     },
@@ -107,6 +108,15 @@
       ]
     },
     {
+      "name": "autolocate",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "geolocation"
+      ]
+    },
+    {
       "name": "autoplay",
       "namespace": "HTML",
       "kind": "element",
@@ -125,6 +135,15 @@
         "link",
         "script",
         "style"
+      ]
+    },
+    {
+      "name": "capture",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "input"
       ]
     },
     {
@@ -470,6 +489,7 @@
       "allowedElements": [
         "canvas",
         "embed",
+        "fencedframe",
         "iframe",
         "img",
         "input",
@@ -1160,6 +1180,15 @@
       ]
     },
     {
+      "name": "watch",
+      "namespace": "HTML",
+      "kind": "element",
+      "obsolete": false,
+      "allowedElements": [
+        "geolocation"
+      ]
+    },
+    {
       "name": "width",
       "namespace": "HTML",
       "kind": "element",
@@ -1167,6 +1196,7 @@
       "allowedElements": [
         "canvas",
         "embed",
+        "fencedframe",
         "iframe",
         "img",
         "input",

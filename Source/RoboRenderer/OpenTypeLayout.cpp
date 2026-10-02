@@ -497,26 +497,48 @@ namespace RoboRenderer
                 continue;
             }
 
+            // Exactly one language system answers a run: the script's default
+            // one when it has one, otherwise the first it declares. A font may
+            // carry different features per language -- Inter's `latn` selects
+            // its kern feature from four language systems -- and applying all of
+            // them would kern the same run four times over.
+            const std::vector<std::uint16_t>* selected = nullptr;
+
             for (const auto& language : script.second)
             {
-                for (std::uint16_t featureIndex : language.second)
+                if (language.first == 0)
                 {
-                    if (featureIndex >= features.size())
-                    {
-                        continue;
-                    }
-                    const FeatureRef& feature = features[featureIndex];
-                    if (feature.substitution != substitution)
-                    {
-                        continue;
-                    }
-                    if (std::find(featureTags.begin(), featureTags.end(), feature.tag) ==
-                        featureTags.end())
-                    {
-                        continue;
-                    }
-                    lookups.insert(lookups.end(), feature.lookups.begin(), feature.lookups.end());
+                    selected = &language.second;
+                    break;
                 }
+                if (selected == nullptr)
+                {
+                    selected = &language.second;
+                }
+            }
+
+            if (selected == nullptr)
+            {
+                continue;
+            }
+
+            for (std::uint16_t featureIndex : *selected)
+            {
+                if (featureIndex >= features.size())
+                {
+                    continue;
+                }
+                const FeatureRef& feature = features[featureIndex];
+                if (feature.substitution != substitution)
+                {
+                    continue;
+                }
+                if (std::find(featureTags.begin(), featureTags.end(), feature.tag) ==
+                    featureTags.end())
+                {
+                    continue;
+                }
+                lookups.insert(lookups.end(), feature.lookups.begin(), feature.lookups.end());
             }
         }
 
@@ -1269,7 +1291,8 @@ namespace RoboRenderer
         }
 
         const std::uint32_t coverage = subtable + ReadU16(subtable + 2);
-        if (CoverageIndex(coverage, glyphs[index].glyph) == kNoCoverage)
+        const std::uint32_t coverageIndex = CoverageIndex(coverage, glyphs[index].glyph);
+        if (coverageIndex == kNoCoverage)
         {
             return false;
         }
@@ -1281,35 +1304,37 @@ namespace RoboRenderer
 
         if (format == 1)
         {
+            // The pair set is addressed by the *first* glyph's coverage index,
+            // not searched for. A pair set holds only the seconds that glyph
+            // kerns with, so scanning them all would match some unrelated first
+            // glyph's record whenever the second glyph happens to repeat.
             const std::uint16_t pairSetCount = ReadU16(subtable + 8);
-
-            std::uint32_t pairSet = 0;
-            for (std::uint16_t set = 0; set < pairSetCount; ++set)
-            {
-                const std::uint32_t candidate = subtable + ReadU16(subtable + 10 + set * 2);
-                const std::uint16_t count = ReadU16(candidate);
-                for (std::uint16_t pair = 0; pair < count; ++pair)
-                {
-                    const std::uint32_t record = candidate + 2 + pair * (2 + size1 + size2);
-                    if (ReadU16(record) == glyphs[index + 1].glyph)
-                    {
-                        pairSet = record + 2;
-                        break;
-                    }
-                }
-                if (pairSet != 0)
-                {
-                    break;
-                }
-            }
-
-            if (pairSet == 0)
+            if (coverageIndex >= pairSetCount)
             {
                 return false;
             }
 
-            ApplyValueRecord(pairSet, valueFormat1, glyphs[index]);
-            ApplyValueRecord(pairSet + size1, valueFormat2, glyphs[index + 1]);
+            const std::uint32_t pairSet = subtable + ReadU16(subtable + 10 + coverageIndex * 2);
+            const std::uint16_t pairCount = ReadU16(pairSet);
+
+            std::uint32_t record = 0;
+            for (std::uint16_t pair = 0; pair < pairCount; ++pair)
+            {
+                const std::uint32_t candidate = pairSet + 2 + pair * (2 + size1 + size2);
+                if (ReadU16(candidate) == glyphs[index + 1].glyph)
+                {
+                    record = candidate + 2;
+                    break;
+                }
+            }
+
+            if (record == 0)
+            {
+                return false;
+            }
+
+            ApplyValueRecord(record, valueFormat1, glyphs[index]);
+            ApplyValueRecord(record + size1, valueFormat2, glyphs[index + 1]);
             return true;
         }
 

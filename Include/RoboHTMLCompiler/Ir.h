@@ -214,6 +214,11 @@ namespace RoboHTMLCompiler
         bool formAssociated = false;
         bool orderedList = false;
         bool preservesWhitespace = false;
+        /// The node is not a source element at all but a run of the text its
+        /// parent holds. Mixed content lowers each run into a child of its own
+        /// so the inline sequence is explicit, and the run then takes the type
+        /// of the element it flowed out of instead of a category of its own.
+        bool textRun = false;
     };
 
     /// Debug and browser-compatibility metadata. Removable in release builds.

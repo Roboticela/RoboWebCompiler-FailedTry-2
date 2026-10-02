@@ -654,6 +654,7 @@ namespace
 
             static const std::map<std::string, std::string> globalProperties = {
                 { "accesskey", "MetadataAccessKey" },
+                { "anchor", "MetadataAnchor" },
                 { "autocapitalize", "MetadataAutoCapitalize" },
                 { "autocorrect", "MetadataAutoCorrect" },
                 { "autofocus", "StateAutofocus" },
@@ -661,7 +662,9 @@ namespace
                 { "contenteditable", "MetadataEditable" },
                 { "dir", "TextDirection" },
                 { "draggable", "StateDraggable" },
+                { "elementtiming", "MetadataElementTiming" },
                 { "enterkeyhint", "MetadataEnterKeyHint" },
+                { "exportparts", "MetadataExportParts" },
                 { "headingoffset", "HeadingOffset" },
                 { "headingreset", "HeadingReset" },
                 { "hidden", "StateHidden" },
@@ -676,6 +679,7 @@ namespace
                 { "itemtype", "MicroDataItemType" },
                 { "lang", "TextLanguage" },
                 { "nonce", "MetadataNonce" },
+                { "part", "MetadataPart" },
                 { "popover", "MetadataPopover" },
                 { "slot", "SlotAssignment" },
                 { "spellcheck", "StateSpellCheck" },
@@ -683,6 +687,7 @@ namespace
                 { "tabindex", "InteractionTabIndex" },
                 { "title", "MetadataTitle" },
                 { "translate", "TextTranslate" },
+                { "virtualkeyboardpolicy", "MetadataVirtualKeyboardPolicy" },
                 { "writingsuggestions", "MetadataWriteSuggestions" }
             };
 

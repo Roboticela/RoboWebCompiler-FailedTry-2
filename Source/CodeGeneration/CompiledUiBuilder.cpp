@@ -400,8 +400,8 @@ namespace RoboHTMLCompiler
 
                 // The style the cascade gave this element, if any. A text run is
                 // lowered out of its parent's content and has no element of its
-                // own to match a selector against, so it inherits the resolved
-                // style of the element it came from - which is what CSS says a
+                // own to match a selector against, so the runtime sets it in the
+                // type of the element it came from - which is what CSS says a
                 // text node's style is.
                 element.styleIndex = 0;
 
@@ -480,7 +480,10 @@ namespace RoboHTMLCompiler
                     element.flags |= ElementFlagRightToLeft;
                 }
 
-                if (node.source.tag == "#text")
+                // A run of text has no element of its own, so the runtime reads
+                // its type off the element it flowed out of rather than off a
+                // style of its own. The lowering records that here.
+                if (node.nature.textRun)
                 {
                     element.flags |= ElementFlagTextRun;
                 }

@@ -165,6 +165,13 @@
     { "attribute": "content", "property": "MetadataContent" },
     { "attribute": "http-equiv", "property": "DocumentHttpEquiv" },
 
+    { "attribute": "capture", "elements": [ "input" ], "property": "InputCapture" },
+    { "attribute": "autolocate", "elements": [ "geolocation" ], "property": "MetadataAutoLocate" },
+    { "attribute": "watch", "elements": [ "geolocation" ], "property": "MetadataWatch" },
+
+    { "attribute": "width", "elements": [ "fencedframe" ], "property": "EmbeddedWidth" },
+    { "attribute": "height", "elements": [ "fencedframe" ], "property": "EmbeddedHeight" },
+
     { "attribute": "shadowrootmode", "property": "ShadowRootMode" },
     { "attribute": "shadowrootdelegatesfocus", "property": "ShadowRootDelegatesFocus" },
     { "attribute": "shadowrootslotassignment", "property": "ShadowRootSlotAssignment" },

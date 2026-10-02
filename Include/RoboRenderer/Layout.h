@@ -366,6 +366,34 @@ namespace RoboRenderer
         void ResolveStyles();
         void BuildLineIndex();
 
+        /// Applies the out-of-flow model once normal flow has placed every box.
+        ///
+        /// It runs after the flow and before the extent is measured, because an
+        /// out-of-flow box is positioned against the *finished* geometry of its
+        /// containing block, not the geometry it had while its ancestors were
+        /// still being arranged. Elements are visited in document order, so an
+        /// ancestor is moved before a descendant asks for its containing block.
+        void ApplyPositioning();
+
+        /// The rectangle an out-of-flow box resolves its offsets against: the
+        /// padding box of the nearest positioned ancestor, or the initial
+        /// containing block (the viewport) when there is none. `fixed` is always
+        /// the viewport, which is what makes it ignore scrolling.
+        Rect ContainingBlockFor(ElementIndex index) const;
+
+        /// Resolves one inset against the containing block's size. `isAuto` is
+        /// set when the offset is `auto`, which leaves the box at its static
+        /// position on that axis.
+        float ResolveInset(const LayoutValue& inset, float containingLength, bool& isAuto) const;
+
+        /// Moves a box and everything inside it: its own geometry, the line
+        /// fragments it owns and every descendant, recursively. A positioned box
+        /// is moved as a unit, so a translation is the only primitive needed.
+        void ShiftSubtree(ElementIndex index, float deltaX, float deltaY);
+
+        /// True when `element` is `ancestor` or inside it.
+        bool IsWithinSubtree(ElementIndex element, ElementIndex ancestor) const;
+
         /// Inline elements flow into line boxes rather than owning a block box,
         /// so their border box is the union of the fragments they own. Hit
         /// testing and ElementBounds need that box; painting reads the fragments

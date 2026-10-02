@@ -283,15 +283,22 @@ ROBO_TEST(CssPipeline, AllInheritCarriesTheParentsValuesIntoTheChild)
     // the parent states its display, the child copies it, and the box geometry
     // below is the geometry of a block - which is what a browser would do with
     // a user-agent sheet that said `div { display: block }`.
+    // Both rules state the same family. An element that declares none takes the
+    // cascade's initial `font-family: serif`, so a child that inherits its
+    // parent's *computed* family via `all: inherit` would otherwise change face
+    // as well as padding, and the box geometry below is about the padding.
     ROBO_CHECK(CompileBodyWithSources(document, plain,
-                                      Sheet(".outer { padding: 1rem; color: #ff0000; display: block } "
-                                            ".inner { color: #000000 }"),
+                                      Sheet(".outer { padding: 1rem; color: #ff0000; display: block; "
+                                            "font-family: sans-serif } "
+                                            ".inner { color: #000000; font-family: sans-serif }"),
                                       error));
     ROBO_CHECK(error.empty());
 
     ROBO_CHECK(CompileBodyWithSources(document, inherited,
-                                      Sheet(".outer { padding: 1rem; color: #ff0000; display: block } "
-                                            ".inner { color: #000000; all: inherit }"),
+                                      Sheet(".outer { padding: 1rem; color: #ff0000; display: block; "
+                                            "font-family: sans-serif } "
+                                            ".inner { color: #000000; font-family: sans-serif; "
+                                            "all: inherit }"),
                                       error));
     ROBO_CHECK(error.empty());
 
@@ -673,4 +680,93 @@ ROBO_TEST(CssPipeline, DocumentWithoutCssHasNoAuthoredStyles)
     {
         ROBO_CHECK_EQ(application.Document().elements[index].styleIndex, static_cast<std::uint16_t>(0));
     }
+}
+
+ROBO_TEST(CssPipeline, ATextRunTakesTheTextStyleOfTheElementItFlowedOutOf)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    // Mixed content is the case that splits an element's text into its own
+    // runs: the paragraph's type has to reach the words on either side of the
+    // inline element, or a sentence is set at two sizes at once.
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div class=\"t\">lead <span>and inline</span> done</div>",
+        application,
+        Sheet(".t { font-size: 40px; letter-spacing: 2px; padding: 1rem; background-color: #ffffff }"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+    StyleTableProvider styles;
+
+    std::size_t runCount = 0;
+
+    for (ElementIndex index = 0; index < document.elementCount; ++index)
+    {
+        const CompiledElement& element = document.elements[index];
+
+        if (!element.HasFlag(ElementFlagTextRun))
+        {
+            continue;
+        }
+
+        ++runCount;
+
+        const CompiledStyle& style = styles.StyleFor(document, index, CategoryFor(element.kind));
+
+        // The inherited text properties arrive...
+        ROBO_CHECK(IsSpecified(style.specified, StyleFlagFontSize));
+        ROBO_CHECK(style.fontSize == 40.0f);
+        ROBO_CHECK(style.letterSpacing == 2.0f);
+
+        // ...and the box properties do not: a run of text sits in the block's
+        // padding rather than carrying a copy of it.
+        ROBO_CHECK(style.padding.top == 0.0f);
+        ROBO_CHECK(style.padding.left == 0.0f);
+    }
+
+    ROBO_CHECK_EQ(runCount, static_cast<std::size_t>(2));
+}
+
+ROBO_TEST(CssPipeline, ADecorationReachesTheTextItIsDrawnAround)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    // `text-decoration` is not inherited - it is drawn around the descendants of
+    // the element that states it - so every piece of the paragraph reports it:
+    // the runs either side of the nested element and the element's own text.
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"d\">plain <span>nested</span> plain</p>",
+        application,
+        Sheet(".d { text-decoration: underline; text-decoration-color: #c2410c }"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+    StyleTableProvider styles;
+
+    std::size_t decorated = 0;
+
+    for (ElementIndex index = 0; index < document.elementCount; ++index)
+    {
+        const CompiledElement& element = document.elements[index];
+
+        // Only the elements that draw text: the paragraph, the run beside the
+        // span, and the span.
+        const CompiledStyle& style = styles.StyleFor(document, index, CategoryFor(element.kind));
+
+        if (!IsSpecified(style.specified, StyleFlagTextDecoration))
+        {
+            continue;
+        }
+
+        ROBO_CHECK(style.textDecoration == TextDecorationUnderline);
+        ROBO_CHECK(IsSpecified(style.specified, StyleFlagTextDecorationColor));
+        ROBO_CHECK(SameColor(style.textDecorationColor, Color::Rgba(194, 65, 12), 1));
+        ++decorated;
+    }
+
+    ROBO_CHECK_EQ(decorated, static_cast<std::size_t>(4));
 }

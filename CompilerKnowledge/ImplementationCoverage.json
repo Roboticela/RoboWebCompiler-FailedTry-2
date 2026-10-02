@@ -1342,13 +1342,21 @@
       "MathCharAlign",
       "MathCharSpacing",
       "MathVAlign",
-      "CustomMetadata"
+      "CustomMetadata",
+      "MetadataPart",
+      "MetadataExportParts",
+      "MetadataAnchor",
+      "MetadataElementTiming",
+      "MetadataVirtualKeyboardPolicy",
+      "InputCapture",
+      "MetadataAutoLocate",
+      "MetadataWatch"
     ],
     "normalizationCoverage": "every reference element has a native category"
   },
   "summary": {
-    "elementCount": 237,
-    "attributeRecordCount": 563,
+    "elementCount": 239,
+    "attributeRecordCount": 573,
     "inputTypeCount": 23
   },
   "referenceState": "consumed",

@@ -2371,6 +2371,48 @@
       "sourceLine": 155447,
       "categories": [],
       "attributes": []
+    },
+    {
+      "name": "fencedframe",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLFencedFrameElement",
+      "contentModel": "Nothing.",
+      "sourceLine": 0,
+      "categories": [
+        "Flow content.",
+        "Phrasing content.",
+        "Embedded content.",
+        "Interactive content.",
+        "Palpable content."
+      ],
+      "attributes": [
+        "allow",
+        "height",
+        "width"
+      ]
+    },
+    {
+      "name": "geolocation",
+      "namespace": "HTML",
+      "sectionId": "",
+      "obsolete": false,
+      "globalAttributes": true,
+      "domInterface": "HTMLGeolocationElement",
+      "contentModel": "Any suitable transparent fallback content.",
+      "sourceLine": 0,
+      "categories": [
+        "Flow content.",
+        "Phrasing content.",
+        "Interactive content.",
+        "Palpable content."
+      ],
+      "attributes": [
+        "autolocate",
+        "watch"
+      ]
     }
   ]
 }

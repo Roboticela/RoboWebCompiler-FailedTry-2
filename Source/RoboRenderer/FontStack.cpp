@@ -52,14 +52,214 @@ namespace RoboRenderer
                    static_cast<std::uint32_t>(d);
         }
 
+        std::string Trimmed(const std::string& value)
+        {
+            std::size_t begin = 0;
+            std::size_t end = value.size();
+            while (begin < end && std::isspace(static_cast<unsigned char>(value[begin])) != 0)
+            {
+                ++begin;
+            }
+            while (end > begin && std::isspace(static_cast<unsigned char>(value[end - 1])) != 0)
+            {
+                --end;
+            }
+            return value.substr(begin, end - begin);
+        }
+
+        /// The words of a family name: lowercased, split on everything that is
+        /// not a letter or a digit. "Segoe UI" is two words, "InterVariable"
+        /// is one, and the punctuation CSS allows in a family name is ignored.
+        std::vector<std::string> FamilyWords(const std::string& name)
+        {
+            std::vector<std::string> words;
+            std::string word;
+
+            for (char character : name)
+            {
+                const unsigned char code = static_cast<unsigned char>(character);
+                if (std::isalnum(code) != 0)
+                {
+                    word += static_cast<char>(std::tolower(code));
+                }
+                else if (!word.empty())
+                {
+                    words.push_back(word);
+                    word.clear();
+                }
+            }
+
+            if (!word.empty())
+            {
+                words.push_back(word);
+            }
+
+            return words;
+        }
+
+        /// A family name reduced to the key a document matches on.
+        ///
+        /// Case, spacing and punctuation are not significant: CSS family names
+        /// are matched case-insensitively, and a browser treats "Segoe UI" and
+        /// "SegoeUI" as one family. The suffix a font appends to distinguish a
+        /// variable file from a static install is dropped as well, which is what
+        /// makes `font-family: Inter` reach the file that calls itself "Inter
+        /// Variable" -- the same file the whole point of bundling a font is to
+        /// use.
+        std::string NormalizeFamilyName(const std::string& name)
+        {
+            static const std::vector<std::string> styleSuffixes = {
+                "variable", "vf", "var", "static", "regular", "roman",
+            };
+
+            std::vector<std::string> words = FamilyWords(name);
+
+            // Repeatedly, because a file may stack two of them ("Inter
+            // Variable Regular"). One word always survives, so a family named
+            // after a suffix alone is still itself.
+            for (;;)
+            {
+                bool stripped = false;
+                if (words.size() > 1)
+                {
+                    for (const std::string& suffix : styleSuffixes)
+                    {
+                        if (words.back() == suffix)
+                        {
+                            words.pop_back();
+                            stripped = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!stripped)
+                {
+                    break;
+                }
+            }
+
+            std::string normalized;
+            for (const std::string& word : words)
+            {
+                normalized += word;
+            }
+            return normalized;
+        }
+
+        /// The kind of face a CSS generic family asks for. A generic name is a
+        /// request for a *category*, so the runtime answers it with the best
+        /// installed family of that category rather than pretending it does not
+        /// know the name.
+        enum class GenericFamilyKind : std::uint8_t
+        {
+            None = 0,
+            SansSerif,
+            Serif,
+            Monospace,
+            Cursive,
+            Fantasy,
+            Emoji,
+            Math,
+        };
+
+        GenericFamilyKind GenericFamilyKindOf(const std::string& name)
+        {
+            const std::string lower = Lower(Trimmed(name));
+
+            if (lower == "sans-serif" || lower == "ui-sans-serif" || lower == "system-ui")
+            {
+                return GenericFamilyKind::SansSerif;
+            }
+            if (lower == "serif" || lower == "ui-serif")
+            {
+                return GenericFamilyKind::Serif;
+            }
+            if (lower == "monospace" || lower == "ui-monospace")
+            {
+                return GenericFamilyKind::Monospace;
+            }
+            if (lower == "cursive")
+            {
+                return GenericFamilyKind::Cursive;
+            }
+            if (lower == "fantasy" || lower == "fangsong")
+            {
+                return GenericFamilyKind::Fantasy;
+            }
+            if (lower == "emoji")
+            {
+                return GenericFamilyKind::Emoji;
+            }
+            if (lower == "math")
+            {
+                return GenericFamilyKind::Math;
+            }
+            if (lower == "ui-rounded")
+            {
+                return GenericFamilyKind::SansSerif;
+            }
+            return GenericFamilyKind::None;
+        }
+
+        /// The families a generic category prefers, most wanted first. A category
+        /// with an empty list is answered by the primary face, which is what
+        /// `sans-serif` means to a runtime whose primary face *is* the default
+        /// sans.
+        const std::vector<std::string>& GenericFamilyFamilies(GenericFamilyKind kind)
+        {
+            static const std::vector<std::string> sans = {};
+            static const std::vector<std::string> serif = {
+                "times new roman", "times", "georgia", "cambria", "constantia",
+                "palatino linotype", "book antiqua", "garamond", "libre baskerville",
+                "liberation serif", "dejavu serif", "noto serif",
+            };
+            static const std::vector<std::string> monospace = {
+                "consolas", "cascadia mono", "cascadia code", "courier new", "courier",
+                "lucida console", "sfmono-regular", "menlo", "monaco", "liberation mono",
+                "dejavu sans mono", "noto sans mono", "roboto mono", "ubuntu mono",
+                "andale mono",
+            };
+            static const std::vector<std::string> cursive = {
+                "segoe script", "comic sans ms", "brush script mt", "lucida handwriting",
+                "apple chancery",
+            };
+            static const std::vector<std::string> fantasy = {
+                "impact", "haettenschweiler", "papyrus", "segoe print",
+            };
+            static const std::vector<std::string> emoji = {
+                "segoe ui emoji", "noto color emoji", "apple color emoji",
+            };
+            static const std::vector<std::string> math = {
+                "cambria math", "stix two math", "latin modern math", "xits math",
+                "segoe ui symbol",
+            };
+
+            switch (kind)
+            {
+                case GenericFamilyKind::Serif:     return serif;
+                case GenericFamilyKind::Monospace: return monospace;
+                case GenericFamilyKind::Cursive:   return cursive;
+                case GenericFamilyKind::Fantasy:   return fantasy;
+                case GenericFamilyKind::Emoji:     return emoji;
+                case GenericFamilyKind::Math:      return math;
+                default:                           return sans;
+            }
+        }
+
         /// A face backed by one parsed sfnt face. Outlines are pulled lazily: a
         /// document that never draws a glyph never parses its contour.
         class SfntFontFace final : public FontFace
         {
         public:
-            SfntFontFace(std::shared_ptr<SfntFont> font, std::string path)
+            SfntFontFace(std::shared_ptr<SfntFont> font,
+                         std::string path,
+                         std::uint32_t faceIndex = 0,
+                         int instanceWeight = 0)
                 : font(std::move(font))
                 , path(std::move(path))
+                , faceIndex(faceIndex)
+                , instanceWeight(instanceWeight)
                 , family(EnsureFamily())
             {
             }
@@ -71,8 +271,13 @@ namespace RoboRenderer
             float LineGap() const override { return font->LineGap(); }
             float UnderlinePosition() const override { return font->UnderlinePosition(); }
             float UnderlineThickness() const override { return font->UnderlineThickness(); }
-            float Weight() const override { return static_cast<float>(font->WeightClass()); }
-            int WeightClass() const override { return font->WeightClass(); }
+            float Weight() const override { return static_cast<float>(WeightClass()); }
+            /// The weight the face paints at: the instance it was resolved to
+            /// for a variable font, otherwise the file's own `usWeightClass`.
+            int WeightClass() const override
+            {
+                return instanceWeight != 0 ? instanceWeight : font->WeightClass();
+            }
             bool HasColorGlyphs() const override { return font->HasColorGlyphs(); }
             bool UsesOutlines() const override { return font->HasOutlines() || font->HasCffOutlines(); }
 
@@ -246,7 +451,11 @@ namespace RoboRenderer
             const StrokePoint* Points() const override { return nullptr; }
 
             const std::string& Path() const { return path; }
-            bool IsBold() const { return font->IsBold(); }
+            std::uint32_t FaceIndex() const { return faceIndex; }
+            /// The weight this face was instantiated at, or 0 when it is the
+            /// file's own default instance.
+            int InstanceWeight() const { return instanceWeight; }
+            bool IsBold() const { return WeightClass() >= 600; }
             bool IsItalic() const override { return font->IsItalic(); }
             bool HasOutlines() const { return font->HasOutlines() || font->HasCffOutlines(); }
             const SfntFont& Font() const { return *font; }
@@ -303,6 +512,8 @@ namespace RoboRenderer
 
             std::shared_ptr<SfntFont> font;
             std::string path;
+            std::uint32_t faceIndex = 0;
+            int instanceWeight = 0;
             std::string family;
 
             mutable std::unordered_map<std::uint32_t, Glyph> glyphs;
@@ -695,6 +906,9 @@ namespace RoboRenderer
                 "seguisym.ttf", "seguihis.ttf", "segmdl2.ttf",  "segoeicons.ttf", "seguiemj.ttf",
                 "arial.ttf",    "arialbd.ttf",  "tahoma.ttf",   "tahomabd.ttf",   "verdana.ttf",
                 "calibri.ttf",  "georgia.ttf",  "candara.ttf",  "cambria.ttc",
+                "times.ttf",    "timesbd.ttf",
+                "consola.ttf",  "consolab.ttf", "cour.ttf",     "courbd.ttf",
+                "comic.ttf",    "impact.ttf",
                 "arabtype.ttf", "majalla.ttf",  "aldhabi.ttf",  "urdtype.ttf",
                 "nirmala.ttc",
                 "leelawui.ttf", "leelawad.ttf", "taile.ttf",
@@ -735,10 +949,10 @@ namespace RoboRenderer
                 "roboto", "open sans", "lato", "ubuntu",
             };
 
-            const std::string lower = Lower(family);
+            const std::string key = NormalizeFamilyName(family);
             for (std::size_t index = 0; index < order.size(); ++index)
             {
-                if (lower == order[index])
+                if (key == NormalizeFamilyName(order[index]))
                 {
                     return static_cast<int>(index);
                 }
@@ -761,15 +975,82 @@ namespace RoboRenderer
                 "segoe ui emoji", "noto color emoji", "apple color emoji",
             };
 
-            const std::string lower = Lower(family);
+            const std::string key = NormalizeFamilyName(family);
             for (std::size_t index = 0; index < order.size(); ++index)
             {
-                if (lower == order[index])
+                if (key == NormalizeFamilyName(order[index]))
                 {
                     return static_cast<int>(index);
                 }
             }
             return 1000;
+        }
+
+        /// The face a generic family resolves to: the best installed family of
+        /// the requested category that carries the requested weight and style,
+        /// and that can draw the code point when one is asked about. Null when
+        /// the host has no face of that category at all, in which case the
+        /// caller keeps walking its list.
+        const FontFace* GenericFaceFor(const std::vector<const FontFace*>& chain,
+                                       GenericFamilyKind kind,
+                                       bool wantBold,
+                                       bool wantItalic,
+                                       std::uint32_t codepoint,
+                                       bool requireCoverage)
+        {
+            if (kind == GenericFamilyKind::None)
+            {
+                return nullptr;
+            }
+
+            const std::vector<std::string>& families = GenericFamilyFamilies(kind);
+            if (families.empty())
+            {
+                // `sans-serif` is the primary face, which the caller already
+                // has in hand.
+                return nullptr;
+            }
+
+            for (const std::string& family : families)
+            {
+                const std::string key = NormalizeFamilyName(family);
+
+                for (const FontFace* face : chain)
+                {
+                    if (face == nullptr || !face->UsesOutlines())
+                    {
+                        continue;
+                    }
+
+                    if (kind == GenericFamilyKind::Emoji)
+                    {
+                        // An emoji face is a face with colour glyphs, whatever
+                        // the file happens to be named.
+                        if (!face->HasColorGlyphs())
+                        {
+                            continue;
+                        }
+                    }
+                    else if (NormalizeFamilyName(face->FamilyName()) != key)
+                    {
+                        continue;
+                    }
+
+                    if (face->IsItalic() != wantItalic || (face->WeightClass() >= 600) != wantBold)
+                    {
+                        continue;
+                    }
+
+                    if (requireCoverage && !face->Covers(codepoint))
+                    {
+                        continue;
+                    }
+
+                    return face;
+                }
+            }
+
+            return nullptr;
         }
 
         // --- process-wide font file cache ----------------------------------
@@ -844,6 +1125,52 @@ namespace RoboRenderer
             auto face = std::make_shared<SfntFontFace>(std::move(font), path);
             cache[key] = face;
             return face;
+        }
+
+        /// A second face for one file, resolved at one weight of its `wght`
+        /// axis. A variable font ships one outline and every weight of it, so a
+        /// document that asks for bold should land on the file's own 700 rather
+        /// than on whichever bold face another family happens to provide.
+        ///
+        /// The face is parsed again rather than shared: `SetInstance` rewrites
+        /// the outlines and the advances, and the face the registry already
+        /// holds has to keep its own instance.
+        std::shared_ptr<SfntFontFace> InstantiateWeightFace(const SfntFontFace& source, int weight)
+        {
+            const SfntFont& font = source.Font();
+            if (!font.IsVariable())
+            {
+                return nullptr;
+            }
+
+            std::vector<float> coordinates;
+            bool hasWeightAxis = false;
+
+            for (const SfntFont::VariationAxis& axis : font.Axes())
+            {
+                coordinates.push_back(axis.defaultValue);
+                if (axis.tag == Tag4('w', 'g', 'h', 't'))
+                {
+                    coordinates.back() = static_cast<float>(weight);
+                    hasWeightAxis = true;
+                }
+            }
+
+            if (!hasWeightAxis)
+            {
+                return nullptr;
+            }
+
+            std::shared_ptr<SfntFont> instance =
+                SfntFont::LoadFile(source.Path(), source.FaceIndex());
+            if (!instance)
+            {
+                return nullptr;
+            }
+
+            instance->SetInstance(coordinates);
+            return std::make_shared<SfntFontFace>(std::move(instance), source.Path(),
+                                                  source.FaceIndex(), weight);
         }
     }
 
@@ -934,6 +1261,37 @@ namespace RoboRenderer
         }
 
         usesStrokeFallback = false;
+
+        // A variable font carries every weight of its family in one file, so the
+        // weights a document can ask for are instantiated before the primary
+        // faces are chosen; otherwise `font-weight: bold` silently substitutes a
+        // different family's bold. Only families that can become the primary are
+        // instantiated: doing this for every font a desktop installs would parse
+        // its whole font folder twice.
+        std::vector<const FontFace*> instantiated;
+        for (const std::shared_ptr<FontFace>& face : owned)
+        {
+            const auto* sfnt = dynamic_cast<const SfntFontFace*>(face.get());
+            if (sfnt == nullptr || !sfnt->UsesOutlines() || sfnt->IsItalic())
+            {
+                continue;
+            }
+            if (PrimaryFamilyRank(face->FamilyName()) < 0)
+            {
+                continue;
+            }
+            if (sfnt->WeightClass() >= 600)
+            {
+                continue;
+            }
+
+            const std::shared_ptr<SfntFontFace> bold = InstantiateWeightFace(*sfnt, 700);
+            if (bold)
+            {
+                instantiated.push_back(bold.get());
+                owned.push_back(bold);
+            }
+        }
 
         const auto familyRank = [](const FontFace* face) {
             return PrimaryFamilyRank(face->FamilyName());
@@ -1130,12 +1488,18 @@ namespace RoboRenderer
         }
 
         // Build the fallback order. The primary four are first; everything else
-        // follows by family preference, outlines before colour-only faces.
+        // follows by family preference, outlines before colour-only faces. An
+        // instantiated weight is not a fallback: it is the same coverage as the
+        // file it came from, which the chain already holds.
         std::vector<const FontFace*> fallbacks;
         for (const std::shared_ptr<FontFace>& face : owned)
         {
             if (face.get() == faceRegular || face.get() == faceBold || face.get() == faceItalic ||
                 face.get() == faceBoldItalic)
+            {
+                continue;
+            }
+            if (std::find(instantiated.begin(), instantiated.end(), face.get()) != instantiated.end())
             {
                 continue;
             }
@@ -1165,51 +1529,23 @@ namespace RoboRenderer
 
     namespace
     {
-        /// Case-insensitive family comparison, with the requested name trimmed.
+        /// Family comparison: the requested name is reduced to the same key the
+        /// face's own name reduces to, so case, spacing, punctuation and a
+        /// variable file's "Variable" suffix all stop mattering.
         bool FamilyEquals(const char* faceFamily, const std::string& requested)
         {
-            std::size_t begin = 0;
-            std::size_t end = requested.size();
-            while (begin < end && std::isspace(static_cast<unsigned char>(requested[begin])) != 0)
-            {
-                ++begin;
-            }
-            while (end > begin && std::isspace(static_cast<unsigned char>(requested[end - 1])) != 0)
-            {
-                --end;
-            }
-
-            if (begin == end)
+            if (faceFamily == nullptr)
             {
                 return false;
             }
 
-            std::size_t index = 0;
-            for (; index < end - begin; ++index)
+            const std::string key = NormalizeFamilyName(requested);
+            if (key.empty())
             {
-                const char actual = faceFamily[index];
-                if (actual == '\0')
-                {
-                    return false;
-                }
-                if (std::tolower(static_cast<unsigned char>(actual)) !=
-                    std::tolower(static_cast<unsigned char>(requested[begin + index])))
-                {
-                    return false;
-                }
+                return false;
             }
 
-            return faceFamily[index] == '\0';
-        }
-
-        /// True for a CSS generic family, which names a *kind* of face rather
-        /// than a family the host may or may not have.
-        bool IsGenericFamily(const std::string& name)
-        {
-            return name == "serif" || name == "sans-serif" || name == "monospace" || name == "cursive" ||
-                   name == "fantasy" || name == "system-ui" || name == "ui-serif" ||
-                   name == "ui-sans-serif" || name == "ui-monospace" || name == "ui-rounded" ||
-                   name == "emoji" || name == "math" || name == "fangsong";
+            return NormalizeFamilyName(faceFamily) == key;
         }
     }
 
@@ -1246,8 +1582,16 @@ namespace RoboRenderer
                 ++cursor;
             }
 
-            if (IsGenericFamily(name))
+            const GenericFamilyKind generic = GenericFamilyKindOf(name);
+            if (generic != GenericFamilyKind::None)
             {
+                // A generic family asks for a kind of face; the category's own
+                // preference order answers it. `sans-serif` and `system-ui` are
+                // the primary face, so they are simply skipped here.
+                if (const FontFace* genericFace = GenericFaceFor(chain, generic, wantBold, wantItalic, 0, false))
+                {
+                    return *genericFace;
+                }
                 continue;
             }
 
@@ -1307,8 +1651,14 @@ namespace RoboRenderer
                 ++cursor;
             }
 
-            if (IsGenericFamily(name))
+            const GenericFamilyKind generic = GenericFamilyKindOf(name);
+            if (generic != GenericFamilyKind::None)
             {
+                if (const FontFace* genericFace =
+                        GenericFaceFor(chain, generic, wantBold, wantItalic, codepoint, true))
+                {
+                    return *genericFace;
+                }
                 continue;
             }
 

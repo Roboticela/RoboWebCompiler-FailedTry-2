@@ -724,9 +724,25 @@ namespace RoboRenderer
 
         for (ElementIndex child = element->firstChild; child != NoElement;)
         {
-            PaintElement(child, childOriginX, childOriginY, childClip);
-
             const CompiledElement* childElement = ElementAt(document, child);
+
+            if (childElement != nullptr &&
+                styles.StyleFor(document, child, CategoryFor(childElement->kind)).position ==
+                    PositionKind::Fixed)
+            {
+                // A fixed box is positioned against the viewport, so neither a
+                // scroll nor a clip from any ancestor applies to it. Its layout
+                // geometry is already in viewport coordinates, which is what an
+                // origin of zero means, and its clip is the viewport itself.
+                const RenderTargetInfo& target = layout.Viewport();
+                PaintElement(child, 0.0f, 0.0f,
+                             Rect{ 0.0f, 0.0f, target.logicalWidth, target.logicalHeight });
+            }
+            else
+            {
+                PaintElement(child, childOriginX, childOriginY, childClip);
+            }
+
             child = childElement != nullptr ? childElement->nextSibling : NoElement;
         }
 

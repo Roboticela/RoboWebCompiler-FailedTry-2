@@ -46,6 +46,17 @@ namespace RoboCSSCompiler
         PaddingBottom,
         PaddingLeft,
 
+        // --- positioning ----------------------------------------------------
+        // The out-of-flow model: which formatting context an element belongs
+        // to (`position`) and where it sits inside it (`top`..`left`), plus the
+        // paint order that out-of-flow boxes need (`z-index`).
+        Position,
+        Top,
+        Right,
+        Bottom,
+        Left,
+        ZIndex,
+
         // --- borders --------------------------------------------------------
         BorderTopWidth,
         BorderRightWidth,
@@ -190,6 +201,8 @@ namespace RoboCSSCompiler
         Display,
         /// `visible | hidden | clip | scroll | auto`
         Overflow,
+        /// `auto | <integer>`
+        ZIndex,
         /// `start | end | left | right | center | justify`
         TextAlign,
         /// `none | underline | overline | line-through` or several of them.
