@@ -218,6 +218,29 @@ namespace RoboRenderer
         return kind != PositionKind::Static;
     }
 
+    /// `float`. Which side of its block a floating box hugs. A float stays in
+    /// its block formatting context - its parent still contains it - but it
+    /// leaves the line flow, and following inline content wraps around it.
+    /// `inline-start`/`inline-end` resolve to `Left`/`Right` here because the
+    /// native flow is left to right.
+    enum class FloatKind : std::uint8_t
+    {
+        /// Not floating. The initial value.
+        None = 0,
+        Left = 1,
+        Right = 2
+    };
+
+    /// `clear`. Which floats a box must be moved below. `Both` moves it below
+    /// every float it would otherwise sit beside.
+    enum class ClearKind : std::uint8_t
+    {
+        None = 0,
+        Left = 1,
+        Right = 2,
+        Both = 3
+    };
+
     enum class TextAlignKind : std::uint8_t
     {
         Start = 0,
@@ -522,6 +545,13 @@ namespace RoboRenderer
         StyleFlagLeft = 1ull << 55,
         StyleFlagZIndex = 1ull << 56,
 
+        // The float model. `float` and `clear` are read by the block arranger:
+        // a floated box is placed against a side and no longer takes part in
+        // the line flow, and a cleared box is pushed below the floats its side
+        // names before it is placed.
+        StyleFlagFloat = 1ull << 57,
+        StyleFlagClear = 1ull << 58,
+
         /// Every inset, for an `inset` shorthand that set all four.
         StyleFlagInset = StyleFlagTop | StyleFlagRight | StyleFlagBottom | StyleFlagLeft,
 
@@ -636,6 +666,14 @@ namespace RoboRenderer
         std::int32_t zIndex = 0;
         std::uint8_t hasZIndex = 0;
 
+        /// `float`. `None` keeps the box in the line flow, which is the initial
+        /// value; either other kind takes it out and hugs the named side.
+        FloatKind floatKind = FloatKind::None;
+
+        /// `clear`. `None` lets the box sit beside a float, which is the initial
+        /// value.
+        ClearKind clearKind = ClearKind::None;
+
         /// `font-kerning`. `Auto` leaves the font's kerning on, which is the
         /// shaper's own default.
         FontKerningKind fontKerning = FontKerningKind::Auto;
@@ -671,6 +709,20 @@ namespace RoboRenderer
         /// Style identity used by debug output to show where a style came from.
         std::uint32_t sourceStyleId;
     };
+
+    /// The stacking level a box paints at within its stacking context. The
+    /// normal flow is level zero; a positioned box that declares `z-index`
+    /// leaves the flow's order for the level it names. Boxes sharing a level
+    /// keep tree order among themselves.
+    inline std::int32_t StackingLevel(const CompiledStyle& style)
+    {
+        if (!IsPositioned(style.position) || style.hasZIndex == 0)
+        {
+            return 0;
+        }
+
+        return style.zIndex;
+    }
 
     // -----------------------------------------------------------------------
     // Elements

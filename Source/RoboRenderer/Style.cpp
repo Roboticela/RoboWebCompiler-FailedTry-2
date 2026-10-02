@@ -982,6 +982,17 @@ namespace RoboRenderer
             target.zIndex = authored.zIndex;
             target.hasZIndex = authored.hasZIndex;
         }
+
+        // The float model. `none` is the initial value for both, so an unstyled
+        // box stays in the line flow and clears nothing.
+        if (IsSpecified(specified, StyleFlagFloat))
+        {
+            target.floatKind = authored.floatKind;
+        }
+        if (IsSpecified(specified, StyleFlagClear))
+        {
+            target.clearKind = authored.clearKind;
+        }
         if (IsSpecified(specified, StyleFlagOverflowX))
         {
             target.overflowX = authored.overflowX;

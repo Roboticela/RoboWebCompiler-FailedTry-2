@@ -106,6 +106,17 @@ namespace RoboRenderer
         }
     };
 
+    /// A float that has been placed in a block formatting context. The arranger
+    /// keeps the placed boxes so that following line boxes can be shortened
+    /// around them and a `clear` can be pushed below them.
+    struct FloatBox
+    {
+        ElementIndex element = NoElement;
+        /// The float's border box, in the coordinates of its block container.
+        Rect box;
+        FloatKind side = FloatKind::None;
+    };
+
     /// Flags on a laid out element.
     enum LayoutFlags : std::uint16_t
     {
@@ -282,6 +293,16 @@ namespace RoboRenderer
         /// The style that applied to an element during the last layout pass.
         const CompiledStyle& StyleOf(ElementIndex index) const { return stylesCache[index]; }
 
+        /// The children of `index` in paint order, written into `ordered`.
+        ///
+        /// The normal flow keeps tree order, but a positioned box that declares
+        /// `z-index` leaves that order for the stacking level it names: negative
+        /// levels paint behind the flow, positive levels in front of it, each
+        /// group in ascending level and ties in tree order. Returning false
+        /// means no child takes its own level, so the caller can walk the tree
+        /// order it already has instead of paying for a sort.
+        bool OrderedChildren(ElementIndex index, std::vector<ElementIndex>& ordered) const;
+
         /// Turns a declared size into a used length, or -1 when the element did
         /// not declare one. Percentages resolve against the containing block the
         /// parent handed down, viewport units against the viewport: both are
@@ -415,14 +436,17 @@ namespace RoboRenderer
         IntrinsicSize MeasureElement(ElementIndex index, float availableWidth);
 
         /// Arranges an element and returns the used height of its border box.
-        /// In measure-only mode nothing is written to the result.
+        /// In measure-only mode nothing is written to the result. `shrinkToFit`
+        /// is set for a float, whose width is its content's max-content width
+        /// rather than the width of its container.
         float ArrangeElement(ElementIndex index,
                              float x,
                              float y,
                              float availableWidth,
                              const Rect& clip,
                              std::uint32_t depth,
-                             bool measureOnly);
+                             bool measureOnly,
+                             bool shrinkToFit = false);
 
         float ArrangeBlockChildren(ElementIndex index,
                                    float x,
@@ -442,7 +466,8 @@ namespace RoboRenderer
                                const Rect& clip,
                                std::uint32_t depth,
                                const std::vector<ElementIndex>* restriction,
-                               bool measureOnly);
+                               bool measureOnly,
+                               const std::vector<FloatBox>* floats = nullptr);
 
         /// Flows inline content down a column instead of along a baseline: the
         /// vertical-writing-mode sibling of `ArrangeInlineRun`. The block has one
@@ -473,6 +498,33 @@ namespace RoboRenderer
         void CollectTableRows(ElementIndex table,
                               std::vector<ElementIndex>& rows,
                               std::vector<ElementIndex>& captions) const;
+
+        /// Places one float and returns its border box in the container's
+        /// coordinates. The float is laid out shrink-to-fit at the container's
+        /// left edge to learn its size, then moved to the named side and below
+        /// any float it cannot sit beside.
+        Rect PlaceFloat(ElementIndex index,
+                        FloatKind side,
+                        float x,
+                        float y,
+                        float availableWidth,
+                        const Rect& clip,
+                        std::uint32_t depth,
+                        const std::vector<FloatBox>& floats);
+
+        /// The top a cleared box must drop to so it sits below the floats the
+        /// `clear` value names. Returns `y` unchanged when nothing is cleared.
+        float ClearBelowFloats(ClearKind clear, float y, const std::vector<FloatBox>& floats) const;
+
+        /// The left and right insets a float imposes on a line box whose top is
+        /// `lineTop`, as offsets into a container starting at `x` and `availableWidth`
+        /// wide. Both are zero when no float overlaps the line's band.
+        void FloatInsetsAt(const std::vector<FloatBox>& floats,
+                           float lineTop,
+                           float x,
+                           float availableWidth,
+                           float& leftInset,
+                           float& rightInset) const;
 
         const CompiledDocument& document;
         StyleProvider& styleProvider;

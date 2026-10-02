@@ -269,7 +269,32 @@ The behaviours worth naming, because each one is a decision:
   layout pass.
 * **z-index.** Compiled as an integer or `auto`, carried on the native style with
   a presence flag so `auto` ("no stacking level of its own") is told apart from
-  `0`. `auto` is the initial value and writes nothing.
+  `0`. `auto` is the initial value and writes nothing. A positioned box that
+  declares a level leaves tree order for it: `LayoutEngine::OrderedChildren`
+  hands the paint traversal and hit testing the same list, with negative levels
+  first, the normal flow next in tree order, and positive levels last in
+  ascending order — the highest level both paints last and is hit first. The
+  scan is skipped unless a child actually names a level, so the ordinary tree
+  walk costs nothing.
+* **The float model.** A floated box stays in its block formatting context — its
+  container still grows to contain it — but it leaves the line flow, so a sibling
+  flows as if it were not there horizontally. `ArrangeBlockChildren` places each
+  float shrink-to-fit against its side, at the container's content edge, then
+  shifts it below any float it cannot sit beside; it records the placed border
+  box in a `FloatBox` list scoped to that formatting context. That list is what
+  lets later content flow *around* the float rather than merely past it:
+  `ArrangeInlineRun` asks `FloatInsetsAt` for the left and right insets the
+  floats impose on each line, and a line that has cleared a float — whose top is
+  below the float's bottom — gets the full width back. `clear` is the mirror
+  promise, and it is applied before a block or a float is placed: the cursor is
+  dropped to the lowest bottom of the floats the named side covers, so the box
+  lands below them. The container's used height is the flow's extent or the
+  lowest float's bottom, whichever is further down.
+
+  Two limits are deliberate. A float's exclusion is computed from the line's top
+  against the float's own band, which is exact for the common case of a float at
+  the top of its container; and a float in a nested block does not reach a
+  sibling block's lines, because exclusions are tracked per formatting context.
 * **The root fills the viewport** vertically, so a short document paints a page
   rather than a stripe.
 

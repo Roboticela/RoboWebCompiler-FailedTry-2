@@ -455,6 +455,62 @@ namespace RoboRenderer
         }
     }
 
+    bool LayoutEngine::OrderedChildren(ElementIndex index, std::vector<ElementIndex>& ordered) const
+    {
+        const CompiledElement* element = ElementAt(document, index);
+        if (element == nullptr)
+        {
+            return false;
+        }
+
+        // Most boxes hold nothing that takes its own stacking level, so the
+        // scan decides whether the sort is worth doing at all.
+        bool anyLevelled = false;
+        for (ElementIndex child = element->firstChild; child != NoElement;)
+        {
+            const CompiledElement* node = ElementAt(document, child);
+            if (node == nullptr)
+            {
+                break;
+            }
+
+            if (StackingLevel(stylesCache[child]) != 0)
+            {
+                anyLevelled = true;
+                break;
+            }
+
+            child = node->nextSibling;
+        }
+
+        if (!anyLevelled)
+        {
+            return false;
+        }
+
+        ordered.clear();
+        for (ElementIndex child = element->firstChild; child != NoElement;)
+        {
+            const CompiledElement* node = ElementAt(document, child);
+            if (node == nullptr)
+            {
+                break;
+            }
+
+            ordered.push_back(child);
+            child = node->nextSibling;
+        }
+
+        // A stable sort by level keeps tree order inside each level: negatives
+        // rise to the front, positives sink to the back, level zero holds the
+        // position the flow gave it.
+        std::stable_sort(ordered.begin(), ordered.end(), [this](ElementIndex a, ElementIndex b) {
+            return StackingLevel(stylesCache[a]) < StackingLevel(stylesCache[b]);
+        });
+
+        return true;
+    }
+
     void LayoutEngine::ApplyPositioning()
     {
         // Document order is parent before child, so an ancestor is moved before
@@ -637,6 +693,14 @@ namespace RoboRenderer
             // only child is absolutely positioned still has to be arranged as a
             // block to place it.
             if (IsOutOfFlow(stylesCache[child].position))
+            {
+                return true;
+            }
+
+            // A float is the same: it is placed by the block path against a side
+            // and never becomes part of a line, so a container holding one is a
+            // block container even when everything else in it is inline.
+            if (stylesCache[child].floatKind != FloatKind::None)
             {
                 return true;
             }
@@ -917,6 +981,14 @@ namespace RoboRenderer
                 continue;
             }
 
+            if (style.floatKind != FloatKind::None)
+            {
+                // A float is placed by the block path against a side; it never
+                // becomes part of a line.
+                child = node->nextSibling;
+                continue;
+            }
+
             if (IsBlockDisplay(style.display))
             {
                 // A block inside an inline context. The caller's run splitting
@@ -984,9 +1056,9 @@ namespace RoboRenderer
                                          float y,
                                          float availableWidth,
                                          const Rect& clip,
-                                         std::uint32_t depth,
-                                         const std::vector<ElementIndex>* restriction,
-                                         bool measureOnly)
+                                         std::uint32_t depth,                               const std::vector<ElementIndex>* restriction,
+                               bool measureOnly,
+                               const std::vector<FloatBox>* floats)
     {
         const CompiledElement* element = ElementAt(document, container);
         if (element == nullptr)
@@ -1071,6 +1143,31 @@ namespace RoboRenderer
 
         const bool wrap = availableWidth > 0.0f;
 
+        // A float shortens the lines whose vertical band it crosses. The insets
+        // are recomputed for every line, because a float only reaches as far
+        // down as its own box: the lines below it get the full width back.
+        float lineLeftInset = 0.0f;
+        float lineRightInset = 0.0f;
+        float lineAvailable = availableWidth;
+        float lineX = x;
+
+        const auto refreshLineInsets = [&](float top) {
+            if (floats == nullptr)
+            {
+                lineLeftInset = 0.0f;
+                lineRightInset = 0.0f;
+            }
+            else
+            {
+                FloatInsetsAt(*floats, top, x, availableWidth, lineLeftInset, lineRightInset);
+            }
+
+            lineAvailable = std::max(1.0f, availableWidth - lineLeftInset - lineRightInset);
+            lineX = x + lineLeftInset;
+        };
+
+        refreshLineInsets(y);
+
         struct Fragment
         {
             const InlineItem* item = nullptr;
@@ -1095,7 +1192,7 @@ namespace RoboRenderer
 
         float lineTop = y;
         float currentIndent = indent;
-        float penX = x + indent;
+        float penX = lineX + indent;
         float maxAscent = 0.0f;
         float maxDescent = 0.0f;
         float specifiedLineHeight = 0.0f;
@@ -1119,7 +1216,7 @@ namespace RoboRenderer
             // still fits and the line boxes do not overlap.
             const float lineHeight = std::max(maxAscent + maxDescent, specifiedLineHeight);
             const float baseline = lineTop + maxAscent;
-            const float used = penX - x - currentIndent;
+            const float used = penX - lineX - currentIndent;
             widestLine = std::max(widestLine, used);
 
             // Justification grows the gaps a line already has: the spaces inside
@@ -1163,7 +1260,7 @@ namespace RoboRenderer
                         gaps += spaceCount(fragment);
                     }
 
-                    const float slack = availableWidth - used;
+                    const float slack = lineAvailable - used;
 
                     if (gaps > 0 && slack > 0.0f)
                     {
@@ -1172,7 +1269,7 @@ namespace RoboRenderer
                 }
             }
 
-            const float offset = AlignmentOffset(effectiveAlign, availableWidth, used);
+            const float offset = AlignmentOffset(effectiveAlign, lineAvailable, used);
 
             for (const AtomicBox& atomic : atomics)
             {
@@ -1197,7 +1294,7 @@ namespace RoboRenderer
                     LineLayout line;
                     line.element = fragment.item->element;
                     line.container = container;
-                    line.x = x + offset + currentIndent + fragment.x +
+                    line.x = lineX + offset + currentIndent + fragment.x +
                              static_cast<float>(gapsBefore) * justifyExtra;
                     line.width = fragment.width + static_cast<float>(spaces) * justifyExtra;
                     line.baseline = baseline;
@@ -1240,7 +1337,11 @@ namespace RoboRenderer
 
             lineTop += lineHeight;
             usedHeight = lineTop - y;
-            penX = x;
+
+            // The next line may sit below the float that shortened this one, so
+            // its insets are worked out from its own top.
+            refreshLineInsets(lineTop);
+            penX = lineX;
             currentIndent = 0.0f;
             maxAscent = 0.0f;
             maxDescent = 0.0f;
@@ -1259,17 +1360,18 @@ namespace RoboRenderer
                                               : textLayout.LineHeight(style.fontSize, style.fontWeight);
                 lineTop += breakHeight;
                 usedHeight = lineTop - y;
+                refreshLineInsets(lineTop);
                 continue;
             }
 
             if (!item.isText)
             {
-                if (wrap && penX > x && (penX - x) + item.width > availableWidth)
+                if (wrap && penX > lineX && (penX - lineX) + item.width > lineAvailable)
                 {
                     flushLine();
                 }
 
-                atomics.push_back(AtomicBox{ &item, penX - x - currentIndent });
+                atomics.push_back(AtomicBox{ &item, penX - lineX - currentIndent });
                 penX += item.width;
                 maxAscent = std::max(maxAscent, item.ascent);
                 maxDescent = std::max(maxDescent, item.descent);
@@ -1282,8 +1384,8 @@ namespace RoboRenderer
             for (;;)
             {
                 const float limit = firstFragment
-                                        ? (wrap ? std::max(1.0f, availableWidth - (penX - x)) : 0.0f)
-                                        : (wrap ? availableWidth : 0.0f);
+                                        ? (wrap ? std::max(1.0f, lineAvailable - (penX - lineX)) : 0.0f)
+                                        : (wrap ? lineAvailable : 0.0f);
 
                 TextRunStyle runStyle;
                 runStyle.letterSpacing = item.letterSpacing;
@@ -1311,7 +1413,7 @@ namespace RoboRenderer
 
                 const TextLine& head = wrappedLines[0];
 
-                if (firstFragment && wrap && penX > x && head.width > limit)
+                if (firstFragment && wrap && penX > lineX && head.width > limit)
                 {
                     // Not even the first word fits in the remaining space.
                     flushLine();
@@ -1319,7 +1421,7 @@ namespace RoboRenderer
                     continue;
                 }
 
-                fragments.push_back(Fragment{ &item, penX - x - currentIndent, head.width,
+                fragments.push_back(Fragment{ &item, penX - lineX - currentIndent, head.width,
                                               offset + head.startByte, offset + head.endByte });
                 penX += head.width;
                 maxAscent = std::max(maxAscent, item.ascent);
@@ -1471,6 +1573,118 @@ namespace RoboRenderer
     // Block layout
     // -----------------------------------------------------------------------
 
+    Rect LayoutEngine::PlaceFloat(ElementIndex index,
+                                 FloatKind side,
+                                 float x,
+                                 float y,
+                                 float availableWidth,
+                                 const Rect& clip,
+                                 std::uint32_t depth,
+                                 const std::vector<FloatBox>& floats)
+    {
+        // A float's width is its content's max-content width unless a length is
+        // declared, so it is laid out shrink-to-fit at the container's left edge
+        // first; where it ends up is then a translation of that measurement.
+        ArrangeElement(index, x, y, availableWidth, clip, depth, false, true);
+
+        const ElementLayout& measured = result.elements[index];
+        const float floatWidth = measured.border.width;
+
+        float targetX = x;
+        if (side == FloatKind::Right)
+        {
+            targetX = x + availableWidth - floatWidth;
+        }
+
+        // Floats on the same side stack vertically, and a float that cannot
+        // share its row with an opposite-side float drops below it: the top is
+        // the lowest bottom of the floats that block this one.
+        float targetY = y;
+        for (const FloatBox& placed : floats)
+        {
+            if (placed.box.Bottom() <= targetY)
+            {
+                continue;
+            }
+
+            const bool sameSide = placed.side == side;
+            const bool noRoom = placed.side != side && floatWidth + placed.box.width > availableWidth;
+
+            if (sameSide || noRoom)
+            {
+                targetY = placed.box.Bottom();
+            }
+        }
+
+        if (targetX != measured.border.x || targetY != measured.border.y)
+        {
+            ShiftSubtree(index, targetX - measured.border.x, targetY - measured.border.y);
+        }
+
+        return result.elements[index].border;
+    }
+
+    float LayoutEngine::ClearBelowFloats(ClearKind clear, float y, const std::vector<FloatBox>& floats) const
+    {
+        float cleared = y;
+
+        for (const FloatBox& placed : floats)
+        {
+            const bool left = placed.side == FloatKind::Left;
+            const bool right = placed.side == FloatKind::Right;
+            const bool applies = clear == ClearKind::Both ||
+                                 (clear == ClearKind::Left && left) ||
+                                 (clear == ClearKind::Right && right);
+
+            if (applies && placed.box.Bottom() > cleared)
+            {
+                cleared = placed.box.Bottom();
+            }
+        }
+
+        return cleared;
+    }
+
+    void LayoutEngine::FloatInsetsAt(const std::vector<FloatBox>& floats,
+                                     float lineTop,
+                                     float x,
+                                     float availableWidth,
+                                     float& leftInset,
+                                     float& rightInset) const
+    {
+        leftInset = 0.0f;
+        rightInset = 0.0f;
+
+        const float rightEdge = x + availableWidth;
+
+        for (const FloatBox& placed : floats)
+        {
+            // A float only reaches the lines its own band crosses; below it the
+            // full width comes back.
+            if (placed.box.y > lineTop || placed.box.Bottom() <= lineTop)
+            {
+                continue;
+            }
+
+            if (placed.side == FloatKind::Left)
+            {
+                const float inset = placed.box.Right() - x;
+                if (inset > leftInset)
+                {
+                    leftInset = inset;
+                }
+            }
+            else if (placed.side == FloatKind::Right)
+            {
+                const float inset = rightEdge - placed.box.x;
+                if (inset > rightInset)
+                {
+                    rightInset = inset;
+                }
+            }
+        }
+    }
+
     float LayoutEngine::ArrangeBlockChildren(ElementIndex index,
                                              float x,
                                              float y,
@@ -1488,6 +1702,12 @@ namespace RoboRenderer
         float cursorY = y;
         std::vector<ElementIndex> inlineRun;
 
+        // The floats placed in this block formatting context, and the lowest
+        // point any of them reaches: the container grows to contain its floats
+        // even though they take no room in the flow.
+        std::vector<FloatBox> floats;
+        float floatBottom = y;
+
         const auto flushRun = [&]() {
             if (inlineRun.empty())
             {
@@ -1495,7 +1715,7 @@ namespace RoboRenderer
             }
 
             cursorY += ArrangeInlineRun(index, x, cursorY, availableWidth, clip, depth, &inlineRun,
-                                        measureOnly);
+                                        measureOnly, &floats);
             inlineRun.clear();
         };
 
@@ -1531,10 +1751,35 @@ namespace RoboRenderer
                 flushRun();
                 ArrangeElement(child, x, cursorY, availableWidth, clip, depth, measureOnly);
             }
+            else if (childStyle.floatKind != FloatKind::None)
+            {
+                // A float is placed against a side of the block and reserves no
+                // room in the flow: the cursor does not advance, but the
+                // container grows to contain it. During intrinsic measurement it
+                // is measured in place, because only painted geometry needs the
+                // exclusions.
+                flushRun();
+
+                if (measureOnly)
+                {
+                    ArrangeElement(child, x, cursorY, availableWidth, clip, depth, true, true);
+                }
+                else
+                {
+                    cursorY = ClearBelowFloats(childStyle.clearKind, cursorY, floats);
+                    const Rect placed = PlaceFloat(child, childStyle.floatKind, x, cursorY, availableWidth,
+                                                   clip, depth, floats);
+                    floats.push_back(FloatBox{ child, placed, childStyle.floatKind });
+                    floatBottom = std::max(floatBottom, placed.Bottom());
+                }
+            }
             else if (IsBlockDisplay(childStyle.display))
             {
                 flushRun();
 
+                // `clear` moves the block below the floats it names before its
+                // margins and its own box are placed.
+                cursorY = ClearBelowFloats(childStyle.clearKind, cursorY, floats);
                 cursorY += childStyle.margin.top;
                 cursorY += ArrangeElement(child, x, cursorY, availableWidth, clip, depth, measureOnly);
                 cursorY += childStyle.margin.bottom;
@@ -1548,7 +1793,10 @@ namespace RoboRenderer
         }
 
         flushRun();
-        return cursorY - y;
+
+        // The container's height is the flow's extent or the bottom of its
+        // lowest float, whichever is further down.
+        return std::max(cursorY - y, floatBottom - y);
     }
 
     // -----------------------------------------------------------------------
@@ -1810,7 +2058,8 @@ namespace RoboRenderer
                                        float availableWidth,
                                        const Rect& clip,
                                        std::uint32_t depth,
-                                       bool measureOnly)
+                                       bool measureOnly,
+                                       bool shrinkToFit)
     {
         const CompiledElement* element = ElementAt(document, index);
         if (element == nullptr)
@@ -1937,7 +2186,9 @@ namespace RoboRenderer
         const bool replaced = IsReplacedCategory(category) && category != RenderCategory::TextArea &&
                               category != RenderCategory::Input && category != RenderCategory::Select;
         const bool blockLevel = IsBlockCategory(category) && !IsInlineCategory(category);
-        const bool fillsWidth = blockLevel && availableWidth > 0.0f;
+        // A float never fills its container: its width is its content's
+        // max-content width unless it declares one.
+        const bool fillsWidth = blockLevel && availableWidth > 0.0f && !shrinkToFit;
 
         // --- intrinsic width when the box is not sized yet ------------------
         float maxContentWidth = 0.0f;

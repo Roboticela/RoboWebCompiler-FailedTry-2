@@ -57,6 +57,13 @@ namespace RoboCSSCompiler
         Left,
         ZIndex,
 
+        // --- floats ---------------------------------------------------------
+        // A float leaves the normal flow horizontally while staying in its
+        // block formatting context: following inline content wraps around the
+        // box, and `clear` pushes a box below the floats it names.
+        Float,
+        Clear,
+
         // --- borders --------------------------------------------------------
         BorderTopWidth,
         BorderRightWidth,

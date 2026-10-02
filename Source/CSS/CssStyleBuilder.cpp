@@ -25,9 +25,13 @@ namespace RoboHTMLCompiler
         using RoboCSSCompiler::CSSValue;
         using RoboCSSCompiler::CSSValueKind;
 
+        using RoboRenderer::ClearKind;
         using RoboRenderer::CompiledStyle;
         using RoboRenderer::DisplayKind;
+        using RoboRenderer::FloatKind;
         using RoboRenderer::PositionKind;
+        using RoboRenderer::StyleFlagClear;
+        using RoboRenderer::StyleFlagFloat;
         using RoboRenderer::StyleFlagBottom;
         using RoboRenderer::StyleFlagLeft;
         using RoboRenderer::StyleFlagPosition;
@@ -526,6 +530,8 @@ namespace RoboHTMLCompiler
                 LowerPosition(computed, location, out);
                 LowerOffsets(computed, location, elementFontSize, out);
                 LowerZIndex(computed, location, out);
+                LowerFloat(computed, location, out);
+                LowerClear(computed, location, out);
                 LowerSize(computed, CSSPropertyId::Width, StyleFlagWidth, location, elementFontSize, out.width, out);
                 LowerSize(computed, CSSPropertyId::Height, StyleFlagHeight, location, elementFontSize, out.height,
                           out);
@@ -785,6 +791,78 @@ namespace RoboHTMLCompiler
 
                 ReportNotLowered(computed, CSSPropertyId::ZIndex, location, "z-index is an integer or 'auto'",
                                  "Write an integer such as 0, 1 or -1, or 'auto'.");
+            }
+
+            /// `float`: which side a box hugs, or `none` to stay in the line
+            /// flow. The logical keywords map to the physical sides because the
+            /// native flow is left to right.
+            void LowerFloat(const CSSComputedStyle& computed, const SourceLocation& location, CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::Float);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->IsKeyword("none"))
+                {
+                    out.floatKind = FloatKind::None;
+                }
+                else if (value->IsKeyword("left") || value->IsKeyword("inline-start"))
+                {
+                    out.floatKind = FloatKind::Left;
+                }
+                else if (value->IsKeyword("right") || value->IsKeyword("inline-end"))
+                {
+                    out.floatKind = FloatKind::Right;
+                }
+                else
+                {
+                    ReportNotLowered(computed, CSSPropertyId::Float, location,
+                                     "the native layout engine floats a box left or right",
+                                     "Use none, left, right, inline-start or inline-end.");
+                    return;
+                }
+
+                out.specified |= StyleFlagFloat;
+            }
+
+            /// `clear`: which floats a box must be moved below.
+            void LowerClear(const CSSComputedStyle& computed, const SourceLocation& location, CompiledStyle& out)
+            {
+                const CSSValue* value = Value(computed, CSSPropertyId::Clear);
+
+                if (value == nullptr)
+                {
+                    return;
+                }
+
+                if (value->IsKeyword("none"))
+                {
+                    out.clearKind = ClearKind::None;
+                }
+                else if (value->IsKeyword("left") || value->IsKeyword("inline-start"))
+                {
+                    out.clearKind = ClearKind::Left;
+                }
+                else if (value->IsKeyword("right") || value->IsKeyword("inline-end"))
+                {
+                    out.clearKind = ClearKind::Right;
+                }
+                else if (value->IsKeyword("both"))
+                {
+                    out.clearKind = ClearKind::Both;
+                }
+                else
+                {
+                    ReportNotLowered(computed, CSSPropertyId::Clear, location,
+                                     "the native layout engine clears to the left, right or both",
+                                     "Use none, left, right, both, inline-start or inline-end.");
+                    return;
+                }
+
+                out.specified |= StyleFlagClear;
             }
 
             void LowerSize(const CSSComputedStyle& computed,

@@ -722,13 +722,11 @@ namespace RoboRenderer
             clipping = true;
         }
 
-        for (ElementIndex child = element->firstChild; child != NoElement;)
+        const auto paintChild = [&](ElementIndex child)
         {
             const CompiledElement* childElement = ElementAt(document, child);
 
-            if (childElement != nullptr &&
-                styles.StyleFor(document, child, CategoryFor(childElement->kind)).position ==
-                    PositionKind::Fixed)
+            if (childElement != nullptr && layout.StyleOf(child).position == PositionKind::Fixed)
             {
                 // A fixed box is positioned against the viewport, so neither a
                 // scroll nor a clip from any ancestor applies to it. Its layout
@@ -742,8 +740,28 @@ namespace RoboRenderer
             {
                 PaintElement(child, childOriginX, childOriginY, childClip);
             }
+        };
 
-            child = childElement != nullptr ? childElement->nextSibling : NoElement;
+        // Children paint in tree order unless one of them declares a stacking
+        // level, in which case the levelled ones move to where that level puts
+        // them: whatever paints last is on top, and hit testing follows the same
+        // order so what is seen is what is clicked.
+        std::vector<ElementIndex> orderedChildren;
+        if (layout.OrderedChildren(index, orderedChildren))
+        {
+            for (ElementIndex child : orderedChildren)
+            {
+                paintChild(child);
+            }
+        }
+        else
+        {
+            for (ElementIndex child = element->firstChild; child != NoElement;)
+            {
+                const CompiledElement* childElement = ElementAt(document, child);
+                paintChild(child);
+                child = childElement != nullptr ? childElement->nextSibling : NoElement;
+            }
         }
 
         if (clipping)

@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <vector>
 
 namespace RoboRenderer
 {
@@ -265,11 +266,12 @@ namespace RoboRenderer
             childClip = box->clip.Translated(originX, originY).Intersection(clip);
         }
 
-        // Children are tested in tree order and the last match wins, which is the
-        // same rule painting uses: whatever was painted last is on top.
+        // Children are tested in paint order and the last match wins, so the box
+        // the user sees on top is the one a click lands on. A stacking level
+        // moves a box in that order exactly as it moves it in painting.
         ElementIndex best = NoElement;
 
-        for (ElementIndex child = element->firstChild; child != NoElement;)
+        const auto testChild = [&](ElementIndex child)
         {
             const CompiledElement* childElement = ElementAt(document, child);
 
@@ -291,8 +293,24 @@ namespace RoboRenderer
             {
                 best = hit;
             }
+        };
 
-            child = childElement != nullptr ? childElement->nextSibling : NoElement;
+        std::vector<ElementIndex> orderedChildren;
+        if (layout.OrderedChildren(index, orderedChildren))
+        {
+            for (ElementIndex child : orderedChildren)
+            {
+                testChild(child);
+            }
+        }
+        else
+        {
+            for (ElementIndex child = element->firstChild; child != NoElement;)
+            {
+                const CompiledElement* childElement = ElementAt(document, child);
+                testChild(child);
+                child = childElement != nullptr ? childElement->nextSibling : NoElement;
+            }
         }
 
         if (best != NoElement)

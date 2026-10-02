@@ -207,6 +207,14 @@ testing the value's sign, and `auto` is a real value rather than an unsupported
 one, so it is stored as `Auto` and the engine reads it as "the static position on
 this axis" rather than as an offset of zero.
 
+The float model is compiled and applied too: `float` lowers to one of three
+kinds (`none`, `left`, `right`, with the logical keywords mapped to the physical
+sides because the native flow is left to right) and `clear` to one of four
+(`none`, `left`, `right`, `both`, with the same mapping). Both are layout
+properties: the block arranger places a floating box against its side and shortens
+the lines that cross it, and a cleared box drops below the floats on the side it
+names.
+
 The text and font properties are the ones that reach the runtime's own text
 engine rather than only the style table. `font-family` and `font-style` select a
 face (a real italic when the host has one, a synthesized oblique otherwise);

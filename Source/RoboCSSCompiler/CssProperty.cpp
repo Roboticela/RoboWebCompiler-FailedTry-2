@@ -171,6 +171,15 @@ namespace RoboCSSCompiler
             { Id::Left, "left", Cat::Position, false, "auto", Grammar::LengthPercentageOrAuto, nullptr, true, false, false, true, true, "css-position-3" },
             { Id::ZIndex, "z-index", Cat::Position, false, "auto", Grammar::ZIndex, nullptr, false, true, false, true, true, "css2" },
 
+            // The float model. `float` decides which side a box hugs and takes
+            // it out of the line flow, and `clear` pushes a box below the floats
+            // on the side it names. Both change where boxes end up, so both are
+            // layout properties.
+            { Id::Float, "float", Cat::Position, false, "none", Grammar::Keyword,
+              "none left right inline-start inline-end", true, false, false, true, true, "css2" },
+            { Id::Clear, "clear", Cat::Position, false, "none", Grammar::Keyword,
+              "none left right both inline-start inline-end", true, false, false, true, true, "css2" },
+
             { Id::BorderTopWidth, "border-top-width", Cat::Border, false, "medium", Grammar::BorderWidth, nullptr, true, true, false, true, true, "css-backgrounds-3" },
             { Id::BorderRightWidth, "border-right-width", Cat::Border, false, "medium", Grammar::BorderWidth, nullptr, true, true, false, true, true, "css-backgrounds-3" },
             { Id::BorderBottomWidth, "border-bottom-width", Cat::Border, false, "medium", Grammar::BorderWidth, nullptr, true, true, false, true, true, "css-backgrounds-3" },

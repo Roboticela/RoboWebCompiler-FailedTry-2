@@ -178,7 +178,7 @@
       "mdnStatus": "standard",
       "covered": true,
       "retired": true,
-      "note": "Compiled as an integer or auto; carried on the native style with a presence flag so auto is not zero."
+      "note": "Compiled as an integer or auto; carried on the native style with a presence flag so auto is not zero. A levelled positioned box now paints and hit tests in stacking order, not tree order."
     },
     {
       "document": "Reference/MDN/files/en-us/web/css/reference/properties/inset",
@@ -192,10 +192,36 @@
       "covered": true,
       "retired": true,
       "note": "Expanded to the four offset longhands by the cascade, with the same 1-to-4 distribution as margin."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/float",
+      "kind": "css property",
+      "names": [
+        "float"
+      ],
+      "compiled": true,
+      "spec": "css2",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native FloatKind; a float is placed against a side of its block, leaves the line flow, and the lines crossing its box are shortened around it."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/clear",
+      "kind": "css property",
+      "names": [
+        "clear"
+      ],
+      "compiled": true,
+      "spec": "css2",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "Lowered to a native ClearKind; a cleared block is pushed below the floats on the side it names before it is placed."
     }
   ],
   "remainingByArea": {
-    "cssProperties": 567,
+    "cssProperties": 565,
     "cssSelectors": 166,
     "cssAtRules": 23,
     "cssValuesAndFunctions": 123,
@@ -204,7 +230,7 @@
     "htmlGlobalAttributes": 32
   },
   "accountedFor": {
-    "cssPropertiesCompiled": 73,
+    "cssPropertiesCompiled": 75,
     "cssPropertiesCarriedOnly": 442,
     "cssPropertyNamesNotAccountedFor": 59,
     "htmlElementDefinitions": 239,
@@ -214,6 +240,7 @@
     "The CSS Working Group drafts and the WHATWG HTML drafts were consumed before this reference arrived, so the compiler already accounts for 1,080 CSS property names and the HTML vocabulary those drafts define. Reference/MDN is a second, differently structured reference: one Markdown page per item, which is why it is walked page by page rather than mined by an extractor.",
     "A property name the compiler carries is known, parsed and stored but not compiled: it keeps its declared value and is reported as an unimplemented feature (RCC010) rather than refused. Implementing one means compiling it and giving it its rendering behaviour.",
     "The 59 CSS property names MDN has that no draft of the reference defined are the vendor-prefixed set, the legacy flexbox box-* set, the SVG presentation attributes (which are SVG attribute vocabulary, not CSS properties) and touch-action, math-*, corner-*-shape, user-modify and font-smooth.",
-    "The out-of-flow model (position, top, right, bottom, left, inset, z-index) was the first slice of the layout machinery: the offsets and the shorthand are compiled and lowered, layout shifts relative and sticky boxes and places absolute and fixed boxes against their containing block, and a fixed box is pinned to the viewport through scrolling in paint, hit testing and bounds."
+    "The out-of-flow model (position, top, right, bottom, left, inset, z-index) was the first slice of the layout machinery: the offsets and the shorthand are compiled and lowered, layout shifts relative and sticky boxes and places absolute and fixed boxes against their containing block, and a fixed box is pinned to the viewport through scrolling in paint, hit testing and bounds.",
+    "The float model (float, clear) was the second slice of the layout machinery: both are compiled and lowered, a float is placed shrink-to-fit against its side and its container grows to contain it, the line boxes crossing it lose its width, and clear drops a box below the floats it names."
   ]
 }

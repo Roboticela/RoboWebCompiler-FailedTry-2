@@ -720,3 +720,200 @@ ROBO_TEST(Layout, FixedPositioningPinsToTheViewportAndIgnoresScroll)
     ROBO_CHECK(window.renderer.Hits().ElementBounds(pin, scrolledBounds));
     ROBO_CHECK_EQ(static_cast<int>(scrolledBounds.y), static_cast<int>(before.y));
 }
+
+ROBO_TEST(Paint, AZIndexReordersPaintingAndHitTestingTogether)
+{
+    // Two positioned boxes on top of each other. The first one names the higher
+    // stacking level, so it must paint last even though it comes first in the
+    // tree: a stacking level overrides tree order, for painting and for hit
+    // testing alike.
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"first\"></div><div id=\"second\"></div>",
+        application,
+        { { "probe.css",
+            "#first, #second { position: absolute; top: 40px; left: 40px; width: 120px; height: 60px; }\n"
+            "#first { z-index: 5; background: red; }\n"
+            "#second { z-index: 1; background: blue; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 400.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex first = FindElementById(document, "first");
+    const ElementIndex second = FindElementById(document, "second");
+    ROBO_CHECK(first != NoElement && second != NoElement);
+
+    const auto& commands = window.renderer.Paint().List().Commands();
+
+    std::size_t firstPaint = commands.size();
+    std::size_t secondPaint = commands.size();
+
+    for (std::size_t index = 0; index < commands.size(); ++index)
+    {
+        if (commands[index].element == first && firstPaint == commands.size())
+        {
+            firstPaint = index;
+        }
+
+        if (commands[index].element == second && secondPaint == commands.size())
+        {
+            secondPaint = index;
+        }
+    }
+
+    ROBO_CHECK(firstPaint < commands.size() && secondPaint < commands.size());
+
+    // The higher level paints later, so whatever it covers is on top.
+    ROBO_CHECK(firstPaint > secondPaint);
+
+    // A click at the shared centre lands on the same box that is drawn on top.
+    const ElementIndex hit = window.renderer.Hits().HitTest(100.0f, 70.0f);
+    ROBO_CHECK_EQ(static_cast<int>(first), static_cast<int>(hit));
+}
+
+// Floating a box takes it out of the line flow and lets following content wrap
+// around it, while its container still grows to contain it; clearing pushes a
+// box below the floats it names. These tests pin those three promises: where
+// the float sits, that the lines beside it lose its width, and that a cleared
+// box does not.
+// ---------------------------------------------------------------------------
+
+ROBO_TEST(Layout, AFloatHugsItsSideAndTheLinesWrapAroundIt)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"box\"><div id=\"f\">F</div>one two three four five six seven eight nine ten "
+        "eleven twelve thirteen fourteen fifteen</div>",
+        application,
+        { { "probe.css",
+            "#box { width: 160px; font-size: 16px; }\n"
+            "#f { float: left; width: 60px; height: 40px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 400.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex box = FindElementById(document, "box");
+    const ElementIndex floaty = FindElementById(document, "f");
+    ROBO_CHECK(box != NoElement && floaty != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+    const Rect boxBox = BoxOf(layout, box);
+    const Rect floatBox = BoxOf(layout, floaty);
+
+    // The float hugs the container's left edge and keeps its declared size.
+    ROBO_CHECK_EQ(static_cast<int>(floatBox.x), static_cast<int>(boxBox.x));
+    ROBO_CHECK(floatBox.width > 59.0f && floatBox.width < 61.0f);
+    ROBO_CHECK(floatBox.height > 39.0f && floatBox.height < 41.0f);
+
+    // The container grows to contain the float even though the float reserves
+    // no room in the flow.
+    ROBO_CHECK(boxBox.height >= 40.0f);
+
+    // The first line starts to the right of the float.
+    float besideLineX = 1.0e9f;
+
+    for (const LineLayout& line : layout.lines)
+    {
+        if (line.container == box && line.lineTop < floatBox.Bottom() - 1.0f)
+        {
+            besideLineX = std::min(besideLineX, line.x);
+        }
+    }
+
+    ROBO_CHECK(besideLineX >= floatBox.Right() - 1.0f);
+
+    // A line below the float gets the full width back.
+    bool regainedFullWidth = false;
+
+    for (const LineLayout& line : layout.lines)
+    {
+        if (line.container == box && line.lineTop >= floatBox.Bottom() - 1.0f &&
+            line.x <= boxBox.x + 1.0f)
+        {
+            regainedFullWidth = true;
+        }
+    }
+
+    ROBO_CHECK(regainedFullWidth);
+}
+
+ROBO_TEST(Layout, ARightFloatHugsTheRightEdge)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"box\"><div id=\"f\">F</div>text after the float</div>",
+        application,
+        { { "probe.css",
+            "#box { width: 200px; }\n"
+            "#f { float: right; width: 60px; height: 30px; }\n" } },
+        error));
+
+    const CompiledDocument& document = application.Document();
+
+    TestRenderer window(document, 400.0f, 300.0f);
+    ROBO_CHECK(window.Frame());
+
+    const ElementIndex box = FindElementById(document, "box");
+    const ElementIndex floaty = FindElementById(document, "f");
+    ROBO_CHECK(box != NoElement && floaty != NoElement);
+
+    const LayoutResult& layout = window.renderer.Layout().Result();
+    const Rect boxBox = BoxOf(layout, box);
+    const Rect floatBox = BoxOf(layout, floaty);
+
+    ROBO_CHECK(floatBox.Right() > boxBox.Right() - 1.0f);
+    ROBO_CHECK(floatBox.Right() < boxBox.Right() + 1.0f);
+}
+
+ROBO_TEST(Layout, ClearMovesABlockBelowTheFloatItNames)
+{
+    std::string error;
+
+    const std::string style = "#box { width: 200px; }\n"
+                              "#f { float: left; width: 60px; height: 50px; }\n"
+                              "#c { height: 20px; }\n";
+
+    RoboTools::CompiledApplication cleared;
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"box\"><div id=\"f\">F</div><div id=\"c\">C</div></div>", cleared,
+        { { "probe.css", style + "#c { clear: both; }\n" } }, error));
+
+    RoboTools::CompiledApplication beside;
+    ROBO_CHECK(CompileBodyWithSources(
+        "<div id=\"box\"><div id=\"f\">F</div><div id=\"c\">C</div></div>", beside,
+        { { "probe.css", style } }, error));
+
+    TestRenderer a(cleared.Document(), 400.0f, 300.0f);
+    TestRenderer b(beside.Document(), 400.0f, 300.0f);
+    ROBO_CHECK(a.Frame() && b.Frame());
+
+    const ElementIndex floatA = FindElementById(cleared.Document(), "f");
+    const ElementIndex blockA = FindElementById(cleared.Document(), "c");
+    const ElementIndex floatB = FindElementById(beside.Document(), "f");
+    const ElementIndex blockB = FindElementById(beside.Document(), "c");
+    ROBO_CHECK(floatA != NoElement && blockA != NoElement && floatB != NoElement && blockB != NoElement);
+
+    const Rect floatBoxA = BoxOf(a.renderer.Layout().Result(), floatA);
+    const Rect blockBoxA = BoxOf(a.renderer.Layout().Result(), blockA);
+    const Rect floatBoxB = BoxOf(b.renderer.Layout().Result(), floatB);
+    const Rect blockBoxB = BoxOf(b.renderer.Layout().Result(), blockB);
+
+    // The cleared block sits below the float...
+    ROBO_CHECK(blockBoxA.y >= floatBoxA.Bottom() - 1.0f);
+
+    // ...whereas without [H[2J[3J the block would flow past it, because a float
+    // reserves no room in the flow.
+    ROBO_CHECK(blockBoxB.y < floatBoxB.Bottom() - 1.0f);
+}
