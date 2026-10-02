@@ -260,7 +260,8 @@ ctest --preset release
 The build produces `build/bin/RoboHTMLCompiler.exe`, `build/bin/RoboHTMLCompilerTests.exe`
 and, when the tools are enabled, `build/bin/SpecExtractor.exe`,
 `build/bin/RegistryCompiler.exe`, `build/bin/RoboViewer.exe` (render one document
-to an image), `build/bin/RoboWatch.exe` (the live preview, Windows only) and
+to an image), `build/bin/RoboWatch.exe` (the live preview, Windows only),
+`build/bin/RoboPlay.exe` (play with a document in a window, Windows only) and
 `build/bin/RoboBench.exe` (measure the runtime and write a report).
 
 ---
@@ -328,7 +329,30 @@ build-clang/bin/RoboWatch.exe Examples/Watch/index.html --once
 
 ---
 
-## 4b. Compiling a folder of documents
+## 4b. Playing with a document
+
+`Tools/Play.bat` opens a document in a window and hands the window's real input
+to the runtime, so a hover, a click, a focused field, a scroll and a resize all
+behave the way they do in a browser. It is the tool for feeling what a document
+does rather than reading a picture of it.
+
+```bat
+Tools\Play.bat
+Tools\Play.bat Examples\Conformance\index.html
+Tools\Play.bat Examples\LandingPage\index.html Examples\LandingPage\app.css
+Tools\Play.bat Examples\Watch\index.html --width 1200 --height 800 --watch
+```
+
+With no arguments it asks for an HTML file and then a CSS file through the
+Windows picker; cancel the CSS dialog to let the document's own stylesheet be
+used, and failing that the one the document links. It builds the player the first
+time it is run. `F5` reloads both files from disk, `Escape` closes the window, and
+`--watch` reloads whenever either file changes. The window is Win32, so the player
+is Windows-only for now, like the live preview.
+
+---
+
+## 4c. Compiling a folder of documents
 
 `Tools/Run.bat` and `Tools/Run.sh` compile every HTML document in a folder into
 its own strongly typed C++ native model. They build the compiler first if it has

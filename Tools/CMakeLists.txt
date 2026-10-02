@@ -114,6 +114,30 @@ if(WIN32)
 endif()
 
 # ---------------------------------------------------------------------------
+# RoboPlay - play with a document in a window
+#
+#     RoboPlay           the document in a window, with the mouse, the wheel,
+#                        the keyboard and the resize forwarded to the runtime
+#
+# Where RoboViewer writes a picture and RoboWatch edits beside one, RoboPlay is
+# the document itself with real input, which is how a hover, a focused field and
+# a resize are felt rather than read. It is a GUI subsystem binary so it opens no
+# console, and it is Windows only for now like the preview.
+# ---------------------------------------------------------------------------
+
+if(WIN32)
+    add_executable(RoboPlay WIN32 "${CMAKE_CURRENT_SOURCE_DIR}/RoboPlay.cpp")
+    target_link_libraries(RoboPlay PRIVATE RoboRendererHarness user32 gdi32 shell32)
+    set_target_properties(RoboPlay PROPERTIES FOLDER "RoboRendererTools")
+
+    if(MSVC)
+        target_compile_options(RoboPlay PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(RoboPlay PRIVATE -Wall -Wextra -Wpedantic)
+    endif()
+endif()
+
+# ---------------------------------------------------------------------------
 # Regeneration pipeline
 # ---------------------------------------------------------------------------
 

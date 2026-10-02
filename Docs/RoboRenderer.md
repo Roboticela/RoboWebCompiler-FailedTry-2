@@ -789,6 +789,8 @@ no work still costs nothing.
 | Tool | What it does |
 | --- | --- |
 | `RoboViewer` | compiles one document in process and renders it to PNG (or PPM), then prints the frame metrics, the renderer diagnostics and an ASCII preview of the framebuffer |
+| `RoboWatch` | the live preview: the HTML and the stylesheet in two boxes and the frame beside them, rebuilt on demand (Windows only) |
+| `RoboPlay` | opens one document in a Windows window and forwards the mouse, the wheel, the keyboard and the resize to the runtime, so a hover, a focused field, a scroll and a resize behave the way they do in a browser (Windows only) |
 | `RoboBench` | generates documents from 10 to 100,000 elements in five shapes, measures them, and writes a Markdown report |
 | `RendererHarness` | the shared "compile a document in process" helper both tools and the renderer tests use |
 
@@ -808,6 +810,9 @@ against every stylesheet beside the document.
 ```sh
 # one document to an image
 RoboViewer Examples/BasicApp/index.html --width 900 --height 620 --output app.png
+
+# a document in a window, with the mouse and the keyboard
+RoboPlay Examples/Conformance/index.html
 
 # a full measurement pass, written as RoboBench.md
 RoboBench --output RoboBench.md
