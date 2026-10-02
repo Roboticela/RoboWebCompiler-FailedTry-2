@@ -250,6 +250,8 @@ namespace RoboCSSCompiler
         TextDecorationLine,
         /// `auto | from-font | <length-percentage>`, the decoration thickness.
         TextDecorationThickness,
+        /// `<length-percentage> && hanging? && each-line?`, the block indent.
+        TextIndent,
         /// `normal | <feature-tag-value>#`, the OpenType feature settings.
         FontFeatureSettings,
         /// One or more keywords from the property's own closed set, which is how

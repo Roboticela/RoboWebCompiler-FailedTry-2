@@ -1359,7 +1359,8 @@ namespace RoboCSSCompiler
             }
 
             static const char* const kStyles[] = { "solid", "double", "dotted", "dashed", "wavy" };
-            static const char* const kLines[] = { "underline", "overline", "line-through" };
+            static const char* const kLines[] = { "underline",  "overline",      "line-through",
+                                                  "spelling-error", "grammar-error" };
 
             std::vector<CSSValue> lines;
             bool noneGiven = false;

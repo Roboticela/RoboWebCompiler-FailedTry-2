@@ -283,10 +283,9 @@ accepts `sideways-right` and `use-glyph-orientation`; `word-break` accepts
 `css-text-decor-3`. Each change is asserted in `Tests/Integration/CssPipelineTests.cpp`,
 and the 34 pages the pass verified are retired. A page is *not* retired while a
 value on it still has no answer, which is why `display` (its `grid`, `flow-root`,
-`list-item`, `table` and multi-keyword forms), `font-size` (`math`),
-`text-indent` (`each-line`, `hanging`), `text-transform` (`full-width`,
-`full-size-kana`, `math-auto`) and `text-decoration-line` (`spelling-error`,
-`grammar-error`) stay in the reference, along with the size and background
+`list-item`, `table` and multi-keyword forms), `font-size` (`math`) and
+`text-transform` (`full-width`, `full-size-kana`, `math-auto`) stay in the
+reference, along with the size and background
 shorthands whose `stretch`, `anchor-size()` and image values have no answer yet.
 
 `all` is the one property that is about the other properties rather than about

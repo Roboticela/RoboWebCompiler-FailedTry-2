@@ -2859,7 +2859,8 @@ namespace RoboCSSCompiler
                 return false;
             }
 
-            static const char* const kKeywords[] = { "none", "underline", "overline", "line-through", "blink" };
+            static const char* const kKeywords[] = { "none", "underline", "overline", "line-through",
+                                                     "spelling-error", "grammar-error", "blink" };
 
             std::vector<CSSValue> keywords;
 
@@ -2871,8 +2872,8 @@ namespace RoboCSSCompiler
                                       location,
                                       "Invalid value for 'text-decoration-line'.",
                                       "the grammar is one or more of none, underline, overline, "
-                                      "line-through, blink",
-                                      "Write 'underline', 'overline', 'line-through' or 'none'.",
+                                      "line-through, spelling-error, grammar-error, blink",
+                                      "Write 'underline', 'spelling-error' or 'none'.",
                                       ComponentsToText(components));
                     return false;
                 }
@@ -2898,7 +2899,7 @@ namespace RoboCSSCompiler
                                       location,
                                       "Unknown text-decoration-line keyword: '" + value->token.text + "'.",
                                       "not a keyword the reference defines",
-                                      "Write 'underline', 'overline', 'line-through' or 'none'.",
+                                      "Write 'underline', 'spelling-error' or 'none'.",
                                       value->token.text);
                     return false;
                 }
@@ -3065,6 +3066,132 @@ namespace RoboCSSCompiler
             }
 
             return !RejectNegativeValue(out, location, diagnostics, definition.name);
+        }
+
+        /// `<length-percentage> && hanging? && each-line?`. The length is
+        /// required and either keyword may sit on either side of it. When a
+        /// keyword is present the value is kept as a list, so the lowerer can
+        /// read the indent and the mode together; a bare length is returned as
+        /// the length itself, which is what the common case lowers to.
+        bool ParseTextIndentValue(const CSSPropertyDefinition& definition,
+                                  const std::vector<CSSComponentValue>& components,
+                                  CSSValue& out,
+                                  const CSSSourceLocation& location,
+                                  CSSDiagnosticSink& diagnostics)
+        {
+            const std::vector<const CSSComponentValue*> values = Significant(components);
+
+            if (values.empty())
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidGrammar, location,
+                                  "text-indent needs a length or percentage.", "no value given",
+                                  "Write '2em', '10%' or '-3em hanging'.", definition.name);
+                return false;
+            }
+
+            bool hanging = false;
+            bool eachLine = false;
+            bool hasLength = false;
+            CSSValue length;
+
+            for (const CSSComponentValue* value : values)
+            {
+                if (value->token.type == CSSTokenType::Ident)
+                {
+                    const std::string name = LowerCase(value->token.text);
+
+                    if (name == "hanging")
+                    {
+                        if (hanging)
+                        {
+                            diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                              "text-indent names 'hanging' twice.",
+                                              "a keyword may appear only once",
+                                              "Write 'hanging' once.", definition.name);
+                            return false;
+                        }
+
+                        hanging = true;
+                        continue;
+                    }
+
+                    if (name == "each-line")
+                    {
+                        if (eachLine)
+                        {
+                            diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                              "text-indent names 'each-line' twice.",
+                                              "a keyword may appear only once",
+                                              "Write 'each-line' once.", definition.name);
+                            return false;
+                        }
+
+                        eachLine = true;
+                        continue;
+                    }
+
+                    diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                      "Unknown text-indent keyword: '" + value->token.text + "'.",
+                                      "the value is a length, optionally with 'hanging' and "
+                                      "'each-line'",
+                                      "Write '2em', '10%' or '-3em hanging each-line'.",
+                                      value->token.text);
+                    return false;
+                }
+
+                if (hasLength)
+                {
+                    diagnostics.Error(CSSDiagnosticCode::InvalidGrammar, location,
+                                      "text-indent takes a single length or percentage.",
+                                      "a second length was given",
+                                      "Write one length, optionally followed by 'hanging' and "
+                                      "'each-line'.",
+                                      definition.name);
+                    return false;
+                }
+
+                std::vector<CSSComponentValue> single{ *value };
+
+                if (!ParseLengthPercentage(single, length, location, diagnostics, false, true,
+                                           definition.name))
+                {
+                    return false;
+                }
+
+                hasLength = true;
+            }
+
+            if (!hasLength)
+            {
+                diagnostics.Error(CSSDiagnosticCode::InvalidValue, location,
+                                  "text-indent needs a length or percentage.",
+                                  "only keywords were given",
+                                  "Write '2em hanging', not 'hanging' on its own.", definition.name);
+                return false;
+            }
+
+            if (!hanging && !eachLine)
+            {
+                out = length;
+                return true;
+            }
+
+            out = CSSValue();
+            out.kind = CSSValueKind::List;
+            out.items.push_back(length);
+
+            if (hanging)
+            {
+                out.items.push_back(CSSValue::MakeKeyword("hanging"));
+            }
+
+            if (eachLine)
+            {
+                out.items.push_back(CSSValue::MakeKeyword("each-line"));
+            }
+
+            out.location = location;
+            return true;
         }
 
         /// `<number> | <length>`. A number is a count of space advances, which
@@ -3782,6 +3909,9 @@ namespace RoboCSSCompiler
 
         case CSSValueGrammar::TextDecorationLine:
             return ParseTextDecorationLineValue(components, out, location, diagnostics);
+
+        case CSSValueGrammar::TextIndent:
+            return ParseTextIndentValue(definition, components, out, location, diagnostics);
 
         case CSSValueGrammar::FontFeatureSettings:
             return ParseFontFeatureSettingsValue(components, out, location, diagnostics);

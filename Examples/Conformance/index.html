@@ -316,6 +316,9 @@
         <div class="text-justify-inter-character">text-justify: inter-character — the characters are spread apart</div>
         <div class="text-justify-distribute">text-justify: distribute</div>
         <p class="text-indent">text-indent: 24px — the first line is indented and the rest are not</p>
+        <p class="text-indent-hanging">text-indent: 24px hanging — every line except the first is indented, and this one wraps across lines</p>
+        <p class="text-indent-each-line">text-indent: 24px each-line — the first line and each line after a forced break are indented<br>this line follows a break</p>
+        <p class="text-indent-hanging-each-line">text-indent: 24px hanging each-line — the first line and lines after a break are not indented, and this one wraps across lines<br>this one follows a break</p>
         <p class="text-transform-uppercase">text-transform: uppercase</p>
         <p class="text-transform-lowercase">TEXT-TRANSFORM: LOWERCASE</p>
         <p class="text-transform-capitalize">text-transform: capitalize every word</p>
@@ -329,6 +332,8 @@
         <p class="decoration-line-through">text-decoration-line: line-through</p>
         <p class="decoration-combination">underline overline line-through</p>
         <p class="decoration-blink">underline blink (blink is accepted and has no effect)</p>
+        <p class="decoration-spelling-error">text-decoration-line: spelling-error</p>
+        <p class="decoration-grammar-error">text-decoration: grammar-error wavy</p>
         <p class="decoration-color">text-decoration-color: #dc2626</p>
         <p class="decoration-currentcolor">text-decoration-color: currentcolor</p>
         <p class="decoration-solid">text-decoration-style: solid</p>
@@ -929,8 +934,6 @@ and a run of them at the end of a line does not hang.</p>
             <li><span class="mono">percentages in margin, padding and font-size</span> — the native box holds resolved lengths; they are supported in width, height and min-*. A percentage in <span class="mono">border-width</span> is invalid CSS and is refused as an error, not reported.</li>
             <li><span class="mono">text-align: match-parent</span> — there is no parent writing mode to inherit one from.</li>
             <li><span class="mono">text-transform: full-width, full-size-kana, math-auto</span> — the case transforms are implemented, these are not.</li>
-            <li><span class="mono">text-indent: each-line, hanging</span> — the indent itself is implemented.</li>
-            <li><span class="mono">text-decoration-line: spelling-error, grammar-error</span> — underline, overline, line-through and blink are.</li>
             <li><span class="mono">font-size: math</span>, and the font shorthand's family, line-height, weight, style and variant halves.</li>
             <li><span class="mono">z-index</span> is compiled and accepted, and does not yet reorder painting.</li>
             <li><span class="mono">sticky</span> takes its offsets like a relative box; the scrollport clamp is not modelled.</li>

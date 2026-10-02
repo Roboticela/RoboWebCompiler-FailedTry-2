@@ -774,6 +774,56 @@ ROBO_TEST(CssPipeline, ADecorationReachesTheTextItIsDrawnAround)
     ROBO_CHECK_EQ(decorated, static_cast<std::size_t>(4));
 }
 
+ROBO_TEST(CssPipeline, TheTextIndentModeReachesTheCompiledStyle)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    // `each-line` and `hanging` do not change the length; they choose which
+    // lines the length moves. Both bits ride beside the length.
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p class=\"hanging\">a</p><p class=\"each\">b</p><p class=\"both\">c</p>",
+        application,
+        Sheet(".hanging { text-indent: 20px hanging }"
+              ".each { text-indent: 30px each-line }"
+              ".both { text-indent: 40px hanging each-line }"),
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+
+    bool sawHanging = false;
+    bool sawEachLine = false;
+    bool sawBoth = false;
+
+    for (std::uint32_t index = 0; index < document.styleCount; ++index)
+    {
+        const CompiledStyle& style = document.styles[index];
+
+        if (!IsSpecified(style.specified, StyleFlagTextIndent))
+        {
+            continue;
+        }
+
+        if (style.textIndent == 20.0f && style.textIndentHanging && !style.textIndentEachLine)
+        {
+            sawHanging = true;
+        }
+        else if (style.textIndent == 30.0f && !style.textIndentHanging && style.textIndentEachLine)
+        {
+            sawEachLine = true;
+        }
+        else if (style.textIndent == 40.0f && style.textIndentHanging && style.textIndentEachLine)
+        {
+            sawBoth = true;
+        }
+    }
+
+    ROBO_CHECK(sawHanging);
+    ROBO_CHECK(sawEachLine);
+    ROBO_CHECK(sawBoth);
+}
+
 // ---------------------------------------------------------------------------
 // The values the reference names
 //

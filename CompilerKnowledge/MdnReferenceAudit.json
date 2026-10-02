@@ -727,6 +727,32 @@
       "note": "Expanded onto the decoration channels. The line keywords and the colour are lowered; the style and thickness are carried by their own longhands."
     },
     {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-decoration-line",
+      "kind": "css property",
+      "names": [
+        "text-decoration-line"
+      ],
+      "compiled": true,
+      "spec": "css-text-decor-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "One or more of none, underline, overline, line-through, spelling-error and grammar-error compile to the decoration bits; blink is accepted and draws nothing. The two error keywords paint where an underline does, which is the freedom the reference leaves to the user agent, and the shorthand carries them as its line part too."
+    },
+    {
+      "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-indent",
+      "kind": "css property",
+      "names": [
+        "text-indent"
+      ],
+      "compiled": true,
+      "spec": "css-text-3",
+      "mdnStatus": "standard",
+      "covered": true,
+      "retired": true,
+      "note": "`hanging` and `each-line` choose which lines the length moves: the first line by default, each line after a forced break with `each-line`, and the other lines with `hanging`. A negative indent is allowed."
+    },
+    {
       "document": "Reference/MDN/files/en-us/web/css/reference/properties/text-decoration-color",
       "kind": "css property",
       "names": [
@@ -1100,7 +1126,7 @@
     }
   ],
   "remainingByArea": {
-    "cssProperties": 516,
+    "cssProperties": 514,
     "cssSelectors": 166,
     "cssAtRules": 23,
     "cssValuesAndFunctions": 101,
@@ -1109,7 +1135,7 @@
     "htmlGlobalAttributes": 32
   },
   "accountedFor": {
-    "cssPropertiesCompiled": 90,
+    "cssPropertiesCompiled": 92,
     "cssPropertiesCarriedOnly": 442,
     "cssPropertyNamesNotAccountedFor": 59,
     "htmlElementDefinitions": 239,

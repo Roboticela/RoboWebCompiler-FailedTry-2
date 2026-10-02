@@ -560,6 +560,78 @@ static Rect BoxOf(const LayoutResult& layout, ElementIndex index)
     return box != nullptr ? box->border : Rect{};
 }
 
+ROBO_TEST(Layout, TextIndentModesChooseWhichLinesMove)
+{
+    RoboTools::CompiledApplication application;
+    std::string error;
+
+    // A forced break gives each paragraph a second line without relying on the
+    // window width: which of the two lines the indent moves is the whole point.
+    ROBO_CHECK(CompileBodyWithSources(
+        "<p id=\"plain\">first line<br>second line</p>"
+        "<p id=\"hanging\">first line<br>second line</p>"
+        "<p id=\"each\">first line<br>second line</p>",
+        application,
+        { { "probe.css",
+            "#plain { text-indent: 40px }"
+            "#hanging { text-indent: 40px hanging }"
+            "#each { text-indent: 40px each-line }" } },
+        error));
+    ROBO_CHECK(error.empty());
+
+    const CompiledDocument& document = application.Document();
+    TestRenderer window(document, 400.0f, 400.0f);
+    ROBO_CHECK(window.Frame());
+
+    // The line starts of one block, ordered top to bottom.
+    const auto lineStarts = [&](const char* id) {
+        std::vector<LineLayout> lines;
+        const ElementIndex element = FindElementById(document, id);
+
+        for (const LineLayout& line : window.renderer.Layout().Result().lines)
+        {
+            if (line.container == element)
+            {
+                lines.push_back(line);
+            }
+        }
+
+        std::sort(lines.begin(), lines.end(), [](const LineLayout& left, const LineLayout& right) {
+            return left.lineTop < right.lineTop;
+        });
+
+        std::vector<float> starts;
+
+        for (const LineLayout& line : lines)
+        {
+            starts.push_back(line.x);
+        }
+
+        return starts;
+    };
+
+    const std::vector<float> plain = lineStarts("plain");
+    const std::vector<float> hanging = lineStarts("hanging");
+    const std::vector<float> each = lineStarts("each");
+
+    ROBO_CHECK(plain.size() >= 2);
+    ROBO_CHECK(hanging.size() >= 2);
+    ROBO_CHECK(each.size() >= 2);
+
+    if (plain.size() >= 2 && hanging.size() >= 2 && each.size() >= 2)
+    {
+        // Default: the first line is indented and the second is not.
+        ROBO_CHECK(plain[0] - plain[1] > 30.0f);
+
+        // `hanging` inverts which line moves.
+        ROBO_CHECK(hanging[1] - hanging[0] > 30.0f);
+
+        // `each-line` indents the line after the forced break too.
+        ROBO_CHECK(std::abs(each[0] - plain[0]) < 1.0f);
+        ROBO_CHECK(each[1] - plain[1] > 30.0f);
+    }
+}
+
 ROBO_TEST(Layout, RelativePositioningMovesTheBoxAndKeepsItsSpace)
 {
     RoboTools::CompiledApplication application;

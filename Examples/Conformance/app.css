@@ -740,6 +740,18 @@ p {
     text-indent: 24px;
 }
 
+.text-indent-hanging {
+    text-indent: 24px hanging;
+}
+
+.text-indent-each-line {
+    text-indent: 24px each-line;
+}
+
+.text-indent-hanging-each-line {
+    text-indent: 24px hanging each-line;
+}
+
 .text-transform-uppercase {
     text-transform: uppercase;
 }
@@ -776,6 +788,14 @@ p {
 
 .decoration-blink {
     text-decoration-line: underline blink;
+}
+
+.decoration-spelling-error {
+    text-decoration-line: spelling-error;
+}
+
+.decoration-grammar-error {
+    text-decoration: grammar-error wavy;
 }
 
 .decoration-color {

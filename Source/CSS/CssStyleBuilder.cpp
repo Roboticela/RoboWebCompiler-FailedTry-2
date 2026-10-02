@@ -112,9 +112,11 @@ namespace RoboHTMLCompiler
         using RoboRenderer::StyleFlagWordSpacing;
         using RoboRenderer::TextAlignKind;
         using RoboRenderer::TextDecorationFlags;
+        using RoboRenderer::TextDecorationGrammarError;
         using RoboRenderer::TextDecorationLineThrough;
         using RoboRenderer::TextDecorationNone;
         using RoboRenderer::TextDecorationOverline;
+        using RoboRenderer::TextDecorationSpellingError;
         using RoboRenderer::TextDecorationStyleKind;
         using RoboRenderer::TextDecorationThicknessKind;
         using RoboRenderer::TextDecorationUnderline;
@@ -2166,6 +2168,14 @@ namespace RoboHTMLCompiler
                     {
                         decoration |= TextDecorationLineThrough;
                     }
+                    else if (value.text == "spelling-error")
+                    {
+                        decoration |= TextDecorationSpellingError;
+                    }
+                    else if (value.text == "grammar-error")
+                    {
+                        decoration |= TextDecorationGrammarError;
+                    }
                 };
 
                 if (line != nullptr)
@@ -2627,12 +2637,50 @@ namespace RoboHTMLCompiler
                     return;
                 }
 
-                const LengthResolution resolved =
-                    ResolveLength(*indent, context, elementFontSize, "text-indent", diagnostics, location);
+                float resolvedIndent = 0.0f;
+                bool hasIndent = false;
+                bool hanging = false;
+                bool eachLine = false;
 
-                if (resolved.value != -1.0f)
+                // The value is a list once `hanging` or `each-line` is present;
+                // a bare length is the length itself. Either way the keywords
+                // and the length are read before the fields are written, so the
+                // mode does not depend on which part came first.
+                const auto note = [&](const CSSValue& value) {
+                    if (value.kind == CSSValueKind::Keyword)
+                    {
+                        hanging = hanging || value.text == "hanging";
+                        eachLine = eachLine || value.text == "each-line";
+                        return;
+                    }
+
+                    const LengthResolution resolved = ResolveLength(value, context, elementFontSize,
+                                                                    "text-indent", diagnostics, location);
+
+                    if (resolved.resolved)
+                    {
+                        resolvedIndent = resolved.value;
+                        hasIndent = true;
+                    }
+                };
+
+                if (indent->kind == CSSValueKind::List)
                 {
-                    out.textIndent = resolved.value;
+                    for (const CSSValue& entry : indent->items)
+                    {
+                        note(entry);
+                    }
+                }
+                else
+                {
+                    note(*indent);
+                }
+
+                if (hasIndent)
+                {
+                    out.textIndent = resolvedIndent;
+                    out.textIndentHanging = hanging;
+                    out.textIndentEachLine = eachLine;
                     out.specified |= StyleFlagTextIndent;
                 }
             }
@@ -3030,6 +3078,8 @@ namespace RoboHTMLCompiler
             appendField(lowered.letterSpacing);
             appendField(lowered.wordSpacing);
             appendField(lowered.textIndent);
+            appendField(lowered.textIndentHanging);
+            appendField(lowered.textIndentEachLine);
             appendField(lowered.display);
             appendField(lowered.overflowX);
             appendField(lowered.overflowY);

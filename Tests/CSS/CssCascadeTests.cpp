@@ -852,10 +852,15 @@ ROBO_TEST(CssCascade, AnOutOfRangeValueIsAnErrorAndIsNeverApplied)
         { "body { row-gap: -1px }", CSSPropertyId::RowGap },
         { "body { column-gap: -1px }", CSSPropertyId::ColumnGap },
         { "body { gap: -1px }", CSSPropertyId::RowGap },
-        { "body { text-decoration-thickness: -1px }", CSSPropertyId::TextDecorationThickness },
-        { "body { flex: -1 }", CSSPropertyId::FlexGrow },
+        { "body { text-decoration-thickness: -1px }", CSSPropertyId::TextDecorationThickness },        { "body { flex: -1 }", CSSPropertyId::FlexGrow },
         { "body { flex: 1 2 3 }", CSSPropertyId::FlexBasis },
+        { "body { text-indent: hanging }", CSSPropertyId::TextIndent },
+        { "body { text-indent: 3em hanging hanging }", CSSPropertyId::TextIndent },
+        { "body { text-indent: 3em each-line each-line }", CSSPropertyId::TextIndent },
+        { "body { text-indent: 3em wiggly }", CSSPropertyId::TextIndent },
+        { "body { text-indent: 3em 4em }", CSSPropertyId::TextIndent },
     };
+
 
     for (const Case& testCase : cases)
     {
@@ -881,6 +886,9 @@ ROBO_TEST(CssCascade, AValueThatMayBeNegativeIsStillAccepted)
         { "body { margin: -5px }", CSSPropertyId::MarginTop },
         { "body { margin-left: calc(-10px) }", CSSPropertyId::MarginLeft },
         { "body { text-indent: -20px }", CSSPropertyId::TextIndent },
+        { "body { text-indent: -20px hanging }", CSSPropertyId::TextIndent },
+        { "body { text-indent: 3em hanging each-line }", CSSPropertyId::TextIndent },
+        { "body { text-indent: 3em each-line hanging }", CSSPropertyId::TextIndent },
         { "body { letter-spacing: -2px }", CSSPropertyId::LetterSpacing },
         { "body { word-spacing: -2px }", CSSPropertyId::WordSpacing },
         { "body { position: relative; top: -5px }", CSSPropertyId::Top },

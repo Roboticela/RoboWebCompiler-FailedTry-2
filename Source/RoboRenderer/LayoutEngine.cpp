@@ -1187,12 +1187,34 @@ namespace RoboRenderer
         std::vector<AtomicBox> atomics;
         std::vector<TextLine> wrappedLines;
 
-        // `text-indent` shifts the first line of the block only.
+        // `text-indent` shifts the first line of the block. `each-line` widens
+        // the affected lines to each line after a forced break, and `hanging`
+        // inverts the set, so each line decides for itself whether the indent
+        // applies rather than the shift being spent once at the start.
         const float indent = IsSpecified(style.specified, StyleFlagTextIndent) ? style.textIndent : 0.0f;
+        const bool hanging =
+            IsSpecified(style.specified, StyleFlagTextIndent) && style.textIndentHanging;
+        const bool eachLine =
+            IsSpecified(style.specified, StyleFlagTextIndent) && style.textIndentEachLine;
 
         float lineTop = y;
-        float currentIndent = indent;
-        float penX = lineX + indent;
+        float currentIndent = 0.0f;
+        float penX = lineX;
+        bool isFirstLine = true;
+        bool lineAfterForcedBreak = false;
+
+        // Begins a new line: it decides whether this line is one the indent
+        // moves, then places the pen past it. A forced break is remembered by
+        // the caller because only it knows why the previous line ended.
+        const auto startLine = [&]() {
+            const bool startsGroup = eachLine ? (isFirstLine || lineAfterForcedBreak) : isFirstLine;
+            currentIndent = (startsGroup != hanging) ? indent : 0.0f;
+            penX = lineX + currentIndent;
+            isFirstLine = false;
+            lineAfterForcedBreak = false;
+        };
+
+        startLine();
         float maxAscent = 0.0f;
         float maxDescent = 0.0f;
         float specifiedLineHeight = 0.0f;
@@ -1341,8 +1363,6 @@ namespace RoboRenderer
             // The next line may sit below the float that shortened this one, so
             // its insets are worked out from its own top.
             refreshLineInsets(lineTop);
-            penX = lineX;
-            currentIndent = 0.0f;
             maxAscent = 0.0f;
             maxDescent = 0.0f;
             specifiedLineHeight = 0.0f;
@@ -1361,6 +1381,9 @@ namespace RoboRenderer
                 lineTop += breakHeight;
                 usedHeight = lineTop - y;
                 refreshLineInsets(lineTop);
+                // The line the break starts is one `each-line` indents.
+                lineAfterForcedBreak = true;
+                startLine();
                 continue;
             }
 
@@ -1369,6 +1392,7 @@ namespace RoboRenderer
                 if (wrap && penX > lineX && (penX - lineX) + item.width > lineAvailable)
                 {
                     flushLine();
+                    startLine();
                 }
 
                 atomics.push_back(AtomicBox{ &item, penX - lineX - currentIndent });
@@ -1417,6 +1441,7 @@ namespace RoboRenderer
                 {
                     // Not even the first word fits in the remaining space.
                     flushLine();
+                    startLine();
                     firstFragment = false;
                     continue;
                 }
@@ -1443,6 +1468,10 @@ namespace RoboRenderer
                 // be seen as an empty one at the start of the next slice.
                 offset += head.endByte + (head.hardBreak ? 1u : 0u);
                 flushLine();
+                // A newline inside the text is a forced break too, so `each-line`
+                // indents the line it starts.
+                lineAfterForcedBreak = head.hardBreak;
+                startLine();
                 firstFragment = false;
             }
         }

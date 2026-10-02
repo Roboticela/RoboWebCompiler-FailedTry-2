@@ -254,7 +254,7 @@ namespace RoboCSSCompiler
             { Id::LetterSpacing, "letter-spacing", Cat::Text, true, "normal", Grammar::LengthOrNormal, nullptr, true, true, true, true, true, "css-text-3" },
             { Id::WordSpacing, "word-spacing", Cat::Text, true, "normal", Grammar::LengthOrNormal, nullptr, true, true, true, true, true, "css-text-3" },
             { Id::TextAlign, "text-align", Cat::Text, true, "start", Grammar::TextAlign, nullptr, false, true, true, false, true, "css-text-3" },
-            { Id::TextIndent, "text-indent", Cat::Text, true, "0", Grammar::LengthPercentage, nullptr, true, true, true, true, true, "css-text-3" },
+            { Id::TextIndent, "text-indent", Cat::Text, true, "0", Grammar::TextIndent, "hanging each-line", true, true, true, true, true, "css-text-3" },
             { Id::TextTransform, "text-transform", Cat::Text, true, "none", Grammar::Keyword, "none uppercase lowercase capitalize", false, true, true, false, true, "css-text-3" },
             // `white-space` became a shorthand for `white-space-collapse` and
             // `text-wrap-mode`, so the reference now names the longhand values too:
@@ -279,7 +279,7 @@ namespace RoboCSSCompiler
             { Id::FontVariantPosition, "font-variant-position", Cat::Font, true, "normal", Grammar::KeywordSetList, "normal sub super", false, true, true, false, true, "css-fonts-3" },
             { Id::FontVariantEastAsian, "font-variant-east-asian", Cat::Font, true, "normal", Grammar::KeywordSetList, "normal jis78 jis83 jis90 jis04 simplified traditional full-width proportional-width ruby", false, true, true, false, true, "css-fonts-3" },
 
-            { Id::TextDecorationLine, "text-decoration-line", Cat::Text, true, "none", Grammar::TextDecorationLine, "none underline overline line-through", false, true, true, false, true, "css-text-decor-3" },
+            { Id::TextDecorationLine, "text-decoration-line", Cat::Text, true, "none", Grammar::TextDecorationLine, "none underline overline line-through spelling-error grammar-error", false, true, true, false, true, "css-text-decor-3" },
             { Id::TextDecorationColor, "text-decoration-color", Cat::Text, true, "currentcolor", Grammar::Color, nullptr, false, true, false, false, true, "css-text-decor-3" },
             { Id::TextDecorationStyle, "text-decoration-style", Cat::Text, true, "solid", Grammar::Keyword, "solid double dotted dashed wavy", false, true, false, false, true, "css-text-decor-3" },
             // These two moved on to css-text-decor-4; the reference states them

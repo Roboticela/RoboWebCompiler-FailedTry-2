@@ -59,6 +59,8 @@ namespace RoboRenderer
                 style.letterSpacing = 0.0f;
                 style.wordSpacing = 0.0f;
                 style.textIndent = 0.0f;
+                style.textIndentHanging = false;
+                style.textIndentEachLine = false;
                 style.display = display;
                 style.overflowX = OverflowKind::Visible;
                 style.overflowY = OverflowKind::Visible;
@@ -396,6 +398,8 @@ namespace RoboRenderer
         target.hasTextAlignLast = source.hasTextAlignLast;
         target.textJustify = source.textJustify;
         target.textIndent = source.textIndent;
+        target.textIndentHanging = source.textIndentHanging;
+        target.textIndentEachLine = source.textIndentEachLine;
         target.textTransform = source.textTransform;
         target.whiteSpace = source.whiteSpace;
         target.wordBreak = source.wordBreak;
@@ -865,6 +869,8 @@ namespace RoboRenderer
         if (IsSpecified(specified, StyleFlagTextIndent))
         {
             target.textIndent = authored.textIndent;
+            target.textIndentHanging = authored.textIndentHanging;
+            target.textIndentEachLine = authored.textIndentEachLine;
         }
         if (IsSpecified(specified, StyleFlagWhiteSpace))
         {

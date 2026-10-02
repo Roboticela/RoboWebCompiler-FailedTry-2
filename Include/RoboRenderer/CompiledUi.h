@@ -442,7 +442,12 @@ namespace RoboRenderer
         TextDecorationNone = 0u,
         TextDecorationUnderline = 1u << 0,
         TextDecorationOverline = 1u << 1,
-        TextDecorationLineThrough = 1u << 2
+        TextDecorationLineThrough = 1u << 2,
+        /// `spelling-error` and `grammar-error`: semantic underline kinds. The
+        /// reference leaves their exact style to the user agent, and this runtime
+        /// draws them as an underline at the underline position.
+        TextDecorationSpellingError = 1u << 3,
+        TextDecorationGrammarError = 1u << 4
     };
 
     /// `text-decoration-style`. The painter draws each of these differently:
@@ -686,6 +691,11 @@ namespace RoboRenderer
         float wordSpacing = 0.0f;
         /// `text-indent`, in logical pixels, applied to the first line of a block.
         float textIndent = 0.0f;
+        /// `text-indent: hanging`: which lines the indent moves, not just the
+        /// first. `hanging` inverts the affected lines and `each-line` widens
+        /// them to each line after a forced break.
+        bool textIndentHanging = false;
+        bool textIndentEachLine = false;
 
         DisplayKind display;
         OverflowKind overflowX;

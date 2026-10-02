@@ -425,7 +425,10 @@ the right edge however Latin the text is.
 
 **Decorations.** `text-decoration-line` is a bitmask on the run — an underline, an
 overline and a strikethrough can be asked for at once — and the painter draws each
-requested line as a filled rectangle a fraction of the font size tall. The colour
+requested line as a filled rectangle a fraction of the font size tall. The
+semantic `spelling-error` and `grammar-error` keywords are their own bits and paint
+where an underline does, which is the freedom the reference leaves to the user
+agent. The colour
 is the element's own text colour unless `text-decoration-color` names one, which is
 what `currentColor` means; a link's underline sets the same bit, so one field
 decides every decoration. `text-decoration-style` picks the line's shape — a solid

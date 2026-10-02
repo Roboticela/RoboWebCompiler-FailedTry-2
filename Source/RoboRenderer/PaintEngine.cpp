@@ -1238,7 +1238,14 @@ namespace RoboRenderer
 
                 const float columnLength = std::max(line.lineHeight, 1.0f);
 
-                if ((decoration & TextDecorationUnderline) != 0u)
+                // `spelling-error` and `grammar-error` are semantic underlines:
+                // the reference leaves their exact style to the user agent, so
+                // this runtime draws them exactly where it draws an underline.
+                const bool drawsUnderline =
+                    (decoration & (TextDecorationUnderline | TextDecorationSpellingError |
+                                   TextDecorationGrammarError)) != 0u;
+
+                if (drawsUnderline)
                 {
                     // `auto` puts the underline where the face says it goes,
                     // which is the `post` table's position; a face without one

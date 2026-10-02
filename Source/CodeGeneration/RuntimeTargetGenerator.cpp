@@ -915,6 +915,18 @@ namespace RoboHTMLCompiler
                 {
                     source << "            tables.styles[" << index
                            << "].textIndent = " << FloatLiteral(style.textIndent) << ";\n";
+
+                    if (style.textIndentHanging)
+                    {
+                        source << "            tables.styles[" << index
+                               << "].textIndentHanging = true;\n";
+                    }
+
+                    if (style.textIndentEachLine)
+                    {
+                        source << "            tables.styles[" << index
+                               << "].textIndentEachLine = true;\n";
+                    }
                 }
                 if (IsSpecified(style.specified, StyleFlagWhiteSpace))
                 {

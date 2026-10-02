@@ -1152,6 +1152,86 @@ ROBO_TEST(Typography, TheDecorationShorthandRoutesEachPartToItsLonghand)
     ROBO_CHECK(sawThickness);
 }
 
+ROBO_TEST(Typography, SpellingAndGrammarErrorsRouteThroughTheLonghandAndTheShorthand)
+{
+    // `spelling-error` and `grammar-error` are `text-decoration-line` keywords,
+    // so the longhand names them directly and the `text-decoration` shorthand
+    // carries them as its line part. Each compiles to its own decoration bit.
+    const auto compilesToDecoration = [](const char* declaration, std::uint8_t expected) {
+        RoboTools::CompiledApplication application;
+        std::string error;
+
+        if (!CompileBodyWithSources("<p class=\"styled\">text</p>", application,
+                                    { { "app.css", declaration } }, error))
+        {
+            return false;
+        }
+
+        for (std::uint32_t index = 0; index < application.Document().styleCount; ++index)
+        {
+            if (application.Document().styles[index].textDecoration == expected)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    };
+
+    ROBO_CHECK(compilesToDecoration(".styled { text-decoration-line: spelling-error }",
+                                    TextDecorationSpellingError));
+    ROBO_CHECK(compilesToDecoration(".styled { text-decoration: spelling-error }",
+                                    TextDecorationSpellingError));
+    ROBO_CHECK(compilesToDecoration(".styled { text-decoration-line: grammar-error }",
+                                    TextDecorationGrammarError));
+    ROBO_CHECK(compilesToDecoration(".styled { text-decoration: grammar-error }",
+                                    TextDecorationGrammarError));
+}
+
+ROBO_TEST(Typography, SpellingAndGrammarErrorsPaintWhereAnUnderlineDoes)
+{
+    const auto rectangleCount = [](const char* declaration) {
+        RoboTools::CompiledApplication application;
+        std::string error;
+
+        if (!CompileBodyWithSources("<p class=\"styled\">underlined text</p>", application,
+                                    { { "app.css", declaration } }, error))
+        {
+            return std::size_t(0);
+        }
+
+        TestRenderer renderer(application.Document(), 400.0f, 200.0f);
+
+        if (!renderer.Frame())
+        {
+            return std::size_t(0);
+        }
+
+        std::size_t count = 0;
+
+        for (const PaintCommand& command : renderer.renderer.Paint().List().Commands())
+        {
+            if (command.type == PaintCommandType::FillRect)
+            {
+                ++count;
+            }
+        }
+
+        return count;
+    };
+
+    // The reference leaves the exact mark to the user agent; this runtime draws
+    // both error underlines exactly where it draws an underline, so all three
+    // decorate the run with the same pieces.
+    const std::size_t underline = rectangleCount(".styled { text-decoration: underline solid }");
+    const std::size_t spelling = rectangleCount(".styled { text-decoration: spelling-error solid }");
+    const std::size_t grammar = rectangleCount(".styled { text-decoration: grammar-error solid }");
+
+    ROBO_CHECK(underline > 0);
+    ROBO_CHECK_EQ(spelling, underline);
+    ROBO_CHECK_EQ(grammar, underline);
+}
+
 ROBO_TEST(Typography, ADottedDecorationPaintsMorePiecesThanASolidOne)
 {
     const auto rectangleCount = [](RoboTools::CompiledApplication& application, float x, float y) {
